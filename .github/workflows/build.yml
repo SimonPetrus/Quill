@@ -1,0 +1,71 @@
+name: Build (unsigned IPA)
+
+# Fork CI: builds an unsigned (ad-hoc, no team) Feather.ipa on every push / PR
+# and uploads it as a workflow artifact. Never creates releases or tags.
+
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '**'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - name: Select Xcode
+        run: |
+          ls -d /Applications/Xcode*.app || true
+          # Prefer the version upstream's release workflow uses, fall back to the newest Xcode 26.
+          if [ -d /Applications/Xcode_26.3.0.app ]; then
+            XCODE=/Applications/Xcode_26.3.0.app
+          else
+            XCODE=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -n 1)
+          fi
+          echo "Using $XCODE"
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/Feather/iphoneos/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('Feather.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Build
+        env:
+          TMPDIR: ${{ runner.temp }}/
+        run: |
+          agvtool new-version -all $(git rev-parse --short HEAD)
+          make iphoneos
+
+      - name: Show result
+        run: |
+          ls -la packages
+          /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" _build/Payload/*.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" _build/Payload/*.app/Info.plist
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Feather-${{ github.sha }}
+          path: packages/Feather.ipa
+          if-no-files-found: error
+          retention-days: 14
