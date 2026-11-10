@@ -7,12 +7,14 @@
 
 import Foundation
 import UIKit
+import OSLog
 
 // MARK: - OptionsManager
 class OptionsManager: ObservableObject {
 	static let shared = OptionsManager()
 	
-	private let _key = "signing_options"
+	static let storageKey = "signing_options"
+	private let _key = OptionsManager.storageKey
 	
 	@Published var options: Options {
 		didSet {
@@ -24,22 +26,13 @@ class OptionsManager: ObservableObject {
 		let defaults = Options.defaultOptions
 		
 		if let data = UserDefaults.standard.data(forKey: _key) {
-			do {
-				let savedDict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-				
-				let defaultData = try JSONEncoder().encode(defaults)
-				var mergedDict = try JSONSerialization.jsonObject(with: defaultData) as? [String: Any] ?? [:]
-
-				for (key, value) in savedDict {
-					mergedDict[key] = value
-				}
-				
-				let mergedData = try JSONSerialization.data(withJSONObject: mergedDict)
-				self.options = try JSONDecoder().decode(Options.self, from: mergedData)
-				return
-			} catch {
-				print("Failed to decode or merge options, falling back to defaults :/ \(error)")
+			let (restored, repaired) = Self.restore(from: data, defaults: defaults)
+			self.options = restored
+			// Write the repaired value back so the corruption does not persist.
+			if repaired, let encoded = try? JSONEncoder().encode(restored) {
+				UserDefaults.standard.set(encoded, forKey: _key)
 			}
+			return
 		}
 		
 		self.options = defaults
@@ -47,6 +40,53 @@ class OptionsManager: ObservableObject {
 		if let encoded = try? JSONEncoder().encode(defaults) {
 			UserDefaults.standard.set(encoded, forKey: _key)
 		}
+	}
+	
+	/// Field-by-field tolerant restore: every saved field is applied on top of the
+	/// defaults only if the result still decodes, so one bad/mistyped field resets
+	/// just that field instead of discarding all the user's settings.
+	/// - Returns: the options and whether anything had to be repaired.
+	static func restore(from data: Data, defaults: Options) -> (Options, Bool) {
+		guard
+			let savedDict = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+			let defaultData = try? JSONEncoder().encode(defaults),
+			var merged = (try? JSONSerialization.jsonObject(with: defaultData)) as? [String: Any]
+		else {
+			Logger.misc.error("Signing options unreadable, falling back to defaults")
+			return (defaults, true)
+		}
+		
+		// Optional fields are omitted from the encoded defaults, so list them explicitly.
+		let known = Set(merged.keys).union(["appName", "appVersion", "appIdentifier", "appEntitlementsFile"])
+		var repaired = false
+		
+		for (key, value) in savedDict {
+			guard known.contains(key) else {
+				Logger.misc.error("Signing options: dropping unknown field '\(key, privacy: .public)'")
+				repaired = true
+				continue
+			}
+			var candidate = merged
+			candidate[key] = value
+			if
+				JSONSerialization.isValidJSONObject(candidate),
+				let candidateData = try? JSONSerialization.data(withJSONObject: candidate),
+				(try? JSONDecoder().decode(Options.self, from: candidateData)) != nil
+			{
+				merged = candidate
+			} else {
+				Logger.misc.error("Signing options: invalid value for '\(key, privacy: .public)', using default")
+				repaired = true
+			}
+		}
+		
+		if
+			let mergedData = try? JSONSerialization.data(withJSONObject: merged),
+			let options = try? JSONDecoder().decode(Options.self, from: mergedData)
+		{
+			return (options, repaired)
+		}
+		return (defaults, true)
 	}
 	
 	/// Saves options
