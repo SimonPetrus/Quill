@@ -19276,6 +19276,24 @@
           }
         }
       }
+    },
+    "%@/s" : {
+      "comment" : "Download speed, e.g. 12.3 MB/s",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@/s"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@/sn"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
