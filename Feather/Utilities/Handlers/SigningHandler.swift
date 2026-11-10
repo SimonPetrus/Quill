@@ -191,7 +191,12 @@ final class SigningHandler: NSObject {
 
 extension SigningHandler {
 	private func _modifyDict(using infoDictionary: NSMutableDictionary, with options: Options, to app: URL) async throws {
-		if options.fileSharing { infoDictionary.setObject(true, forKey: "UISupportsDocumentBrowser" as NSCopying) }
+		// Files app visibility needs both keys. UISupportsDocumentBrowser is intentionally NOT written:
+		// it declares the app a document-browser app and can break apps that don't implement one.
+		if options.fileSharing {
+			infoDictionary.setObject(true, forKey: "UIFileSharingEnabled" as NSCopying)
+			infoDictionary.setObject(true, forKey: "LSSupportsOpeningDocumentsInPlace" as NSCopying)
+		}
 		if options.itunesFileSharing { infoDictionary.setObject(true, forKey: "UIFileSharingEnabled" as NSCopying) }
 		if options.proMotion { infoDictionary.setObject(true, forKey: "CADisableMinimumFrameDurationOnPhone" as NSCopying) }
 		if options.gameMode { infoDictionary.setObject(true, forKey: "GCSupportsGameMode" as NSCopying)}
