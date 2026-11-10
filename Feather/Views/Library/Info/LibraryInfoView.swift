@@ -12,6 +12,7 @@ import Zsign
 // MARK: - View
 struct LibraryInfoView: View {
 	var app: AppInfoPresentable
+	@State private var _sizeText: String?
 	
 	// MARK: Body
 	var body: some View {
@@ -35,6 +36,9 @@ struct LibraryInfoView: View {
 			}
 			.toolbar {
 				NBToolbarButton(role: .close)
+			}
+			.task {
+				await _loadSize()
 			}
 		}
 	}
@@ -61,6 +65,14 @@ extension LibraryInfoView {
 				_infoCell(.localized("Date Added"), desc: date.formatted())
 			}
 			
+			if let sourceName = _sourceName(for: app) {
+				_infoCell(.localized("Source"), desc: sourceName)
+			}
+			
+			if let sizeText = _sizeText {
+				_infoCell(.localized("Size"), desc: sizeText)
+			}
+			
 			if 
 				let name = app.name, 
 				let appDirectory = Storage.shared.getAppDirectory(for: app),
@@ -69,6 +81,32 @@ extension LibraryInfoView {
 				_infoCell(.localized("Minimum OS"), desc: appMinimumOS)
 			}
 		}
+	}
+	
+	private func _sourceName(for app: AppInfoPresentable) -> String? {
+		if let name = Storage.shared.sourceMetadata(for: app)?.sourceRepositoryName, !name.isEmpty {
+			return name
+		}
+		return app.source?.host
+	}
+	
+	private func _loadSize() async {
+		guard let directory = Storage.shared.getUuidDirectory(for: app) else { return }
+		let bytes = await Task.detached(priority: .utility) { () -> Int64 in
+			guard let enumerator = FileManager.default.enumerator(
+				at: directory,
+				includingPropertiesForKeys: [.totalFileAllocatedSizeKey, .isRegularFileKey]
+			) else { return 0 }
+			var total: Int64 = 0
+			for case let url as URL in enumerator {
+				let values = try? url.resourceValues(forKeys: [.totalFileAllocatedSizeKey, .isRegularFileKey])
+				if values?.isRegularFile == true {
+					total += Int64(values?.totalFileAllocatedSize ?? 0)
+				}
+			}
+			return total
+		}.value
+		_sizeText = ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
 	}
 	
 	@ViewBuilder
