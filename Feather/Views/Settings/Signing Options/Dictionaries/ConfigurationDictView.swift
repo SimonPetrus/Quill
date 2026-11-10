@@ -20,7 +20,12 @@ struct ConfigurationDictView: View {
 		NBList(title, type: .list) {
 			ForEach(dataDict.sorted(by: { $0.key < $1.key }), id: \.key) { key, value in
 				Section(key) {
-					Text(value).swipeActions(edge: .trailing) {
+					NavigationLink {
+						ConfigurationDictAddView(dataDict: $dataDict, editingKey: key)
+					} label: {
+						Text(value)
+					}
+					.swipeActions(edge: .trailing) {
 						_actions(key: key)
 					}
 				}

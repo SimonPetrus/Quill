@@ -21,15 +21,22 @@ struct ConfigurationDictAddView: View {
 	}
 	
 	@Binding var dataDict: [String: String]
+	var editingKey: String? = nil
 	
 	// MARK: Body
 	var body: some View {
-		NBList(.localized("New")) {
+		NBList(editingKey == nil ? .localized("New") : .localized("Edit")) {
 			Section {
 				TextField(.localized("Value"), text: $_newKey)
 				TextField(.localized("Replacement"), text: $_newValue)
 			}
 			.autocapitalization(.none)
+		}
+		.onAppear {
+			if let editingKey, _newKey.isEmpty, _newValue.isEmpty {
+				_newKey = editingKey
+				_newValue = dataDict[editingKey] ?? ""
+			}
 		}
 		.toolbar {
 			NBToolbarButton(
@@ -38,6 +45,9 @@ struct ConfigurationDictAddView: View {
 				placement: .confirmationAction,
 				isDisabled: saveButtonDisabled
 			) {
+				if let editingKey, editingKey != _newKey {
+					dataDict.removeValue(forKey: editingKey)
+				}
 				dataDict[_newKey] = _newValue
 				OptionsManager.shared.saveOptions()
 				dismiss()
