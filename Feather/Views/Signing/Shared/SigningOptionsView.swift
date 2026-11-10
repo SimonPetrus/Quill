@@ -137,9 +137,7 @@ struct SigningOptionsView: View {
 				temporaryValue: temporaryOptions?.removeWatchApp
 			)
 		} footer: {
-			Text(String.localized("Removing the provisioning file will exclude the mobileprovision file from being embedded inside of the application when signing, to help prevent any detection.") + "
-
-" + String.localized("Remove Watch App deletes the entire Watch folder, so the Apple Watch companion app is not installed."))
+			Text(String.localized("Removing the provisioning file will exclude the mobileprovision file from being embedded inside of the application when signing, to help prevent any detection.") + "\n\n" + String.localized("Remove Watch App deletes the entire Watch folder, so the Apple Watch companion app is not installed."))
 		}
 		
 		Section {
