@@ -18396,6 +18396,40 @@
           }
         }
       }
+    },
+    "Remove Watch App" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove Watch App"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch Uygulamasını Kaldır"
+          }
+        }
+      }
+    },
+    "Remove Watch App deletes the entire Watch folder, so the Apple Watch companion app is not installed." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove Watch App deletes the entire Watch folder, so the Apple Watch companion app is not installed."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch Uygulamasını Kaldır seçeneği Watch klasörünün tamamını siler; Apple Watch yardımcı uygulaması kurulmaz."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

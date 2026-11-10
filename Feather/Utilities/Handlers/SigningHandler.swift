@@ -86,7 +86,11 @@ final class SigningHandler: NSObject {
 		}
 		
 		try await _removePresetFiles(for: movedAppPath)
-		try await _removeWatchIfNeeded(for: movedAppPath)
+		if _options.removeWatchApp {
+			try _fileManager.removeFileIfNeeded(at: movedAppPath.appendingPathComponent("Watch"))
+		} else {
+			try await _removeWatchIfNeeded(for: movedAppPath)
+		}
 		
 		if _options.experiment_supportLiquidGlass {
 			try await _locateMachosAndChangeToSDK26(for: movedAppPath)
