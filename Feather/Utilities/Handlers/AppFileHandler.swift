@@ -168,6 +168,11 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 		// Also drop the downloaded IPA we used in place, so a failed/finished import leaves no multi-GB leftovers.
 		if _ownsSource {
 			try? _fileManager.removeItem(at: _ipa)
+			// Each download lives in its own QuillDownloads/<UUID>/ folder; remove it too.
+			let parent = _ipa.deletingLastPathComponent()
+			if parent.deletingLastPathComponent().lastPathComponent == "QuillDownloads" {
+				try? _fileManager.removeItem(at: parent)
+			}
 		}
 	}
 }
