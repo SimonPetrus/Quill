@@ -22,6 +22,15 @@ struct AppUpdate: Identifiable, Equatable {
 	let sourceProvenance: SourceAppProvenance
 }
 
+struct VersionChoiceContext: Identifiable {
+	let id = UUID()
+	let sourceURL: URL
+	let repository: ASRepository
+	let app: ASRepository.App
+	let versions: [ASRepository.App.Version]
+	let installedVersion: String?
+}
+
 @MainActor
 final class UpdateManager: ObservableObject {
 	static let shared = UpdateManager()
@@ -39,6 +48,45 @@ final class UpdateManager: ObservableObject {
 	func update(for app: AppInfoPresentable) -> AppUpdate? {
 		guard let uuid = app.uuid else { return nil }
 		return updates[uuid]
+	}
+	
+	/// Source link of a library app (stored metadata, else the app's own source URL).
+	private func _sourceLink(for app: AppInfoPresentable) -> (identifier: String, version: String?, url: URL)? {
+		if
+			let uuid = app.uuid,
+			let metadata = Storage.shared.sourceMetadata(for: uuid),
+			let identifier = metadata.sourceAppIdentifier,
+			let url = metadata.sourceRepositoryURL
+		{
+			return (identifier, metadata.sourceAppVersion ?? app.version, url)
+		}
+		if let url = app.source, let identifier = app.identifier {
+			return (identifier, app.version, url)
+		}
+		return nil
+	}
+	
+	/// True when the app was obtained from a source, so versions can be chosen.
+	func hasSourceLink(for app: AppInfoPresentable) -> Bool {
+		_sourceLink(for: app) != nil
+	}
+	
+	/// Fetches the app's source and returns every downloadable version it lists.
+	func versionChoices(for app: AppInfoPresentable) async -> VersionChoiceContext? {
+		guard let link = _sourceLink(for: app) else { return nil }
+		guard let repository = await _fetchRepository(from: link.url) else { return nil }
+		guard let remoteApp = repository.apps.first(where: { $0.id == link.identifier }) else { return nil }
+		
+		let versions = (remoteApp.versions ?? []).filter { $0.downloadURL != nil }
+		guard !versions.isEmpty else { return nil }
+		
+		return VersionChoiceContext(
+			sourceURL: link.url,
+			repository: repository,
+			app: remoteApp,
+			versions: versions,
+			installedVersion: link.version
+		)
 	}
 	
 	func checkForUpdates(

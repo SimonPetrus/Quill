@@ -16,6 +16,8 @@ struct LibraryCellView: View {
 	@ObservedObject private var updateManager = UpdateManager.shared
 	@State private var _signedUpdateConfirmation: AppUpdate?
 	@State private var _isSignedUpdateConfirmationPresented = false
+	@State private var _versionChoices: VersionChoiceContext?
+	@State private var _isVersionsUnavailablePresented = false
 
 	var certInfo: Date.ExpirationInfo? {
 		Storage.shared.getCertificate(from: app)?.expiration?.expirationInfo()
@@ -102,6 +104,29 @@ struct LibraryCellView: View {
 				_actions(for: app)
 			}
 		}
+		.sheet(item: $_versionChoices) { context in
+			NavigationStack {
+				VersionHistoryView(
+					sourceURL: context.sourceURL,
+					source: context.repository,
+					app: context.app,
+					versions: context.versions,
+					installedVersion: context.installedVersion ?? ""
+				)
+				.navigationTitle(.localized("Choose Version"))
+				.navigationBarTitleDisplayMode(.inline)
+				.toolbar {
+					ToolbarItem(placement: .cancellationAction) {
+						Button(.localized("Cancel")) { _versionChoices = nil }
+					}
+				}
+			}
+		}
+		.alert(.localized("Versions Unavailable"), isPresented: $_isVersionsUnavailablePresented) {
+			Button(.localized("OK"), role: .cancel) {}
+		} message: {
+			Text(.localized("Could not load the version list from this app's source."))
+		}
 		.confirmationDialog(
 			.localized("Update Available"),
 			isPresented: $_isSignedUpdateConfirmationPresented,
@@ -178,6 +203,18 @@ extension LibraryCellView {
 					_isSignedUpdateConfirmationPresented = true
 				} else {
 					_startUpdateDownload(update)
+				}
+			}
+		}
+		
+		if updateManager.hasSourceLink(for: app) {
+			Button(.localized("Choose Version"), systemImage: "clock.arrow.circlepath") {
+				Task {
+					if let context = await updateManager.versionChoices(for: app) {
+						_versionChoices = context
+					} else {
+						_isVersionsUnavailablePresented = true
+					}
 				}
 			}
 		}
