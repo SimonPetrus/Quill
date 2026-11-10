@@ -13,8 +13,10 @@ extension AppInfoPresentable {
 	/// True when this library item is Quill itself (same bundle ID as the running app).
 	/// Determined at runtime so no Core Data schema change is needed.
 	var isQuillItself: Bool {
-		guard let identifier, let own = Bundle.main.bundleIdentifier else { return false }
-		return identifier == own
+		guard let identifier, !identifier.isEmpty, let own = Bundle.main.bundleIdentifier else { return false }
+		// Tools like SideStore/AltStore can rewrite the installed bundle ID (e.g. "app.quill.sign.TEAMID"),
+		// so a library item whose ID is a prefix of the running one is Quill too.
+		return identifier == own || own.hasPrefix(identifier + ".")
 	}
 }
 
@@ -46,21 +48,39 @@ final class SelfUpdateManager: ObservableObject {
 	
 	/// Numeric, component-wise comparison ("v" prefix ignored; missing components count as 0).
 	/// Returns a negative value when `a < b`, 0 when equal, positive when `a > b`.
+	/// Tags that don't start with a digit ("Quill-1.2") use the first digit run onward; a pre-release
+	/// suffix ("1.2-beta") sorts below the stable release with the same numbers.
 	nonisolated static func compareVersions(_ a: String, _ b: String) -> Int {
-		func parts(_ s: String) -> [Int] {
-			var t = s.trimmingCharacters(in: .whitespacesAndNewlines)
-			if t.lowercased().hasPrefix("v") { t.removeFirst() }
-			return t.split(separator: ".").map { comp in
+		func parse(_ s: String) -> (nums: [Int], pre: String?) {
+			let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
+			guard let start = t.firstIndex(where: { $0.isNumber }) else { return ([0], nil) }
+			let rest = t[start...]
+			var numeric = rest
+			var pre: String? = nil
+			if let dash = rest.firstIndex(where: { $0 == "-" || $0 == "+" }) {
+				numeric = rest[..<dash]
+				if rest[dash] == "-" {
+					let suffix = String(rest[rest.index(after: dash)...])
+					pre = suffix.isEmpty ? nil : suffix.lowercased()
+				}
+			}
+			let nums = numeric.split(separator: ".").map { comp in
 				Int(comp.prefix(while: { $0.isNumber })) ?? 0
 			}
+			return (nums, pre)
 		}
-		let x = parts(a), y = parts(b)
-		for i in 0..<max(x.count, y.count) {
-			let l = i < x.count ? x[i] : 0
-			let r = i < y.count ? y[i] : 0
+		let x = parse(a), y = parse(b)
+		for i in 0..<max(x.nums.count, y.nums.count) {
+			let l = i < x.nums.count ? x.nums[i] : 0
+			let r = i < y.nums.count ? y.nums[i] : 0
 			if l != r { return l < r ? -1 : 1 }
 		}
-		return 0
+		switch (x.pre, y.pre) {
+		case (nil, nil): return 0
+		case (nil, _): return 1
+		case (_, nil): return -1
+		case let (p?, q?): return p == q ? 0 : (p < q ? -1 : 1)
+		}
 	}
 	
 	// MARK: Check
@@ -130,7 +150,8 @@ final class SelfUpdateManager: ObservableObject {
 		let latest = (app["versions"] as? [[String: Any]])?.first
 		guard let version = (latest?["version"] as? String) ?? (app["version"] as? String) else { return nil }
 		
-		let candidates = [latest?["downloadURL"] as? String, app["downloadURL"] as? String, json["website"] as? String]
+		// Prefer the source's page, then the direct download.
+		let candidates = [json["website"] as? String, latest?["downloadURL"] as? String, app["downloadURL"] as? String]
 		guard
 			let link = candidates.compactMap({ $0 }).compactMap({ URL(string: $0) }).first(where: {
 				["http", "https"].contains($0.scheme?.lowercased() ?? "")
@@ -141,7 +162,11 @@ final class SelfUpdateManager: ObservableObject {
 	
 	// MARK: Launch check
 	
+	/// Result of a launch check that still has to be shown (no presenter yet, or another alert was up).
+	private var _pendingAlert: (version: String, url: URL)?
+	
 	/// At most once a day, silent unless a newer version exists. Only runs when enabled and a source is set.
+	/// The day only counts once a check actually produced a result.
 	func autoCheckIfNeeded() {
 		let defaults = UserDefaults.standard
 		guard
@@ -151,21 +176,44 @@ final class SelfUpdateManager: ObservableObject {
 		
 		let last = defaults.object(forKey: Self._lastAutoCheckKey) as? Date
 		if let last, Date().timeIntervalSince(last) < 24 * 60 * 60 { return }
-		defaults.set(Date(), forKey: Self._lastAutoCheckKey)
 		
 		Task {
 			await check()
-			guard case .available(let version, let url) = status else { return }
-			UIAlertController.showAlert(
-				title: .localized("Update Available"),
-				message: .localized("Quill %@ is available.", arguments: version),
-				actions: [
-					UIAlertAction(title: .localized("Open"), style: .default) { _ in
-						UIApplication.shared.open(url)
-					},
-					UIAlertAction(title: .localized("Cancel"), style: .cancel)
-				]
-			)
+			switch status {
+			case .available(let version, let url):
+				defaults.set(Date(), forKey: Self._lastAutoCheckKey)
+				_pendingAlert = (version, url)
+				presentPendingIfPossible()
+			case .upToDate:
+				defaults.set(Date(), forKey: Self._lastAutoCheckKey)
+			default:
+				break
+			}
 		}
+	}
+	
+	/// Shows the stored update alert once a presenter exists and nothing else (startup notice, another
+	/// alert) is in the way; otherwise it stays pending for the next time the app becomes active.
+	func presentPendingIfPossible() {
+		guard
+			let pending = _pendingAlert,
+			Storage.startupNotice == nil,
+			let presenter = UIApplication.topViewController(),
+			presenter.presentedViewController == nil,
+			!(presenter is UIAlertController)
+		else { return }
+		_pendingAlert = nil
+		
+		UIAlertController.showAlert(
+			presenter,
+			title: .localized("Update Available"),
+			message: .localized("Quill %@ is available.", arguments: pending.version),
+			actions: [
+				UIAlertAction(title: .localized("Open"), style: .default) { _ in
+					UIApplication.shared.open(pending.url)
+				},
+				UIAlertAction(title: .localized("Cancel"), style: .cancel)
+			]
+		)
 	}
 }
