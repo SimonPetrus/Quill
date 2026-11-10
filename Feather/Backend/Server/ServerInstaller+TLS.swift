@@ -38,7 +38,12 @@ extension ServerInstaller {
 		
 		if getServerMethod() != 1 {
 			// Key log only feeds the in-memory TLS sniffer of the relay, it does not change the handshake.
-			let keyLog: NIOSSLKeyLogCallback? = behindRelay ? { line in TLSKeyLogStore.shared.add(line) } : nil
+			var keyLog: NIOSSLKeyLogCallback?
+			if behindRelay {
+				keyLog = { (line: ByteBuffer) in
+					TLSKeyLogStore.shared.add(line)
+				}
+			}
 			if let tls = try Self.tls(keyLog: keyLog) {
 				app.http.server.configuration.tlsConfiguration = tls
 			}
