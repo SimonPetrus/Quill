@@ -1,6 +1,23 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Replaces any existing keychain-access-groups value." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replaces any existing keychain-access-groups value."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mevcut keychain-access-groups değerinin yerine geçer."
+          }
+        }
+      }
+    },
     "The selected provisioning profile is not a wildcard profile, so the keychain cannot be isolated." : {
       "extractionState" : "manual",
       "localizations" : {

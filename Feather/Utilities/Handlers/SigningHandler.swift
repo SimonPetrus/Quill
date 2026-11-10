@@ -632,11 +632,15 @@ extension SigningHandler {
 		
 		// start from the entitlements zsign would use anyway: a custom/merged file, or the profile's
 		var dictionary: [String: Any]
-		if
-			let file = options.appEntitlementsFile,
-			let data = try? Data(contentsOf: file),
-			let existing = (try? PropertyListSerialization.propertyList(from: data, options: [], format: nil)) as? [String: Any]
-		{
+		if let file = options.appEntitlementsFile {
+			// never replace a user's entitlements file we cannot read: leave it untouched
+			guard
+				let data = try? Data(contentsOf: file),
+				let existing = (try? PropertyListSerialization.propertyList(from: data, options: [], format: nil)) as? [String: Any]
+			else {
+				Logger.misc.warning("Isolate keychain skipped: could not read or parse the custom entitlements file")
+				return
+			}
 			dictionary = existing
 		} else {
 			dictionary = (profile.Entitlements ?? [:]).mapValues { $0.value }

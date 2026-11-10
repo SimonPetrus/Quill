@@ -206,7 +206,10 @@ struct SigningOptionsView: View {
 			).disabled(!isWildcardProfile)
 		} footer: {
 			if isWildcardProfile {
-				Text(.localized("Gives the app its own keychain group so other apps signed with the same profile cannot read its keychain items. Only works with wildcard provisioning profiles."))
+				VStack(alignment: .leading, spacing: 6) {
+					Text(.localized("Gives the app its own keychain group so other apps signed with the same profile cannot read its keychain items. Only works with wildcard provisioning profiles."))
+					Text(.localized("Replaces any existing keychain-access-groups value."))
+				}
 			} else {
 				Text(.localized("The selected provisioning profile is not a wildcard profile, so the keychain cannot be isolated."))
 			}
