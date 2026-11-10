@@ -668,6 +668,108 @@
         }
       }
     },
+    "Show Log" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Log"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Günlüğü Göster"
+          }
+        }
+      }
+    },
+    "Install Log" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install Log"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kurulum Günlüğü"
+          }
+        }
+      }
+    },
+    "Last Install Log" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last Install Log"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Son Kurulum Günlüğü"
+          }
+        }
+      }
+    },
+    "No log entries yet." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No log entries yet."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Henüz günlük kaydı yok."
+          }
+        }
+      }
+    },
+    "Restrict CA to localhost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restrict CA to localhost"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CA'da localhost kısıtı"
+          }
+        }
+      }
+    },
+    "After changing this, install and trust the CA again (for testing)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After changing this, install and trust the CA again (for testing)."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Değiştirince CA'yı yeniden yükleyip güvenmen gerekir (deneme amaçlı)."
+          }
+        }
+      }
+    },
     "Connected" : {
       "extractionState" : "manual",
       "localizations" : {

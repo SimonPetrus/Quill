@@ -23,6 +23,15 @@ extension ServerInstaller {
 	/// Extra SAN kept from the original PR.
 	static let serverHostname = "quill.localhost"
 
+	/// UserDefaults key: whether the root CA carries the critical localhost / 127.0.0.1 Name Constraints.
+	static let nameConstraintsKey = "Quill.localCA.nameConstraints"
+
+	/// Default true (current behaviour). Turning it off is a diagnostic: some installer
+	/// daemons might reject a user trusted root with critical Name Constraints.
+	static var usesNameConstraints: Bool {
+		UserDefaults.standard.object(forKey: nameConstraintsKey) as? Bool ?? true
+	}
+
 	private static let _caLock = NSLock()
 	private static let _renewWindow: TimeInterval = 60 * 60 * 24 * 30
 	private static let _clockSkew: TimeInterval = 60 * 60
@@ -83,6 +92,21 @@ extension ServerInstaller {
 
 		// No anchors set: evaluated against system + user installed/trusted roots.
 		return SecTrustEvaluateWithError(trust, nil)
+	}
+
+	/// One line for the install log: which root is in use (fingerprint, Name Constraints, validity).
+	static func localCADescription() -> String {
+		_caLock.lock()
+		defer { _caLock.unlock() }
+
+		guard let material = try? _ensureMaterial() else {
+			return "Local CA: could not be loaded"
+		}
+
+		let fingerprint = SHA256.hash(data: material.root.der).prefix(8).map { String(format: "%02X", $0) }.joined(separator: ":")
+		let constrained = ((try? material.root.certificate.extensions.nameConstraints) ?? nil) != nil
+		return "Local CA: SHA-256 \(fingerprint)…, name constraints \(constrained ? "ON" : "OFF"), "
+			+ "valid until \(material.root.certificate.notValidAfter), server cert until \(material.server.notValidAfter)"
 	}
 
 	// MARK: Material
@@ -154,7 +178,8 @@ extension ServerInstaller {
 				key.publicKey.isValidSignature(certificate.signature, for: certificate),
 				certificate.notValidBefore <= now.addingTimeInterval(_clockSkew),
 				certificate.notValidAfter > now.addingTimeInterval(_renewWindow),
-				hasNameConstraints
+				// Setting changed: the stored root no longer matches, a new one is generated.
+				hasNameConstraints == usesNameConstraints
 			{
 				return RootMaterialModel(privateKey: key, certificate: certificate, der: der)
 			}
@@ -192,6 +217,7 @@ extension ServerInstaller {
 			permittedIPRanges: [ASN1OctetString(contentBytes: [127, 0, 0, 1, 255, 255, 255, 255][...])]
 		)
 
+		let withNameConstraints = usesNameConstraints
 		let extensions = try X509.Certificate.Extensions {
 			Critical(
 				BasicConstraints.isCertificateAuthority(maxPathLength: 0)
@@ -199,7 +225,9 @@ extension ServerInstaller {
 			Critical(
 				KeyUsage(keyCertSign: true, cRLSign: true)
 			)
-			Critical(nameConstraints)
+			if withNameConstraints {
+				Critical(nameConstraints)
+			}
 			SubjectKeyIdentifier(hash: key.publicKey)
 		}
 

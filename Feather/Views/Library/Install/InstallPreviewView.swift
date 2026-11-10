@@ -19,6 +19,7 @@ struct InstallPreviewView: View {
 	@AppStorage("Quill.installationMethod") private var _installationMethod: Int = 0
 	@AppStorage("Quill.serverMethod") private var _serverMethod: Int = 0
 	@State private var _isWebviewPresenting = false
+	@State private var _isLogPresenting = false
 	@State private var progressTask: Task<Void, Never>?
 	
 	var app: AppInfoPresentable
@@ -54,6 +55,7 @@ struct InstallPreviewView: View {
 			InstallProgressView(app: app, viewModel: viewModel)
 			_status()
 			_button()
+			_logButton()
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
 		.background(Color(UIColor.secondarySystemBackground))
@@ -66,7 +68,11 @@ struct InstallPreviewView: View {
 			if _installationMethod == 0 {
 				if case .ready = newStatus {
 					if _serverMethod == 0 {
-						UIApplication.shared.open(URL(string: installer.iTunesLink)!)
+						let link = installer.iTunesLink
+						InstallServerLog.shared.add("Opening \(link)")
+						UIApplication.shared.open(URL(string: link)!) { opened in
+							InstallServerLog.shared.add("itms-services link \(opened ? "opened" : "could NOT be opened")")
+						}
 					} else if _serverMethod == 1 {
 						_isWebviewPresenting = true
 					}
@@ -177,6 +183,24 @@ struct InstallPreviewView: View {
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
 		.animation(.easeInOut(duration: 0.3), value: viewModel.isCompleted)
+	}
+	
+	/// Fully Local diagnostics: shows the install server log (connections, TLS, requests).
+	@ViewBuilder
+	private func _logButton() -> some View {
+		if !isSharing, _installationMethod == 0, _serverMethod == 0 {
+			Button {
+				_isLogPresenting = true
+			} label: {
+				Label(.localized("Show Log"), systemImage: "doc.text.magnifyingglass")
+					.font(.footnote)
+			}
+			.padding()
+			.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+			.sheet(isPresented: $_isLogPresenting) {
+				InstallLogSheetView()
+			}
+		}
 	}
 	
 	/// Fully Local + server install: warn first if the local CA is not trusted yet.

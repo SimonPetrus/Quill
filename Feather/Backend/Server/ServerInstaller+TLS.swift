@@ -11,6 +11,7 @@ import Foundation
 import NIOSSL
 import NIOTLS
 import Vapor
+import Logging
 import SystemConfiguration.CaptiveNetwork
 
 // MARK: - Class extension: TLS/Setup
@@ -22,20 +23,35 @@ extension ServerInstaller {
 		return env
 	}()
 	
-	func setupApp(port: Int) throws -> Application {
+	/// - Parameter behindRelay: Fully Local diagnostics: Vapor listens on a random
+	///   loopback port and `InstallDiagnosticProxy` relays the public `port` to it.
+	func setupApp(port: Int, behindRelay: Bool = false) throws -> Application {
 		let app = Application(Self.env)
 		app.threadPool = .init(numberOfThreads: 1)
 		
+		// Install server only (not global): Vapor's own messages also go to the install log.
+		var logger = Logging.Logger(label: "quill.install-server") { _ in InstallServerLogHandler() }
+		logger.logLevel = .debug
+		app.logger = logger
+		app.http.server.configuration.logger = logger
+		app.middleware.use(InstallServerLogMiddleware(), at: .beginning)
+		
 		if getServerMethod() != 1 {
-			if let tls = try Self.tls() {
+			// Key log only feeds the in-memory TLS sniffer of the relay, it does not change the handshake.
+			let keyLog: NIOSSLKeyLogCallback? = behindRelay ? { line in TLSKeyLogStore.shared.add(line) } : nil
+			if let tls = try Self.tls(keyLog: keyLog) {
 				app.http.server.configuration.tlsConfiguration = tls
 			}
 		}
 		
 		app.http.server.configuration.hostname = sni()
 		app.http.server.configuration.tcpNoDelay = true
-		app.http.server.configuration.address = .hostname("0.0.0.0", port: port)
-		app.http.server.configuration.port = port
+		if behindRelay {
+			app.http.server.configuration.address = .hostname("127.0.0.1", port: 0)
+		} else {
+			app.http.server.configuration.address = .hostname("0.0.0.0", port: port)
+			app.http.server.configuration.port = port
+		}
 		app.routes.defaultMaxBodySize = "128mb"
 		app.routes.caseInsensitive = false
 		
@@ -58,10 +74,10 @@ extension ServerInstaller {
 		}
 	}
 	
-	static func tls() throws -> TLSConfiguration? {
+	static func tls(keyLog: NIOSSLKeyLogCallback? = nil) throws -> TLSConfiguration? {
 		let (crt, pem) = try Self.createServerCert()
 		
-		return try TLSConfiguration.makeServerConfiguration(
+		var configuration = try TLSConfiguration.makeServerConfiguration(
 			certificateChain: NIOSSLCertificate.fromPEMFile(crt.path).map {
 				NIOSSLCertificateSource.certificate($0)
 			},
@@ -69,6 +85,8 @@ extension ServerInstaller {
 				try NIOSSLPrivateKey(file: pem.path, format: .pem)
 			)
 		)
+		configuration.keyLogCallback = keyLog
+		return configuration
 	}
 }
 

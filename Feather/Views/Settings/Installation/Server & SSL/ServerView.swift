@@ -16,6 +16,7 @@ struct ServerView: View {
 	
 	@AppStorage("Quill.ipFix") private var _ipFix: Bool = false
 	@AppStorage("Quill.serverMethod") private var _serverMethod: Int = 0
+	@AppStorage(ServerInstaller.nameConstraintsKey) private var _nameConstraints: Bool = true
 	private let _serverMethods: [String] = [.localized("Fully Local"), .localized("Semi Local")]
 	
 	// MARK: Body
@@ -77,6 +78,24 @@ struct ServerView: View {
 				} footer: {
 					Text(.localized("1) Install the profile: Settings → General → VPN & Device Management.\n2) Settings → General → About → Certificate Trust Settings → enable full trust for \"Quill Local Root CA\".\nThe profile must open in Safari. If another browser is your default, copy the address to Safari."))
 				}
+
+				Section {
+					NavigationLink {
+						InstallLogView()
+					} label: {
+						Label(.localized("Last Install Log"), systemImage: "doc.text.magnifyingglass")
+					}
+
+					Toggle(
+						.localized("Restrict CA to localhost"),
+						systemImage: "scope",
+						isOn: $_nameConstraints
+					)
+				} header: {
+					Text(.localized("Advanced"))
+				} footer: {
+					Text(.localized("After changing this, install and trust the CA again (for testing)."))
+				}
 			}
 		}
 		.onAppear(perform: _refreshTrust)
@@ -84,6 +103,23 @@ struct ServerView: View {
 			if phase == .active { _refreshTrust() }
 		}
 		.onChange(of: _serverMethod) { _ in _refreshTrust() }
+		.onChange(of: _nameConstraints) { _ in _regenerateCA() }
+	}
+
+	/// The stored root no longer matches the setting: a new root (and server certificate) is created.
+	private func _regenerateCA() {
+		_isTrusted = nil
+		Task.detached(priority: .userInitiated) {
+			do {
+				try ServerInstaller.createServerCert()
+			} catch {
+				await MainActor.run {
+					UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
+				}
+			}
+			let trusted = ServerInstaller.isLocalCATrusted()
+			await MainActor.run { _isTrusted = trusted }
+		}
 	}
 	
 	private func _testConnection() {

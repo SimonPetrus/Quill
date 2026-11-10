@@ -25,25 +25,81 @@ class ServerInstaller: Identifiable, ObservableObject {
 	var app: AppInfoPresentable
 	@ObservedObject var viewModel: InstallerStatusViewModel
 	private var _server: Application?
+	/// Fully Local only: transparent TCP relay that logs connections and the TLS handshake.
+	private var _relay: InstallDiagnosticProxy?
+	private var _observers: [NSObjectProtocol] = []
 
 	init(app: AppInfoPresentable, viewModel: InstallerStatusViewModel) throws {
 		self.app = app
 		self.viewModel = viewModel
+		_beginLog()
 		try _setup()
 		try _configureRoutes()
 		try _server?.server.start()
 		_needsShutdown = true
+		_startRelayIfNeeded()
 	}
 	
 	deinit {
 		_shutdownServer()
+		_observers.forEach { NotificationCenter.default.removeObserver($0) }
+	}
+	
+	private var _isFullyLocal: Bool {
+		getServerMethod() != 1
 	}
 	
 	private func _setup() throws {
 		do {
-			self._server = try setupApp(port: port)
+			self._server = try setupApp(port: port, behindRelay: _isFullyLocal)
 		} catch {
 			Logger.misc.error("Server setup failed: \(error.localizedDescription)")
+			InstallServerLog.shared.add("Server setup failed: \(String(describing: error))")
+			DispatchQueue.main.async {
+				self.viewModel.status = .broken(error)
+			}
+		}
+	}
+	
+	// MARK: Diagnostics
+	
+	private func _beginLog() {
+		let log = InstallServerLog.shared
+		log.reset()
+		log.add("Install server: \(_isFullyLocal ? "Fully Local (HTTPS)" : "Semi Local (HTTP)"), port \(port), host \(sni())")
+		log.add("iOS \(UIDevice.current.systemVersion), app \(app.identifier ?? "?") \(app.version ?? "")")
+		if _isFullyLocal {
+			log.add(Self.localCADescription())
+		}
+		
+		// The installer daemons can only connect while the app (and its server) is alive.
+		let center = NotificationCenter.default
+		let events: [(Notification.Name, String)] = [
+			(UIApplication.didEnterBackgroundNotification, "app entered background"),
+			(UIApplication.willEnterForegroundNotification, "app will enter foreground"),
+			(UIApplication.willResignActiveNotification, "app will resign active"),
+			(UIApplication.didBecomeActiveNotification, "app became active")
+		]
+		_observers = events.map { name, text in
+			center.addObserver(forName: name, object: nil, queue: nil) { _ in
+				InstallServerLog.shared.add(text)
+			}
+		}
+	}
+	
+	private func _startRelayIfNeeded() {
+		guard _isFullyLocal, let server = _server else { return }
+		
+		do {
+			guard let internalPort = server.http.server.shared.localAddress?.port else {
+				throw Abort(.internalServerError, reason: "internal server port unknown")
+			}
+			let relay = InstallDiagnosticProxy(group: server.eventLoopGroup)
+			try relay.start(port: port, targetPort: internalPort)
+			_relay = relay
+		} catch {
+			Logger.misc.error("Install relay failed: \(error.localizedDescription)")
+			InstallServerLog.shared.add("Relay could not listen on port \(port): \(String(describing: error))")
 			DispatchQueue.main.async {
 				self.viewModel.status = .broken(error)
 			}
@@ -99,11 +155,15 @@ class ServerInstaller: Identifiable, ObservableObject {
 		guard _needsShutdown else { return }
 		
 		_needsShutdown = false
+		_relay?.stop()
+		_relay = nil
 		_server?.server.shutdown()
 		_server?.shutdown()
+		InstallServerLog.shared.add("Install server stopped")
 	}
 	
 	private func _updateStatus(_ newStatus: InstallerStatusViewModel.InstallerStatus) {
+		InstallServerLog.shared.add("Status: \(String(describing: newStatus))")
 		DispatchQueue.main.async {
 			self.viewModel.status = newStatus
 		}
