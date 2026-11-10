@@ -54,7 +54,7 @@ jobs:
       - name: Cache Swift packages
         uses: actions/cache@v4
         with:
-          path: ${{ runner.temp }}/Feather/iphoneos/SourcePackages
+          path: ${{ runner.temp }}/Quill/iphoneos/SourcePackages
           key: spm-${{ runner.os }}-${{ hashFiles('Feather.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: spm-${{ runner.os }}-
 
@@ -67,7 +67,7 @@ jobs:
             echo "Resolve attempt $i"
             if xcodebuild -resolvePackageDependencies \
                  -project Feather.xcodeproj -scheme Feather \
-                 -derivedDataPath "$RUNNER_TEMP/Feather/iphoneos" \
+                 -derivedDataPath "$RUNNER_TEMP/Quill/iphoneos" \
                  -skipPackagePluginValidation; then
               exit 0
             fi

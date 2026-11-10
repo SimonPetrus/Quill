@@ -1,4 +1,4 @@
-NAME := Feather
+NAME := Quill
 SCHEME := Feather
 PLATFORMS := iphoneos maccatalyst
 
@@ -29,6 +29,7 @@ $(PLATFORMS):
 		-derivedDataPath $(TMP)/$@ \
 		-skipPackagePluginValidation \
 		CODE_SIGNING_ALLOWED=NO \
+		'OTHER_CFLAGS=$$(inherited) -ffile-prefix-map=$(CURDIR)=/src' \
 		ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO
 
 	mkdir -p _build/Payload

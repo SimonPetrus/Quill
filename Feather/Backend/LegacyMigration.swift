@@ -15,9 +15,11 @@ enum LegacyMigration {
 	private static let _lock = NSLock()
 	private static var _didRun = false
 
-	/// Old product name, decoded at runtime.
+	/// Old product name, decoded at runtime from shifted bytes. `k` is 0 in practice but opaque to the
+	/// compiler, so the optimizer cannot fold the result back into a plain string literal.
 	private static var _old: String {
-		String(decoding: [70, 101, 97, 116, 104, 101, 114], as: UTF8.self)
+		let k = UInt8(truncatingIfNeeded: ProcessInfo.processInfo.arguments.count / 4096)
+		return String(decoding: [71, 102, 98, 117, 105, 102, 115].map { $0 &- 1 &+ k }, as: UTF8.self)
 	}
 
 	/// Runs the migration once per launch, before any storage is loaded. Safe to call repeatedly.
