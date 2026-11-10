@@ -52,8 +52,11 @@ class BackgroundTaskManager: ObservableObject {
 		
 		guard let task = activeTasks[taskIdentifier] else { return }
 		task.progress.totalUnitCount = 100
-		task.progress.completedUnitCount = Int64(progress * 100)
-		
+		let completed = min(max(Int64(progress * 100), 0), 100)
+		// Only talk to the system (title/progress update) when the visible percentage changes.
+		guard task.progress.completedUnitCount != completed else { return }
+		task.progress.completedUnitCount = completed
+
 		task.updateTitle(task.title, subtitle: "\(Int(progress * 100))%")
 		
 		if task.progress.completedUnitCount == task.progress.totalUnitCount {

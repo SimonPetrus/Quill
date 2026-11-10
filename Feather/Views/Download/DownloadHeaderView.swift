@@ -46,7 +46,8 @@ struct DownloadItemView: View {
 	@State private var bytesDownloaded: Int64 = 0
 	@State private var totalBytes: Int64 = 0
 	@State private var unpackageProgress: Double = 0
-	
+	@State private var bytesPerSecond: Double = 0
+
 	var body: some View {
 		VStack(alignment: .leading, spacing: 4) {
 			Text(download.fileName)
@@ -59,6 +60,10 @@ struct DownloadItemView: View {
 			HStack {
 				Text(verbatim: "\(Int(overallProgress * 100))%")
 					.contentTransition(.numericText())
+				if showsSpeed {
+					Text(verbatim: speedText)
+						.monospacedDigit()
+				}
 				Spacer()
 				if totalBytes > 0 {
 					Text(verbatim: "\($bytesDownloaded.wrappedValue.formattedByteCount) / \(totalBytes.formattedByteCount)")
@@ -73,6 +78,16 @@ struct DownloadItemView: View {
 		.onReceive(download.$bytesDownloaded) { self.bytesDownloaded = $0 }
 		.onReceive(download.$totalBytes) { self.totalBytes = $0 }
 		.onReceive(download.$unpackageProgress) { self.unpackageProgress = $0 }
+		.onReceive(download.$bytesPerSecond) { self.bytesPerSecond = $0 }
+	}
+
+	/// Live transfer speed, only while bytes are still arriving.
+	private var showsSpeed: Bool {
+		!download.onlyArchiving && bytesPerSecond > 0 && progress < 1
+	}
+
+	private var speedText: String {
+		.localized("%@/s", arguments: Int64(bytesPerSecond).formattedByteCount)
 	}
 	
 	private var overallProgress: Double {
