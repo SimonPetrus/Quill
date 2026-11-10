@@ -47,7 +47,7 @@
 
 ### Derleme
 - Yerel (yalnızca macOS + Xcode 26.x): `git submodule update --init && make iphoneos`
-  → `packages/Feather.ipa` (imzasız/ad-hoc; `CODE_SIGNING_ALLOWED=NO`).
+  → `packages/Quill.ipa` (imzasız/ad-hoc; `CODE_SIGNING_ALLOWED=NO`).
   `make` ayrıca `maccatalyst` dener; proje Catalyst desteklemediği için **sadece `make iphoneos`** kullan.
 - CI: `.github/workflows/build.yml` — her push/PR/manuel çalıştırmada macOS runner'da
   Xcode 26.3 ile `make iphoneos`.
@@ -55,9 +55,9 @@
     `IDESwiftPackageCore` içinde `NSMutableArray insertObjects` istisnasıyla çökmüştü).
   - Manuel çalıştırmada `xcode` girdisiyle sürüm seçilebilir (örn. `26.6.0`).
   - **IPA alma:** hesabın Actions artifact kotası dolu olduğu için IPA ayrıca
-    `ipa-builds` branch'ine tek commit olarak force-push ediliyor (`Feather.ipa` + `BUILD_INFO.txt`
+    `ipa-builds` branch'ine tek commit olarak force-push ediliyor (`Quill.ipa` + `BUILD_INFO.txt`
     içinde commit ve sha256). Almak için:
-    `git fetch origin ipa-builds && git show FETCH_HEAD:Feather.ipa > Feather.ipa`
+    `git fetch origin ipa-builds && git show FETCH_HEAD:Quill.ipa > Quill.ipa`
   - Artifact yükleme `continue-on-error` — kota açılınca artifact olarak da gelir.
 - Upstream'den gelen `release.yml` (tag'de draft release) ve `update_repo.yml` (release yayınlanınca
   `main`'e push) dokunulmadı; tag/release oluşturulmadıkça çalışmazlar.

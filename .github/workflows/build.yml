@@ -1,6 +1,6 @@
 name: Build (unsigned IPA)
 
-# Fork CI: builds an unsigned (ad-hoc, no team) Feather.ipa on every push / PR,
+# Fork CI: builds an unsigned (ad-hoc, no team) Quill.ipa on every push / PR,
 # uploads it as a workflow artifact and (for pushes / manual runs) force-pushes
 # it as a single commit to the `ipa-builds` branch so it can be fetched even
 # when the account's artifact storage quota is full. Never creates releases or tags.
@@ -97,15 +97,15 @@ jobs:
           OUT="$RUNNER_TEMP/ipa-builds"
           rm -rf "$OUT" && mkdir -p "$OUT" && cd "$OUT"
           git init -q -b ipa-builds
-          cp "$GITHUB_WORKSPACE/packages/Feather.ipa" .
+          cp "$GITHUB_WORKSPACE/packages/Quill.ipa" .
           {
             echo "branch: $GITHUB_REF_NAME"
             echo "commit: $GITHUB_SHA"
             echo "run:    $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-            echo "sha256: $(shasum -a 256 Feather.ipa | cut -d' ' -f1)"
+            echo "sha256: $(shasum -a 256 Quill.ipa | cut -d' ' -f1)"
           } > BUILD_INFO.txt
           cat BUILD_INFO.txt
-          git add Feather.ipa BUILD_INFO.txt
+          git add Quill.ipa BUILD_INFO.txt
           git -c user.name="github-actions[bot]" \
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
               commit -q -m "IPA build from $GITHUB_REF_NAME @ ${GITHUB_SHA::7}"
@@ -116,7 +116,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: Feather-${{ github.sha }}
-          path: packages/Feather.ipa
+          name: Quill-${{ github.sha }}
+          path: packages/Quill.ipa
           if-no-files-found: error
           retention-days: 14
