@@ -15,7 +15,7 @@ enum ArchivePathValidator {
 
 		var errorDescription: String? {
 			switch self {
-			case .unsafePath(let name): "Unsafe path in archive: \(name)"
+			case .unsafePath(let name): String.localized("Unsafe path in archive: %@", arguments: name)
 			}
 		}
 	}

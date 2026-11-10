@@ -83,7 +83,8 @@ enum ErrorExplainer {
 		Rule(
 			"Signing failed.",
 			"Check that the certificate is valid (not expired or revoked), matches its profile, and that the app is not corrupted.",
-			needles: ["signing failed"]
+			// "mzalama başarısız": localized SigningFileHandlerError text (tr); "İ" lowercases to "i" + combining dot
+			needles: ["signing failed", "mzalama başarısız"]
 		)
 	]
 	

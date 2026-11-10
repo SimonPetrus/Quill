@@ -19293,6 +19293,91 @@
           }
         }
       }
+    },
+    "Signing failed: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signing failed: %@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İmzalama başarısız oldu: %@"
+          }
+        }
+      }
+    },
+    "Injecting %@ into the app executable failed." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Injecting %@ into the app executable failed."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ uygulamanın çalıştırılabilir dosyasına eklenemedi."
+          }
+        }
+      }
+    },
+    "The app contains an executable or symbolic link that points outside the app or to a missing file: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The app contains an executable or symbolic link that points outside the app or to a missing file: %@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uygulama, uygulamanın dışına veya var olmayan bir dosyaya işaret eden bir çalıştırılabilir dosya ya da sembolik bağ içeriyor: %@"
+          }
+        }
+      }
+    },
+    "Invalid ZIP archive (%@)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid ZIP archive (%@)."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geçersiz ZIP arşivi (%@)."
+          }
+        }
+      }
+    },
+    "Unsafe path in archive: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unsafe path in archive: %@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arşivde güvenli olmayan yol: %@"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

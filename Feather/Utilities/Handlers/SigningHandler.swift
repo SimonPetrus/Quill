@@ -710,10 +710,10 @@ enum SigningFileHandlerError: Error, LocalizedError {
 		case .infoPlistNotFound: "Unable to locate info.plist path."
 		case .missingCertifcate: "No certificate was specified."
 		case .disinjectFailed: "Removing mach-O load paths failed."
-		case .signFailed: "Signing failed."
-		case .signFailedWithReason(let reason): reason.map { "Signing failed: \($0)" } ?? "Signing failed."
-		case .injectFailed(let name): "Injecting \(name) into the app executable failed."
-		case .unsafeBundle(let path): "The app contains an executable or symbolic link that points outside the app or to a missing file: \(path)"
+		case .signFailed: String.localized("Signing failed.")
+		case .signFailedWithReason(let reason): reason.map { String.localized("Signing failed: %@", arguments: $0) } ?? String.localized("Signing failed.")
+		case .injectFailed(let name): String.localized("Injecting %@ into the app executable failed.", arguments: name)
+		case .unsafeBundle(let path): String.localized("The app contains an executable or symbolic link that points outside the app or to a missing file: %@", arguments: path)
 		}
 	}
 }

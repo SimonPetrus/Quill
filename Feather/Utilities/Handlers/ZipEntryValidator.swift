@@ -24,8 +24,8 @@ enum ZipEntryValidator {
 
 		var errorDescription: String? {
 			switch self {
-			case .unreadable(let reason): "Invalid ZIP archive (\(reason))."
-			case .unsafePath(let name): "Unsafe path in archive: \(name)"
+			case .unreadable(let reason): String.localized("Invalid ZIP archive (%@).", arguments: reason)
+			case .unsafePath(let name): String.localized("Unsafe path in archive: %@", arguments: name)
 			}
 		}
 	}
