@@ -39,6 +39,7 @@ extension Storage {
 		CertificatePasswordCache.shared.invalidate(uuid)
 		Storage.shared.revokagedCertificate(for: new)
 		saveContext()
+		NotificationManager.shared.reschedule()
 		generator.impactOccurred()
 		completion(nil)
 	}
@@ -53,6 +54,7 @@ extension Storage {
 		}
 		context.delete(cert)
 		saveContext()
+		NotificationManager.shared.reschedule()
 	}
 	
 	func getCertificate(for index: Int) -> CertificatePair? {

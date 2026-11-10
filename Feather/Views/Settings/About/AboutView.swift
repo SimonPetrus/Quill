@@ -37,11 +37,24 @@ struct AboutView: View {
 			.frame(maxWidth: .infinity)
 			.listRowBackground(EmptyView())
 			
-			_updateSection()
-			
-			NBSection(.localized("Credits")) {
-				Label("SP", systemImage: "person.crop.circle")
+			NBSection(.localized("Developer")) {
+				Button {
+					if let url = URL(string: "https://github.com/SimonPetrus/Quill") {
+						UIApplication.shared.open(url)
+					}
+				} label: {
+					HStack {
+						Label(.localized("SimonPetrus"), systemImage: "person.crop.circle")
+						Spacer()
+						Image(systemName: "arrow.up.right")
+							.font(.footnote)
+							.foregroundStyle(.secondary)
+					}
+				}
+				.buttonStyle(.plain)
 			}
+			
+			_updateSection()
 			
 			Section {
 				Text(.localized("Based on Feather (GPL-3.0)."))
@@ -62,11 +75,6 @@ extension AboutView {
 	@ViewBuilder
 	private func _updateSection() -> some View {
 		NBSection(.localized("Updates")) {
-			TextField(.localized("Update source URL"), text: $_sourceURL)
-				.textInputAutocapitalization(.never)
-				.autocorrectionDisabled()
-				.keyboardType(.URL)
-			
 			Toggle(.localized("Check automatically on launch"), isOn: $_autoCheck)
 				.disabled(!_hasSource)
 			
@@ -93,7 +101,7 @@ extension AboutView {
 					.foregroundStyle(.red)
 			}
 		} footer: {
-			Text(.localized("Add a source JSON or GitHub releases API URL to check for new versions of Quill. Updates are never downloaded automatically."))
+			Text(.localized("Quill checks GitHub for new versions. Updates are never downloaded automatically."))
 		}
 	}
 }

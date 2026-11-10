@@ -125,6 +125,12 @@ extension ResetView {
 	@ViewBuilder
 	private func _all() -> some View {
 		Section {
+			Button(.localized("Reset Signing Options"), systemImage: "xmark.octagon") {
+				Self.resetAlert(title: .localized("Reset Signing Options")) {
+					Self.resetSigningOptions()
+				}
+			}
+			
 			Button(.localized("Reset Settings"), systemImage: "xmark.octagon") {
 				Self.resetAlert(title: .localized("Reset Settings")) {
 					Self.resetUserDefaults()
@@ -190,6 +196,11 @@ extension ResetView {
 		try? FileManager.default.removeFileIfNeeded(at: FileManager.default.secureCertificates)
 		KeychainHelper.deleteAll()
 		CertificatePasswordCache.shared.invalidate()
+		NotificationManager.shared.reschedule()
+	}
+	
+	static func resetSigningOptions() {
+		UserDefaults.standard.removeObject(forKey: OptionsManager.storageKey)
 	}
 	
 	static func resetUserDefaults() {

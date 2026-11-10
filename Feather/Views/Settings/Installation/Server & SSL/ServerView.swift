@@ -53,7 +53,7 @@ struct ServerView: View {
 						do {
 							try LocalCAInstaller.shared.install()
 						} catch {
-							UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
+							UIAlertController.showAlertWithOk(title: .localized("Error"), message: ErrorExplainer.message(for: error))
 						}
 					}
 					
@@ -137,7 +137,7 @@ struct ServerView: View {
 				try ServerInstaller.createServerCert()
 			} catch {
 				await MainActor.run {
-					UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
+					UIAlertController.showAlertWithOk(title: .localized("Error"), message: ErrorExplainer.message(for: error))
 				}
 			}
 			let trusted = ServerInstaller.isLocalCATrusted()

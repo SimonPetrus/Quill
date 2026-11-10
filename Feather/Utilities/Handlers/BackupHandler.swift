@@ -175,7 +175,7 @@ struct BackupSummary {
 enum BackupHandler {
 	static let formatVersion = 1
 	static let minPasswordLength = 8
-	private static let _optionsKey = "signing_options"
+	private static let _optionsKey = OptionsManager.storageKey
 	/// Non-sensitive preferences only.
 	private static let _defaultsKeys = [
 		"Quill.userInterfaceStyle", "Quill.userTintColor", "Quill.installationMethod",

@@ -8,3 +8,5 @@ cert.json
 _build
 
 work/
+
+Zsign/build/

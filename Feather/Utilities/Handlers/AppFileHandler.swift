@@ -8,6 +8,7 @@
 import Foundation
 import Zip
 import SwiftUI
+import NimbleExtensions
 
 final class AppFileHandler: NSObject, @unchecked Sendable {
 	private let _fileManager = FileManager.default
@@ -16,6 +17,8 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 	var uniqueWorkDirPayload: URL?
 
 	private var _ipa: URL
+	/// True when `_ipa` is a private temp download that we own and may delete (no copy was made).
+	private var _ownsSource = false
 	private let _install: Bool
 	private let _download: Download?
 	private let _sourceProvenance: SourceAppProvenance?
@@ -36,8 +39,31 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 		super.init()
 	}
 	
+	/// Rough multiplier of IPA size needed on disk: the archive itself, the extracted
+	/// payload (usually larger than the compressed IPA) and the final move.
+	private static let _diskSpaceFactor = 2.5
+	
+	private func _checkDiskSpace() throws {
+		let size = (try? _ipa.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
+		guard size > 0 else { return }
+		let required = Int64(Double(size) * AppFileHandler._diskSpaceFactor)
+		let values = try? URL(fileURLWithPath: NSHomeDirectory())
+			.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+		guard let available = values?.volumeAvailableCapacityForImportantUsage else { return }
+		if available < required {
+			throw ImportedFileHandlerError.insufficientSpace(required: required, available: available)
+		}
+	}
+	
 	func copy() async throws {
+		// Downloads already live in our own temp folder; copying a multi-GB IPA again
+		// would double the disk usage for no reason, so use it in place (file based, no memory load).
+		let tempPath = _fileManager.temporaryDirectory.standardizedFileURL.path
+		_ownsSource = _ipa.standardizedFileURL.path.hasPrefix(tempPath + "/QuillDownloads/")
+		
+		try _checkDiskSpace()
 		try _fileManager.createDirectoryIfNeeded(at: _uniqueWorkDir)
+		if _ownsSource { return }
 		
 		let destinationURL = _uniqueWorkDir.appendingPathComponent(_ipa.lastPathComponent)
 
@@ -83,7 +109,7 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 					self.uniqueWorkDirPayload = self._uniqueWorkDir.appendingPathComponent("Payload")
 					continuation.resume()
 				} catch {
-					continuation.resume(throwing: error)
+					continuation.resume(throwing: ImportedFileHandlerError.extractionFailed(error.localizedDescription))
 				}
 			}
 		}
@@ -139,9 +165,35 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 	
 	func clean() async throws {
 		try _fileManager.removeFileIfNeeded(at: _uniqueWorkDir)
+		// Also drop the downloaded IPA we used in place, so a failed/finished import leaves no multi-GB leftovers.
+		if _ownsSource {
+			try? _fileManager.removeItem(at: _ipa)
+			// Each download lives in its own QuillDownloads/<UUID>/ folder; remove it too.
+			let parent = _ipa.deletingLastPathComponent()
+			if parent.deletingLastPathComponent().lastPathComponent == "QuillDownloads" {
+				try? _fileManager.removeItem(at: parent)
+			}
+		}
 	}
 }
 
-private enum ImportedFileHandlerError: Error {
+enum ImportedFileHandlerError: Error, LocalizedError {
 	case payloadNotFound
+	case insufficientSpace(required: Int64, available: Int64)
+	case extractionFailed(String)
+	
+	var errorDescription: String? {
+		switch self {
+		case .payloadNotFound:
+			return .localized("The IPA does not contain a valid Payload folder.")
+		case .insufficientSpace(let required, let available):
+			return String(
+				format: .localized("Not enough free space: %@ required, %@ available."),
+				required.formattedByteCount,
+				available.formattedByteCount
+			)
+		case .extractionFailed(let reason):
+			return String(format: .localized("Could not extract the IPA: %@"), reason)
+		}
+	}
 }

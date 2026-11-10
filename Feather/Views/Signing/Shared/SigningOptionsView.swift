@@ -12,6 +12,8 @@ import NimbleViews
 struct SigningOptionsView: View {
 	@Binding var options: Options
 	var temporaryOptions: Options?
+	/// `false` when the selected provisioning profile is known not to be a wildcard profile
+	var isWildcardProfile: Bool = true
 	
 	// MARK: Body
 	var body: some View {
@@ -74,6 +76,13 @@ struct SigningOptionsView: View {
 					systemImage: "syringe",
 					isOn: $options.injectIntoExtensions,
 					temporaryValue: temporaryOptions?.injectIntoExtensions
+				)
+				
+				_toggle(
+					.localized("Inject into Watch App"),
+					systemImage: "applewatch",
+					isOn: $options.injectIntoWatchApp,
+					temporaryValue: temporaryOptions?.injectIntoWatchApp
 				)
 			}
 		}
@@ -186,6 +195,24 @@ struct SigningOptionsView: View {
 			).disabled(options.appEntitlementsFile != nil)
 		} footer: {
 			Text(.localized("This option merges entitlements with the embedded entitlements from the app you're signing."))
+		}
+		
+		Section {
+			_toggle(
+				.localized("Isolate Keychain"),
+				systemImage: "key",
+				isOn: $options.isolateKeychain,
+				temporaryValue: temporaryOptions?.isolateKeychain
+			).disabled(!isWildcardProfile)
+		} footer: {
+			if isWildcardProfile {
+				VStack(alignment: .leading, spacing: 6) {
+					Text(.localized("Gives the app its own keychain group so other apps signed with the same profile cannot read its keychain items. Only works with wildcard provisioning profiles."))
+					Text(.localized("Replaces any existing keychain-access-groups value."))
+				}
+			} else {
+				Text(.localized("The selected provisioning profile is not a wildcard profile, so the keychain cannot be isolated."))
+			}
 		}
 		
 		NBSection(.localized("Experiments")) {			

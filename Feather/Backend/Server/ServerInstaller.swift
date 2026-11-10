@@ -59,7 +59,7 @@ class ServerInstaller: Identifiable, ObservableObject {
 		do {
 			self._server = try setupApp(port: port, diagnostics: diagnostics)
 		} catch {
-			Logger.misc.error("Server setup failed: \(error.localizedDescription)")
+			Logger.misc.error("Server setup failed: \(error.localizedDescription, privacy: .public)")
 			if diagnostics {
 				InstallServerLog.shared.add("Server setup failed: \(String(describing: error))")
 			}
@@ -106,7 +106,7 @@ class ServerInstaller: Identifiable, ObservableObject {
 			try relay.start(port: port, targetPort: internalPort)
 			_relay = relay
 		} catch {
-			Logger.misc.error("Install relay failed: \(error.localizedDescription)")
+			Logger.misc.error("Install relay failed: \(error.localizedDescription, privacy: .public)")
 			InstallServerLog.shared.add("Relay could not listen on port \(port): \(String(describing: error))")
 			DispatchQueue.main.async {
 				self.viewModel.status = .broken(error)

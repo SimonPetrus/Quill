@@ -81,7 +81,7 @@ enum LegacyMigration {
 				guard UIApplication.shared.alternateIconName != nil else { return finish() }
 				UIApplication.shared.setAlternateIconName(nil) { error in
 					if let error {
-						Logger.misc.error("Resetting alternate icon failed: \(error.localizedDescription)")
+						Logger.misc.error("Resetting alternate icon failed: \(error.localizedDescription, privacy: .public)")
 					} else {
 						DispatchQueue.main.async { finish() }
 					}
@@ -127,7 +127,7 @@ enum LegacyMigration {
 				do {
 					try fm.moveItem(at: source, to: target)
 				} catch {
-					Logger.misc.error("Could not set aside the empty new store: \(error.localizedDescription)")
+					Logger.misc.error("Could not set aside the empty new store: \(error.localizedDescription, privacy: .public)")
 					return false
 				}
 			}
@@ -145,7 +145,7 @@ enum LegacyMigration {
 					try fm.removeItem(at: orphan)
 				}
 			} catch {
-				Logger.misc.error("Could not clean up partial store migration: \(error.localizedDescription)")
+				Logger.misc.error("Could not clean up partial store migration: \(error.localizedDescription, privacy: .public)")
 				return false
 			}
 		}
@@ -166,7 +166,7 @@ enum LegacyMigration {
 				try fm.moveItem(at: source, to: url("Quill", suffix))
 				moved.append(suffix)
 			} catch {
-				Logger.misc.error("Store migration failed for \(suffix.isEmpty ? "main" : suffix): \(error.localizedDescription)")
+				Logger.misc.error("Store migration failed for \(suffix.isEmpty ? "main" : suffix): \(error.localizedDescription, privacy: .public)")
 				rollback()
 				return false
 			}
@@ -188,7 +188,7 @@ enum LegacyMigration {
 			do {
 				try fm.moveItem(at: oldDir, to: newDir)
 			} catch {
-				Logger.misc.error("Application Support migration failed: \(error.localizedDescription)")
+				Logger.misc.error("Application Support migration failed: \(error.localizedDescription, privacy: .public)")
 			}
 			return
 		}
@@ -209,7 +209,7 @@ enum LegacyMigration {
 			do {
 				try fm.moveItem(at: source, to: target)
 			} catch {
-				Logger.misc.error("Could not move \(child): \(error.localizedDescription)")
+				Logger.misc.error("Could not move \(child): \(error.localizedDescription, privacy: .public)")
 			}
 		}
 

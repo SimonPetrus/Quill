@@ -169,6 +169,17 @@ extension SigningView {
 		return id.isEmpty ? nil : id
 	}
 	
+	/// False only when the selected profile is readable and has a fixed (non-wildcard) app ID.
+	private func _selectedProfileIsWildcard() -> Bool {
+		guard
+			let cert = _selectedCert(),
+			let url = Storage.shared.getFile(.provision, from: cert),
+			let profile = CertificateReader(url).decoded,
+			let full = profile.Entitlements?["application-identifier"]?.value as? String
+		else { return true }
+		return full.contains("*")
+	}
+	
 	/// Layers: profile suggestion, PPQ suffix, then user-defined identifier mappings.
 	/// Never touches Quill itself, and never overwrites a manual edit.
 	private func _applyAutoIdentifier() {
@@ -314,7 +325,8 @@ extension SigningView {
 			NavigationLink(.localized("Properties")) {
 				Form { SigningOptionsView(
 					options: $_temporaryOptions,
-					temporaryOptions: _optionsManager.options
+					temporaryOptions: _optionsManager.options,
+					isWildcardProfile: _selectedProfileIsWildcard()
 				)}
 				.navigationTitle(.localized("Properties"))
 			}
@@ -406,7 +418,7 @@ extension SigningView {
 				
 				UIAlertController.showAlert(
 					title: "Error",
-					message: error.localizedDescription,
+					message: ErrorExplainer.message(for: error),
 					actions: [ok]
 				)
 			} else {
