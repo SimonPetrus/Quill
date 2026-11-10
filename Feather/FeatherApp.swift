@@ -42,21 +42,33 @@ struct QuillApp: App {
 					)
 				}
 			}
+			.onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+				_showStartupNoticeIfPossible()
+			}
 			// dear god help me
 			.onAppear {
 				if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "Quill.userInterfaceStyle")) {
 					UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
 				}
 				
-				if let notice = Storage.startupNotice {
-					Storage.startupNotice = nil
-					DispatchQueue.main.async {
-						UIAlertController.showAlertWithOk(title: .localized("Error"), message: notice)
-					}
-				}
+				_showStartupNoticeIfPossible()
 				
 				UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "Quill.userTintColor") ?? "#848ef9"))
 			}
+		}
+	}
+	
+	/// Shows the pending storage notice only when a presenter exists; otherwise keeps it for the next
+	/// time the app becomes active. Cleared only after it was actually presented.
+	private func _showStartupNoticeIfPossible() {
+		guard let notice = Storage.startupNotice else { return }
+		DispatchQueue.main.async {
+			guard
+				Storage.startupNotice != nil,
+				let presenter = UIApplication.topViewController()
+			else { return }
+			Storage.startupNotice = nil
+			UIAlertController.showAlertWithOk(presenter, title: .localized("Error"), message: notice)
 		}
 	}
 	

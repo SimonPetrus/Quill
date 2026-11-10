@@ -77,7 +77,22 @@ final class Storage: ObservableObject {
 			} else if let error {
 				// Never delete user data: move the unreadable store aside and start with an empty one.
 				let code = (error as NSError).code
-				let backup = self._backupStore(at: description.url)
+				let result = self._backupStore(at: description.url)
+				var backup: String?
+				switch result {
+				case .backedUp(let name): backup = name
+				case .nothingToBack: break
+				case .failed:
+					// Old files are still in place: never open a fresh store over them.
+					Logger.misc.error("Store load failed (Cocoa code \(code)) and backup failed, using in-memory store: \(error.localizedDescription)")
+					self.container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
+					self.container.loadPersistentStores { _, error in
+						if let error {
+							fatalError("Core Data unrecoverable: \(error)")
+						}
+					}
+					return
+				}
 				Logger.misc.error("Store load failed (Cocoa code \(code)), backup: \(backup ?? "none"): \(error.localizedDescription)")
 				if let backup {
 					Storage.startupNotice = String(format: .localized("The database could not be opened; the old data was backed up (%@)."), backup)
@@ -97,29 +112,50 @@ final class Storage: ObservableObject {
 		}
 	}
 
+	private enum _BackupResult {
+		case backedUp(String)
+		case nothingToBack
+		case failed
+	}
+	
 	/// Moves the store files next to the original as `<name>.bak-<unix time>.sqlite` (+ wal/shm).
-	/// Returns the backup file name, or nil if there was nothing to move. Never touches other user files.
-	private func _backupStore(at url: URL?) -> String? {
-		guard let url, url.path != "/dev/null" else { return nil }
+	/// The main file moves first; if it fails nothing is moved. If a wal/shm move fails, earlier moves are
+	/// rolled back, so the result is either a complete backup or the original files untouched.
+	private func _backupStore(at url: URL?) -> _BackupResult {
+		guard let url, url.path != "/dev/null" else { return .nothingToBack }
 		
 		let fm = FileManager.default
 		let dir = url.deletingLastPathComponent()
 		let name = url.deletingPathExtension().lastPathComponent
 		let stamp = Int(Date().timeIntervalSince1970)
-		var mainBackup: String?
 		
-		for ext in ["sqlite", "sqlite-wal", "sqlite-shm"] {
+		let main = dir.appendingPathComponent("\(name).sqlite")
+		guard fm.fileExists(atPath: main.path) else { return .nothingToBack }
+		let mainTarget = dir.appendingPathComponent("\(name).bak-\(stamp).sqlite")
+		do {
+			try fm.moveItem(at: main, to: mainTarget)
+		} catch {
+			Logger.misc.error("Could not back up \(main.lastPathComponent): \(error.localizedDescription)")
+			return .failed
+		}
+		
+		var moved: [(from: URL, to: URL)] = [(main, mainTarget)]
+		for ext in ["sqlite-wal", "sqlite-shm"] {
 			let source = dir.appendingPathComponent("\(name).\(ext)")
 			guard fm.fileExists(atPath: source.path) else { continue }
 			let target = dir.appendingPathComponent("\(name).bak-\(stamp).\(ext)")
 			do {
 				try fm.moveItem(at: source, to: target)
-				if ext == "sqlite" { mainBackup = target.lastPathComponent }
+				moved.append((source, target))
 			} catch {
-				Logger.misc.error("Could not back up \(source.lastPathComponent): \(error.localizedDescription)")
+				Logger.misc.error("Could not back up \(source.lastPathComponent), rolling back: \(error.localizedDescription)")
+				for item in moved.reversed() {
+					try? fm.moveItem(at: item.to, to: item.from)
+				}
+				return .failed
 			}
 		}
 		
-		return mainBackup
+		return .backedUp(mainTarget.lastPathComponent)
 	}
 }
