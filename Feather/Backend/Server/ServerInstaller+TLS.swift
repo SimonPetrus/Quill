@@ -23,18 +23,23 @@ extension ServerInstaller {
 		return env
 	}()
 	
-	/// - Parameter behindRelay: Fully Local diagnostics: Vapor listens on a random
-	///   loopback port and `InstallDiagnosticProxy` relays the public `port` to it.
-	func setupApp(port: Int, behindRelay: Bool = false) throws -> Application {
+	/// - Parameter diagnostics: Diagnostic mode (off by default). Off: exactly the
+	///   original setup. On: install log logger + middleware, and in Fully Local Vapor
+	///   listens on a random loopback port behind `InstallDiagnosticProxy` (public `port`).
+	func setupApp(port: Int, diagnostics: Bool = false) throws -> Application {
 		let app = Application(Self.env)
 		app.threadPool = .init(numberOfThreads: 1)
 		
-		// Install server only (not global): Vapor's own messages also go to the install log.
-		var logger = Logging.Logger(label: "quill.install-server") { _ in InstallServerLogHandler() }
-		logger.logLevel = .debug
-		app.logger = logger
-		app.http.server.configuration.logger = logger
-		app.middleware.use(InstallServerLogMiddleware(), at: .beginning)
+		let behindRelay = diagnostics && getServerMethod() != 1
+		
+		if diagnostics {
+			// Install server only (not global): Vapor's own messages also go to the install log.
+			var logger = Logging.Logger(label: "quill.install-server") { _ in InstallServerLogHandler() }
+			logger.logLevel = .debug
+			app.logger = logger
+			app.http.server.configuration.logger = logger
+			app.middleware.use(InstallServerLogMiddleware(), at: .beginning)
+		}
 		
 		if getServerMethod() != 1 {
 			// Key log only feeds the in-memory TLS sniffer of the relay, it does not change the handshake.
@@ -90,7 +95,9 @@ extension ServerInstaller {
 				try NIOSSLPrivateKey(file: pem.path, format: .pem)
 			)
 		)
-		configuration.keyLogCallback = keyLog
+		if let keyLog {
+			configuration.keyLogCallback = keyLog
+		}
 		return configuration
 	}
 }

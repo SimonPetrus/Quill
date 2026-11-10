@@ -70,10 +70,14 @@ struct InstallPreviewView: View {
 			if _installationMethod == 0 {
 				if case .ready = newStatus {
 					if _serverMethod == 0 {
-						let link = installer.iTunesLink
-						InstallServerLog.shared.add("Opening \(link)")
-						UIApplication.shared.open(URL(string: link)!) { opened in
-							InstallServerLog.shared.add("itms-services link \(opened ? "opened" : "could NOT be opened")")
+						if installer.diagnostics {
+							let link = installer.iTunesLink
+							InstallServerLog.shared.add("Opening \(link)")
+							UIApplication.shared.open(URL(string: link)!) { opened in
+								InstallServerLog.shared.add("itms-services link \(opened ? "opened" : "could NOT be opened")")
+							}
+						} else {
+							UIApplication.shared.open(URL(string: installer.iTunesLink)!)
 						}
 					} else if _serverMethod == 1 {
 						_isWebviewPresenting = true
@@ -190,7 +194,7 @@ struct InstallPreviewView: View {
 	/// Fully Local diagnostics: shows the install server log (connections, TLS, requests).
 	@ViewBuilder
 	private func _logButton() -> some View {
-		if !isSharing, _installationMethod == 0, _serverMethod == 0 {
+		if installer.diagnostics, !isSharing, _installationMethod == 0, _serverMethod == 0 {
 			Button {
 				_isLogPresenting = true
 			} label: {

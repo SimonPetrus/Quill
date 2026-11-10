@@ -17,6 +17,7 @@ struct ServerView: View {
 	@AppStorage("Quill.ipFix") private var _ipFix: Bool = false
 	@AppStorage("Quill.serverMethod") private var _serverMethod: Int = 0
 	@AppStorage(ServerInstaller.nameConstraintsKey) private var _nameConstraints: Bool = true
+	@AppStorage(ServerInstaller.diagnosticsKey) private var _diagnostics: Bool = false
 	private let _serverMethods: [String] = [.localized("Fully Local"), .localized("Semi Local")]
 	
 	// MARK: Body
@@ -80,12 +81,6 @@ struct ServerView: View {
 				}
 
 				Section {
-					NavigationLink {
-						InstallLogView()
-					} label: {
-						Label(.localized("Last Install Log"), systemImage: "doc.text.magnifyingglass")
-					}
-
 					Toggle(
 						.localized("Restrict CA to localhost"),
 						systemImage: "scope",
@@ -96,6 +91,28 @@ struct ServerView: View {
 				} footer: {
 					Text(.localized("After changing this, install and trust the CA again (for testing)."))
 				}
+			}
+
+			Section {
+				Toggle(
+					.localized("Diagnostic mode"),
+					systemImage: "stethoscope",
+					isOn: $_diagnostics
+				)
+
+				if _diagnostics {
+					NavigationLink {
+						InstallLogView()
+					} label: {
+						Label(.localized("Last Install Log"), systemImage: "doc.text.magnifyingglass")
+					}
+				}
+			} header: {
+				if _serverMethod != 0 {
+					Text(.localized("Advanced"))
+				}
+			} footer: {
+				Text(.localized("Records the install connection; turn on only for troubleshooting."))
 			}
 		}
 		.onAppear(perform: _refreshTrust)

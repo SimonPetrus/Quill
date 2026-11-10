@@ -32,6 +32,13 @@ extension ServerInstaller {
 		UserDefaults.standard.object(forKey: nameConstraintsKey) as? Bool ?? true
 	}
 
+	/// UserDefaults key: diagnostic mode (install log, TCP relay with TLS inspection). Default off.
+	static let diagnosticsKey = "Quill.diagnostics.enabled"
+
+	static var diagnosticsEnabled: Bool {
+		UserDefaults.standard.bool(forKey: diagnosticsKey)
+	}
+
 	private static let _caLock = NSLock()
 	private static let _renewWindow: TimeInterval = 60 * 60 * 24 * 30
 	private static let _clockSkew: TimeInterval = 60 * 60

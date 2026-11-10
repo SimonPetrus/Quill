@@ -28,16 +28,22 @@ class ServerInstaller: Identifiable, ObservableObject {
 	/// Fully Local only: transparent TCP relay that logs connections and the TLS handshake.
 	private var _relay: InstallDiagnosticProxy?
 	private var _observers: [NSObjectProtocol] = []
+	/// Diagnostic mode, read once per install. Off: same server as before the diagnostics.
+	let diagnostics = ServerInstaller.diagnosticsEnabled
 
 	init(app: AppInfoPresentable, viewModel: InstallerStatusViewModel) throws {
 		self.app = app
 		self.viewModel = viewModel
-		_beginLog()
+		if diagnostics {
+			_beginLog()
+		}
 		try _setup()
 		try _configureRoutes()
 		try _server?.server.start()
 		_needsShutdown = true
-		_startRelayIfNeeded()
+		if diagnostics {
+			_startRelayIfNeeded()
+		}
 	}
 	
 	deinit {
@@ -51,10 +57,12 @@ class ServerInstaller: Identifiable, ObservableObject {
 	
 	private func _setup() throws {
 		do {
-			self._server = try setupApp(port: port, behindRelay: _isFullyLocal)
+			self._server = try setupApp(port: port, diagnostics: diagnostics)
 		} catch {
 			Logger.misc.error("Server setup failed: \(error.localizedDescription)")
-			InstallServerLog.shared.add("Server setup failed: \(String(describing: error))")
+			if diagnostics {
+				InstallServerLog.shared.add("Server setup failed: \(String(describing: error))")
+			}
 			DispatchQueue.main.async {
 				self.viewModel.status = .broken(error)
 			}
@@ -88,7 +96,7 @@ class ServerInstaller: Identifiable, ObservableObject {
 	}
 	
 	private func _startRelayIfNeeded() {
-		guard _isFullyLocal, let server = _server else { return }
+		guard diagnostics, _isFullyLocal, let server = _server else { return }
 		
 		do {
 			guard let internalPort = server.http.server.shared.localAddress?.port else {
@@ -159,11 +167,15 @@ class ServerInstaller: Identifiable, ObservableObject {
 		_relay = nil
 		_server?.server.shutdown()
 		_server?.shutdown()
-		InstallServerLog.shared.add("Install server stopped")
+		if diagnostics {
+			InstallServerLog.shared.add("Install server stopped")
+		}
 	}
 	
 	private func _updateStatus(_ newStatus: InstallerStatusViewModel.InstallerStatus) {
-		InstallServerLog.shared.add("Status: \(String(describing: newStatus))")
+		if diagnostics {
+			InstallServerLog.shared.add("Status: \(String(describing: newStatus))")
+		}
 		DispatchQueue.main.async {
 			self.viewModel.status = newStatus
 		}

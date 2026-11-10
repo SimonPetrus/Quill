@@ -753,6 +753,40 @@
         }
       }
     },
+    "Diagnostic mode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostic mode"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanılama modu"
+          }
+        }
+      }
+    },
+    "Records the install connection; turn on only for troubleshooting." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Records the install connection; turn on only for troubleshooting."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kurulum bağlantısını kaydeder; yalnız sorun giderme için açın."
+          }
+        }
+      }
+    },
     "After changing this, install and trust the CA again (for testing)." : {
       "extractionState" : "manual",
       "localizations" : {
