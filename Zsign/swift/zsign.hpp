@@ -35,6 +35,9 @@ int zsign(
 	void(^completionHandler)(BOOL success)
 );
 
+// First error zsign logged on the calling thread during the last zsign() call, or nil.
+NSString *ZsignFirstError(void);
+
 int checkCert(
 	NSString *prov,
 	NSString *key,

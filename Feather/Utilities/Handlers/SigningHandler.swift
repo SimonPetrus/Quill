@@ -691,6 +691,10 @@ enum SigningFileHandlerError: Error, LocalizedError {
 	case missingCertifcate
 	case disinjectFailed
 	case signFailed
+	/// Signing failed; carries zsign's error message when there is one.
+	case signFailedWithReason(String?)
+	/// Adding the load command for the named dylib/framework to the app executable failed.
+	case injectFailed(String)
 	
 	var errorDescription: String? {
 		switch self {
@@ -699,6 +703,8 @@ enum SigningFileHandlerError: Error, LocalizedError {
 		case .missingCertifcate: "No certificate was specified."
 		case .disinjectFailed: "Removing mach-O load paths failed."
 		case .signFailed: "Signing failed."
+		case .signFailedWithReason(let reason): reason.map { "Signing failed: \($0)" } ?? "Signing failed."
+		case .injectFailed(let name): "Injecting \(name) into the app executable failed."
 		}
 	}
 }

@@ -61,7 +61,7 @@ enum ErrorExplainer {
 		Rule(
 			"The certificate password is wrong.",
 			"Check the .p12 password (it is case sensitive) and try again.",
-			needles: ["mac verify error", "wrong password", "bad password", "incorrect password", "invalid password", "pkcs12 password", "p12 password"]
+			needles: ["mac verify error", "can't load p12 or private key", "wrong password", "bad password", "incorrect password", "invalid password", "pkcs12 password", "p12 password"]
 		),
 		Rule(
 			"The provisioning profile does not match this app or device.",

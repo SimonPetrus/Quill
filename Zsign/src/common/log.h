@@ -30,8 +30,12 @@ public:
 	static void Print(int nLevel, const char* szLog);
 	static void PrintV(int nLevel, const char* szFormat, ...);
 	static void SetLogLever(int nLogLevel) { g_nLogLevel = nLogLevel; }
+	// Quill: first error logged on this thread since ClearFirstError() (shown to the user)
+	static string GetFirstError();
+	static void ClearFirstError();
 
 private:
 	static void _Print(const char* szLog, int nColor = 0);
+	static void _KeepError(const char* szLog);
 	static int g_nLogLevel;
 };

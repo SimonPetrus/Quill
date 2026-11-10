@@ -44,32 +44,35 @@ final class ZsignHandler {
 			throw SigningFileHandlerError.missingCertifcate
 		}
 
-		let _ = Zsign.sign(
+		let success = Zsign.sign(
 			appPath: _appUrl.relativePath,
 			provisionPath: Storage.shared.getFile(.provision, from: cert)?.path ?? "",
 			p12Path: Storage.shared.getFile(.certificate, from: cert)?.path ?? "",
 			p12Password: cert.password ?? "",
 			entitlementsPath: _options.appEntitlementsFile?.path ?? "",
-			removeProvision: _options.removeProvisioning,
-			completion: { success in
-				if !success {
-					self.hadError = SigningFileHandlerError.signFailed
-				}
-			}
+			removeProvision: _options.removeProvisioning
 		)
+		try _throwIfFailed(success)
 	}
 	
 	func adhocSign() async throws {
-		let _ = Zsign.sign(
+		let success = Zsign.sign(
 			appPath: _appUrl.relativePath,
 			entitlementsPath: _options.appEntitlementsFile?.path ?? "",
 			adhoc: true,
-			removeProvision: _options.removeProvisioning,
-			completion: { success in
-				if !success {
-					self.hadError = SigningFileHandlerError.signFailed
-				}
-			}
+			removeProvision: _options.removeProvisioning
 		)
+		try _throwIfFailed(success)
+	}
+	
+	/// zsign reports every failure through its return value (wrong password, profile/certificate
+	/// mismatch, unsigned nested code...). Throw before the app is moved and added to the library,
+	/// so an unsigned app is never listed as signed.
+	private func _throwIfFailed(_ success: Bool) throws {
+		guard !success else { return }
+		// read synchronously right after `sign`: the error is kept per thread
+		let error = SigningFileHandlerError.signFailedWithReason(Zsign.lastError)
+		hadError = error
+		throw error
 	}
 }

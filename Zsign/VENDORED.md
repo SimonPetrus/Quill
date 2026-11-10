@@ -50,6 +50,9 @@ Keep these when syncing with upstream again.
 - `src/common/fs.cpp` (`ZFile::MapFile`): `chmod(0755)` and retry when `open` fails
   (files extracted on iOS without permissions). Upstream removed it in e6e7aa7; Quill keeps it.
 - `src/common/util.h`: includes `TargetConditionals.h` on Apple platforms.
+- `src/common/log.h`, `src/common/log.cpp` (Quill): `ZLog::GetFirstError` / `ClearFirstError`
+  keep the first error logged on the thread, so `swift/zsign.mm` (`ZsignFirstError`) can show
+  why signing failed.
 - `src/include/ZSign.h`: umbrella header for SwiftPM.
 
 ### Strip empty entitlements slot from non-main binaries (upstream #616)

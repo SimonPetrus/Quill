@@ -2,6 +2,24 @@
 
 
 int ZLog::g_nLogLevel = ZLog::E_INFO;
+static thread_local string s_strFirstError;
+
+void ZLog::_KeepError(const char* szLog)
+{
+	if (s_strFirstError.empty() && NULL != szLog) {
+		s_strFirstError = szLog;
+	}
+}
+
+string ZLog::GetFirstError()
+{
+	return s_strFirstError;
+}
+
+void ZLog::ClearFirstError()
+{
+	s_strFirstError.clear();
+}
 
 void ZLog::_Print(const char* szLog, int nColor)
 {
@@ -66,6 +84,7 @@ void ZLog::PrintV(int nLevel, const char* szFormat, ...)
 
 bool ZLog::Error(const char* szLog)
 {
+	_KeepError(szLog);
 	_Print(szLog, 12);
 	return false;
 }
@@ -73,6 +92,7 @@ bool ZLog::Error(const char* szLog)
 bool ZLog::ErrorV(const char* szFormat, ...)
 {
 	FORMAT_V(szFormat, szLog);
+	_KeepError(szLog);
 	_Print(szLog, 12);
 	return false;
 }

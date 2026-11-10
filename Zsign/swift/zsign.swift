@@ -35,7 +35,7 @@ public enum Zsign {
 	/// - Parameter appExecutable: Executable
 	/// - Returns: String array with load commands if any
 	static public func listDylibs(appExecutable: String) -> [String] {
-		ListDylibs(appExecutable)
+		ListDylibs(appExecutable) ?? []
 	}
 	/// Matches and replaces load commands to an executable
 	/// - Parameters:
@@ -92,6 +92,11 @@ public enum Zsign {
 			return false
 		}
 		return true
+	}
+	/// First error zsign logged on this thread during the last `sign` call.
+	/// Read it right after `sign` returns false, without suspending in between.
+	static public var lastError: String? {
+		ZsignFirstError()
 	}
 	/// Check revokage
 	/// - Parameters:

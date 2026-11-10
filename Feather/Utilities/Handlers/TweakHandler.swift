@@ -164,11 +164,13 @@ class TweakHandler {
 			for: "/Library/Frameworks/CydiaSubstrate.framework/CydiaSubstrate",
 			with: "@rpath/CydiaSubstrate.framework/CydiaSubstrate"
 		)
-		// inject if there's a valid app main executable
-		_ = Zsign.injectDyLib(
+		// inject if there's a valid app main executable; a failure means the tweak would not load
+		guard Zsign.injectDyLib(
 			appExecutable: appexe.path,
 			with: "\(_options.injectPath.rawValue)\(injectFolder.rawValue)\(destinationURL.lastPathComponent)"
-		)
+		) else {
+			throw SigningFileHandlerError.injectFailed(destinationURL.lastPathComponent)
+		}
 
 		_injectedDylibNames.append(destinationURL.lastPathComponent)
 		_injectedDylibURLs.append(destinationURL)
@@ -192,11 +194,13 @@ class TweakHandler {
 			for: "/Library/Frameworks/CydiaSubstrate.framework/CydiaSubstrate",
 			with: "@rpath/CydiaSubstrate.framework/CydiaSubstrate"
 		)
-		// inject if there's a valid app main executable
-		_ = Zsign.injectDyLib(
+		// inject if there's a valid app main executable; a failure means the tweak would not load
+		guard Zsign.injectDyLib(
 			appExecutable: appexe.path,
 			with: "@executable_path/Frameworks/\(framework.lastPathComponent)/\(fexe.lastPathComponent)"
-		)
+		) else {
+			throw SigningFileHandlerError.injectFailed(framework.lastPathComponent)
+		}
 	}
 	
 	// Extracy imported deb file

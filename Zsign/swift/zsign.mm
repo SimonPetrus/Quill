@@ -118,16 +118,18 @@ NSArray<NSString *> *ListDylibs(NSString *filePath) {
 		bool initSuccess = machO.Init(filePathStr.c_str());
 		if (!initSuccess) {
 			gtimer.Print(">>> Failed to initialize ZMachO.");
-			return nil;
+			return @[]; // Swift imports this as non-optional; nil would crash there
 		}
-		
+
 		std::vector<std::string> dylibPaths = machO.ListDylibs();
-		
+
 		if (!dylibPaths.empty()) {
 			gtimer.Print(">>> List of dylibs in the Mach-O file:");
 			for (const std::string &dylibPath : dylibPaths) {
 				NSString *dylibPathStr = [NSString stringWithUTF8String:dylibPath.c_str()];
-				[dylibPathsArray addObject:dylibPathStr];
+				if (dylibPathStr) { // nil for invalid UTF-8 (untrusted binary)
+					[dylibPathsArray addObject:dylibPathStr];
+				}
 			}
 		} else {
 			gtimer.Print(">>> No dylibs found in the Mach-O file.");
@@ -182,7 +184,16 @@ int zsign(
 ) {
 	ZTimer atimer;
 	ZTimer gtimer;
-	
+	ZLog::ClearFirstError();
+
+	// every exit reports through the completion handler (it may be nil)
+	auto finish = [&](bool bSuccess) -> int {
+		if (completionHandler) {
+			completionHandler(bSuccess);
+		}
+		return bSuccess ? 0 : -1;
+	};
+
 	bool bForce = true;
 	bool bWeakInject = false;
 	bool bAdhoc = adhoc;
@@ -211,15 +222,16 @@ int zsign(
 	string strPath = [app cStringUsingEncoding:NSUTF8StringEncoding];
 	if (!ZFile::IsFileExists(strPath.c_str())) {
 		ZLog::ErrorV(">>> Invalid path! %s\n", strPath.c_str());
-		return -1;
+		return finish(false);
 	}
-	
+
 	ZSignAsset zsa;
 	if (!zsa.Init(strCertFile, strPKeyFile, strProvFile, strEntitleFile, strPassword, bAdhoc, bSHA256Only, false)) {
-		return -1;
+		return finish(false);
 	}
-	
-	bool bEnableCache = true;
+
+	// the cache is never read (bForce) and would be written to the process' working directory
+	bool bEnableCache = false;
 	string strFolder = strPath;
 	
 	atimer.Reset();
@@ -227,11 +239,21 @@ int zsign(
 	bool bRet = bundle.SignFolder(&zsa, strFolder, strBundleId, strBundleVersion, strDisplayName, arrDylibFiles, arrDisDylibFiles, bForce, bWeakInject, bEnableCache, removeProvision);
 	ZLog::PrintV(">>> Signing:\t%s %s\n", strPath.c_str(), (bAdhoc ? " (Ad-hoc)" : ""));
 	atimer.PrintResult(bRet, ">>> Signed %s!", bRet ? "OK" : "Failed");
-	
-	completionHandler(bRet);
-	
+
 	gtimer.Print(">>> Done.");
-	return bRet ? 0 : -1;
+	return finish(bRet);
+}
+
+NSString *ZsignFirstError(void) {
+	std::string strError = ZLog::GetFirstError();
+	// drop the ">>> " log prefix and surrounding whitespace
+	size_t uStart = strError.find_first_not_of("> \t\r\n");
+	size_t uEnd = strError.find_last_not_of(" \t\r\n");
+	if (std::string::npos == uStart || std::string::npos == uEnd || uEnd < uStart) {
+		return nil;
+	}
+	strError = strError.substr(uStart, uEnd - uStart + 1);
+	return [NSString stringWithUTF8String:strError.c_str()];
 }
 
 
@@ -270,33 +292,37 @@ int checkCert(
 		completionHandler(2, nil, @"Error loading certificate");
 		return -4;
 	}
-	BIO *brother1;
+	// Issuer: the embedded WWDR intermediate (G1-G8) matching the certificate,
+	// otherwise a CA certificate from the p12 that actually issued it.
+	X509 *issuer = NULL;
 	unsigned long issuerHash = X509_issuer_name_hash((X509*)cert);
-	if (0x817d2f7a == issuerHash) {
-		brother1 = BIO_new_mem_buf(ZSignAsset::s_szAppleDevCACert, (int)strlen(ZSignAsset::s_szAppleDevCACert));
-	} else if (0x9b16b75c == issuerHash) {
-		brother1 = BIO_new_mem_buf(ZSignAsset::s_szAppleDevCACertG3, (int)strlen(ZSignAsset::s_szAppleDevCACertG3));
-	} else {
+	const char *szIssuerPEM = ZSignAsset::WWDRIntermediatePEM(issuerHash);
+	if (szIssuerPEM) {
+		BIO *issuerBio = BIO_new_mem_buf(szIssuerPEM, (int)strlen(szIssuerPEM));
+		if (issuerBio) {
+			issuer = PEM_read_bio_X509(issuerBio, NULL, 0, NULL);
+			BIO_free(issuerBio);
+		}
+	}
+	if (!issuer && zsa.m_caCerts) {
+		STACK_OF(X509) *caCerts = (STACK_OF(X509) *)zsa.m_caCerts;
+		for (int i = 0; i < sk_X509_num(caCerts); i++) {
+			X509 *caCert = sk_X509_value(caCerts, i);
+			if (X509_V_OK == X509_check_issued(caCert, cert) && X509_up_ref(caCert)) {
+				issuer = caCert;
+				break;
+			}
+		}
+	}
+	if (!issuer) {
 		completionHandler(2, nil, @"Unable to determine issuer of the certificate. It is signed by Apple Developer?");
 		return -2;
 	}
-		
-	if (!brother1)
-	{
-		completionHandler(2, nil, @"Unable to initialize issuer certificate.");
-		return -3;
-	}
-		
-	X509 *issuer = PEM_read_bio_X509(brother1, NULL, 0, NULL);
-	
-	if (!cert || !issuer) {
-		completionHandler(2, nil, @"Error loading cert or issuer");
-		return -4;
-	}
-	
+
 	// Extract OCSP URL from cert
 	STACK_OF(ACCESS_DESCRIPTION)* aia = (STACK_OF(ACCESS_DESCRIPTION)*)X509_get_ext_d2i((X509*)cert, NID_info_access, 0, 0);
 	if (!aia) {
+		X509_free(issuer);
 		completionHandler(2, nil, @"No AIA (OCSP) extension found in certificate");
 		return -5;
 	}
@@ -312,19 +338,24 @@ int checkCert(
 		}
 	}
 	
-	if (!uri) {
+	// ASN1 string data is not guaranteed to be NUL terminated
+	NSString *ocspURLString = uri ? [[NSString alloc] initWithBytes:uri->data length:(NSUInteger)MAX(uri->length, 0) encoding:NSUTF8StringEncoding] : nil;
+	NSURL *ocspURL = ocspURLString ? [NSURL URLWithString:ocspURLString] : nil;
+	if (!ocspURL) {
+		sk_ACCESS_DESCRIPTION_pop_free(aia, ACCESS_DESCRIPTION_free);
+		X509_free(issuer);
 		completionHandler(2, nil, @"No OCSP URI found in certificate.");
 		return -6;
 	}
-	
+
 	OCSP_REQUEST* req = OCSP_REQUEST_new();
 	OCSP_CERTID* cert_id = OCSP_cert_to_id(nullptr, (X509*)cert, issuer);
 	OCSP_request_add0_id(req, cert_id);
 	cert_id = OCSP_cert_to_id(nullptr, (X509*)cert, issuer);
 	unsigned char* der = 0;
 	int len = i2d_OCSP_REQUEST(req, &der);
-	
-	NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:[NSString stringWithUTF8String:(const char *)uri->data]]];
+
+	NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:ocspURL];
 	[request setHTTPMethod:@"POST"];
 	[request setHTTPBody:[NSData dataWithBytes:der length:len]];
 	[request setValue:@"application/ocsp-request" forHTTPHeaderField:@"Content-Type"];
@@ -336,7 +367,6 @@ int checkCert(
 	}
 	OCSP_REQUEST_free(req);
 	X509_free(issuer);
-	BIO_free(brother1);
 	
 	// Read the date before starting the request, so the asynchronous
 	// completion does not need a borrowed certificate pointer.
