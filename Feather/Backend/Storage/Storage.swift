@@ -20,6 +20,11 @@ final class Storage: ObservableObject {
 		LegacyMigration.runIfNeeded()
 		container = NSPersistentContainer(name: _name)
 
+		// If the old store could not be moved, keep using it for this session instead of creating an empty new one.
+		if !inMemory, let legacy = LegacyMigration.fallbackStoreURL {
+			container.persistentStoreDescriptions.first?.url = legacy
+		}
+
 		if inMemory {
 			container.persistentStoreDescriptions.first?.url =
 				URL(fileURLWithPath: "/dev/null")

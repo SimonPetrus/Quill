@@ -110,7 +110,7 @@ extension ServerInstaller {
 		try? dir.setResourceValues(values)
 
 		// Leftovers: expired backloop.dev files (they were visible in Files).
-		let leftovers = ["server.crt", "server.pem", "commonName.txt", "root.key", "QuillLocalCA.cer", "\(LegacyMigration.legacyName)LocalCA.cer"]
+		let leftovers = ["server.crt", "server.pem", "commonName.txt", "root.key", "\(LegacyMigration.legacyName)LocalCA.cer"]
 		for name in leftovers {
 			let url = URL.documentsDirectory.appendingPathComponent(name)
 			if fm.fileExists(atPath: url.path) {

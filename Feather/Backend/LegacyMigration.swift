@@ -27,10 +27,16 @@ enum LegacyMigration {
 	private static var _supportDir: URL { URL.applicationSupportDirectory }
 	private static var _oldStore: URL { _supportDir.appendingPathComponent("\(legacyName).sqlite") }
 
-	/// True while the migration has not completed (flag missing) or an old-named store is still on disk.
+	/// True while an old-named main store is still on disk (migration did not complete).
 	/// While true, the destructive "reset on load failure" path must not run.
 	static var isPending: Bool {
-		!UserDefaults.standard.bool(forKey: _doneKey) || FileManager.default.fileExists(atPath: _oldStore.path)
+		FileManager.default.fileExists(atPath: _oldStore.path)
+	}
+
+	/// Store file the app must open this session: the old file if it could not be moved
+	/// (so no empty new store is created and no data is hidden), otherwise nil (= default `Quill.sqlite`).
+	static var fallbackStoreURL: URL? {
+		isPending ? _oldStore : nil
 	}
 
 	/// Runs the migration once per launch, before any storage is loaded. Safe to call repeatedly.
@@ -44,25 +50,41 @@ enum LegacyMigration {
 		guard !defaults.bool(forKey: _doneKey) else { return }
 
 		let storeOK = _migrateStore()
-		let supportOK = _migrateApplicationSupport()
+		_migrateApplicationSupport()
 		_migrateDefaults(defaults)
 		_removeLegacyCache()
 
-		// The flag is written only after everything succeeded, otherwise the next launch retries.
-		if storeOK && supportOK {
+		// The flag is written only after the store migration succeeded, otherwise the next launch retries.
+		if storeOK {
 			defaults.set(true, forKey: _doneKey)
 		} else {
-			Logger.misc.error("Legacy migration incomplete, will retry on next launch")
+			Logger.misc.error("Legacy store migration incomplete, will retry on next launch")
 		}
 	}
 
-	/// Alternate icons no longer exist: go back to the primary icon. Call after launch (main thread).
+	private static var _iconObserver: NSObjectProtocol?
+
+	/// Alternate icons no longer exist: go back to the primary icon once the app is active
+	/// (the call can be rejected during launch). Retries on the next activation until it succeeds.
 	static func resetAlternateIcon() {
 		DispatchQueue.main.async {
-			guard UIApplication.shared.alternateIconName != nil else { return }
-			UIApplication.shared.setAlternateIconName(nil) { error in
-				if let error {
-					Logger.misc.error("Resetting alternate icon failed: \(error.localizedDescription)")
+			guard UIApplication.shared.alternateIconName != nil, _iconObserver == nil else { return }
+			_iconObserver = NotificationCenter.default.addObserver(
+				forName: UIApplication.didBecomeActiveNotification,
+				object: nil,
+				queue: .main
+			) { _ in
+				func finish() {
+					if let token = _iconObserver { NotificationCenter.default.removeObserver(token) }
+					_iconObserver = nil
+				}
+				guard UIApplication.shared.alternateIconName != nil else { return finish() }
+				UIApplication.shared.setAlternateIconName(nil) { error in
+					if let error {
+						Logger.misc.error("Resetting alternate icon failed: \(error.localizedDescription)")
+					} else {
+						DispatchQueue.main.async { finish() }
+					}
 				}
 			}
 		}
@@ -84,10 +106,31 @@ enum LegacyMigration {
 		let oldExists = fm.fileExists(atPath: oldMain.path)
 
 		if fm.fileExists(atPath: newMain.path) {
-			if oldExists {
-				Logger.misc.error("Legacy store and new store both exist, leaving the legacy store untouched")
+			guard oldExists else { return true }
+			// Both exist (e.g. left by an earlier failed attempt). Only if the new store is clearly smaller
+			// (an empty store Core Data created) it is set aside; otherwise the old one stays and is opened.
+			func size(_ name: String) -> Int {
+				["", "-wal", "-shm"].reduce(0) { sum, suffix in
+					let attrs = try? fm.attributesOfItem(atPath: url(name, suffix).path)
+					return sum + ((attrs?[.size] as? Int) ?? 0)
+				}
 			}
-			return !oldExists
+			guard size("Quill") < size(old) else {
+				Logger.misc.error("Legacy and new store both exist, not sure which is current: opening the legacy store")
+				return false
+			}
+			let stamp = Int(Date().timeIntervalSince1970)
+			for suffix in ["", "-wal", "-shm"] {
+				let source = url("Quill", suffix)
+				guard fm.fileExists(atPath: source.path) else { continue }
+				let target = dir.appendingPathComponent("Quill.sqlite\(suffix).orphan-\(stamp)")
+				do {
+					try fm.moveItem(at: source, to: target)
+				} catch {
+					Logger.misc.error("Could not set aside the empty new store: \(error.localizedDescription)")
+					return false
+				}
+			}
 		}
 
 		// A previous attempt may have left -wal/-shm behind under the new name without the main file.
@@ -133,41 +176,46 @@ enum LegacyMigration {
 
 	// MARK: Application Support folder (LocalCA etc.)
 
-	/// Returns true when the old folder is gone afterwards. It is only removed once completely empty.
-	private static func _migrateApplicationSupport() -> Bool {
+	/// Moves the old folder over. Does not influence the migration flag or `isPending`.
+	private static func _migrateApplicationSupport() {
 		let fm = FileManager.default
 		let oldDir = _supportDir.appendingPathComponent(legacyName, isDirectory: true)
 		let newDir = _supportDir.appendingPathComponent("Quill", isDirectory: true)
 
-		guard fm.fileExists(atPath: oldDir.path) else { return true }
+		guard fm.fileExists(atPath: oldDir.path) else { return }
 
 		if !fm.fileExists(atPath: newDir.path) {
 			do {
 				try fm.moveItem(at: oldDir, to: newDir)
-				return true
 			} catch {
 				Logger.misc.error("Application Support migration failed: \(error.localizedDescription)")
-				return false
 			}
+			return
 		}
 
-		// New folder already exists: move children that are missing there, keep conflicting ones.
-		if let children = try? fm.contentsOfDirectory(atPath: oldDir.path) {
-			for child in children {
-				let target = newDir.appendingPathComponent(child)
-				guard !fm.fileExists(atPath: target.path) else { continue }
-				do {
-					try fm.moveItem(at: oldDir.appendingPathComponent(child), to: target)
-				} catch {
-					Logger.misc.error("Could not move \(child): \(error.localizedDescription)")
+		// New folder already exists: move missing children. A conflicting LocalCA is dropped (it is
+		// regenerated anyway), other conflicts are kept next to the new item as `<name>.legacy`.
+		for child in (try? fm.contentsOfDirectory(atPath: oldDir.path)) ?? [] {
+			let source = oldDir.appendingPathComponent(child)
+			var target = newDir.appendingPathComponent(child)
+			if fm.fileExists(atPath: target.path) {
+				if child == "LocalCA" {
+					try? fm.removeItem(at: source)
+					continue
 				}
+				target = newDir.appendingPathComponent(child + ".legacy")
+				guard !fm.fileExists(atPath: target.path) else { continue }
+			}
+			do {
+				try fm.moveItem(at: source, to: target)
+			} catch {
+				Logger.misc.error("Could not move \(child): \(error.localizedDescription)")
 			}
 		}
 
 		if (try? fm.contentsOfDirectory(atPath: oldDir.path))?.isEmpty == true {
 			try? fm.removeItem(at: oldDir)
 		}
-		return !fm.fileExists(atPath: oldDir.path)
 	}
 
 	// MARK: UserDefaults
