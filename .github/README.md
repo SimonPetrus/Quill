@@ -1,73 +1,151 @@
-[![GitHub Release](https://img.shields.io/github/v/release/claration/Feather?include_prereleases)](https://github.com/claration/Feather/releases)
-[![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/claration/Feather/total)](https://github.com/claration/Feather/releases)
-[![GitHub License](https://img.shields.io/github/license/claration/Feather?color=%23C96FAD)](https://github.com/claration/Feather/blob/main/LICENSE)
-[![Sponsor Me](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/khcrysalis)
-
 <div align="center">
 
-<img title="Feather" alt="Feather" height="180" src="landing.png">
-
-Sideloading app meant for developer certificates.
-
-<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="demo-dark.png"><source media="(prefers-color-scheme: light)" srcset="demo-light.png"><img alt="Feather" src="demo-light.png"></picture></p>
-
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="landing-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="landing-light.png">
+  <img alt="Quill" src="landing-light.png">
+</picture>
 
 </div>
 
+Quill is a personal iOS sideloading app: sign IPAs with your own certificate and install them straight from your device.
+
 ## Features
 
-- User friendly, and clean UI.
 - Sign and install applications.
-- Supports [AltStore](https://faq.altstore.io/distribute-your-apps/make-a-source#apps) repositories.
+- Supports [AltStore](https://faq.altstore.io/distribute-your-apps/make-a-source#apps) sources.
 - View detailed information about apps and your certificates.
-- Configurable signing options mainly for modifying the app, such as appearance and allowing support for the files app.
-  - This includes patching apps for compatibility and Liquid Glass.
-- Tweak support for advanced users, using [Ellekit](https://github.com/tealbathingsuit/ellekit) for injection. 
-  - Supports injecting `.deb` and `.dylib` files.
-- Actively maintained: always ensuring most apps get installed properly.
-- No tracking or analytics, ensuring user privacy.
-- Of course, open source and free.
+- Configurable signing options for modifying the app.
+- Tweak support: inject `.deb` and `.dylib` files using [Ellekit](https://github.com/tealbathingsuit/ellekit).
+- No tracking or analytics.
 
-## Download
+Added in Quill:
 
-Visit [releases](https://github.com/claration/Feather/releases) and get the latest `.ipa`.
+- Offline "Fully Local" installs using a Local CA generated on your device.
+- Option to delete the signed IPA after installation.
+- Source pinning.
+- More coming.
 
-<a href="https://celloserenity.github.io/altdirect/?url=https://raw.githubusercontent.com/claration/Feather/refs/heads/main/app-repo.json" target="_blank">
-   <img src="https://github.com/CelloSerenity/altdirect/blob/main/assets/png/AltSource_Blue.png?raw=true" alt="Add AltSource" width="200">
-</a>
-<a href="https://github.com/claration/Feather/releases/latest/download/Feather.ipa" target="_blank">
-   <img src="https://github.com/CelloSerenity/altdirect/blob/main/assets/png/Download_Blue.png?raw=true" alt="Download .ipa" width="200">
-</a>
+## Screenshots
 
-## Translating
+Screenshots coming soon.
 
-Feather now has translation support, all localizations are located in `Feather/Resources/Localizable.xcstrings`.
+<!--
+<p align="center"><picture>
+  <source media="(prefers-color-scheme: dark)" srcset="demo-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="demo-light.png">
+  <img alt="Quill" src="demo-light.png">
+</picture></p>
+-->
 
-To add a new language, open Xcode and use the interface to add/contribute to languages.
+## Getting the IPA
 
-To properly contribute and test potentially test localizations, you can head over to the [contributing guide](./CONTRIBUTING.md).
+The repository is private, so there are no public releases. CI places `Quill.ipa` on the `ipa-builds` branch on every push to `quill`:
 
-## Sponsors
+```sh
+git fetch origin ipa-builds && git show FETCH_HEAD:Quill.ipa > Quill.ipa
+```
 
-| Thanks to all my [sponsors](https://github.com/sponsors/claration)!! |
-|:--------------------------------------------------------------------:|
-| <img src="https://sponsors.claration.dev/sponsors.png">              |
-| _**"samara is cute" - Vendicated**_                                  |
+The IPA is unsigned; sign it with your own method.
 
-## Acknowledgements
+## Local CA setup
 
-- [Samara](https://github.com/claration) - The maker
-- [idevice](https://github.com/jkcoxson/idevice) - Backend for builds with this included, used for communication with `installd`.
-- [*.backloop.dev](https://backloop.dev/) - localhost with public CA signed SSL certificate
-- [Vapor](https://github.com/vapor/vapor) - A server-side Swift HTTP web framework.
-- [Zsign](https://github.com/zhlynn/zsign) - Allowing to sign on-device, reimplimented to work on other platforms such as iOS.
-- [LiveContainer](https://github.com/LiveContainer/LiveContainer) - Fixes/some help
-- [Nuke](https://github.com/kean/Nuke) - Image caching.
-- [Asspp](https://github.com/Lakr233/Asspp) - Some code for setting up the http server.
-- [plistserver](https://github.com/nekohaxx/plistserver) - Hosted on https://api.palera.in.
+1. In Quill, open Settings > Install > Server Type and choose "Fully Local".
+2. Tap "Install Local CA".
+3. Download the profile in Safari.
+4. On the iPhone, open Settings and tap "Profile Downloaded", then Install.
+5. Go to Settings > General > About > Certificate Trust Settings and enable full trust for "Quill Local Root CA".
+6. Back in Quill, the status should read "Trusted".
 
-## License 
+See [How it works](HOW_IT_WORKS.md) for details.
 
-This project is licensed under the GPL-3.0 license. You can see the full details of the license [here](https://github.com/claration/Feather/blob/main/LICENSE). It's under this specific license because I wanted to make a project that is transparent to the user thats related to certificate paired sideloading, before this project there weren't any open source projects that filled in this gap.
+## Updating Quill itself
 
-By contributing to this project, you agree to license your code under the GPL-3.0 license as well (including agreeing to license exceptions), ensuring that your work, like all other contributions, remains freely accessible and open.
+Updating Quill from within Quill requires the idevice install method; the server method cannot install over the running app. The bundle ID must stay the same, and PPQ must be off.
+
+## Building
+
+Requires macOS with Xcode 26:
+
+```sh
+git submodule update --init && make iphoneos
+```
+
+The result is `packages/Quill.ipa`.
+
+## Credits & License
+
+Quill is based on [Feather](https://github.com/claration/Feather), licensed under GPL-3.0. See [LICENSE](../LICENSE).
+
+---
+
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="landing-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="landing-light.png">
+  <img alt="Quill" src="landing-light.png">
+</picture>
+
+</div>
+
+Quill, kişisel kullanım için bir iOS sideloading uygulamasıdır: IPA'ları kendi sertifikanla imzala ve doğrudan cihazından kur.
+
+## Özellikler
+
+- Uygulamaları imzala ve kur.
+- [AltStore](https://faq.altstore.io/distribute-your-apps/make-a-source#apps) kaynaklarını destekler.
+- Uygulamalar ve sertifikaların hakkında ayrıntılı bilgi görüntüle.
+- Uygulamayı değiştirmek için yapılandırılabilir imzalama seçenekleri.
+- Tweak desteği: [Ellekit](https://github.com/tealbathingsuit/ellekit) ile `.deb` ve `.dylib` dosyalarını enjekte et.
+- İzleme veya analitik yok.
+
+Quill ile eklenenler:
+
+- Cihazda üretilen Yerel CA ile çevrimdışı "Fully Local" kurulum.
+- Kurulumdan sonra imzalı IPA'yı silme seçeneği.
+- Kaynak sabitleme.
+- Daha fazlası geliyor.
+
+## Ekran görüntüleri
+
+Ekran görüntüleri yakında.
+
+## IPA'yı edinme
+
+Depo gizli olduğu için herkese açık sürüm yok. CI, `quill` dalına her push'ta `Quill.ipa` dosyasını `ipa-builds` dalına koyar:
+
+```sh
+git fetch origin ipa-builds && git show FETCH_HEAD:Quill.ipa > Quill.ipa
+```
+
+IPA imzasızdır; kendi yönteminle imzala.
+
+## Yerel CA kurulumu
+
+1. Quill'de Ayarlar > Kurulum > Sunucu Türü bölümüne gir ve "Fully Local" seç.
+2. "Install Local CA" düğmesine dokun.
+3. Profili Safari'de indir.
+4. iPhone'da Ayarlar'ı aç, "Profil İndirildi"ye dokun ve Yükle'yi seç.
+5. Ayarlar > Genel > Hakkında > Sertifika Güven Ayarları'na git ve "Quill Local Root CA" için tam güveni aç.
+6. Quill'e dön; durum "Trusted" olmalı.
+
+Ayrıntılar için [Nasıl çalışır](HOW_IT_WORKS.md) sayfasına bak.
+
+## Quill'i güncelleme
+
+Quill'i Quill içinden güncellemek için idevice kurulum yöntemi gerekir; sunucu yöntemi çalışan uygulamanın üzerine kurulum yapamaz. Bundle ID aynı kalmalı ve PPQ kapalı olmalı.
+
+## Derleme
+
+macOS ve Xcode 26 gerekir:
+
+```sh
+git submodule update --init && make iphoneos
+```
+
+Sonuç `packages/Quill.ipa` olur.
+
+## Katkı ve Lisans
+
+Quill, GPL-3.0 lisanslı [Feather](https://github.com/claration/Feather) projesine dayanır. Bkz. [LICENSE](../LICENSE).
