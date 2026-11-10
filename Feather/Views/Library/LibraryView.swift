@@ -27,6 +27,11 @@ struct LibraryView: View {
 	@State private var _selectedAppUUIDs: Set<String> = []
 	@State private var _editMode: EditMode = .inactive
 	
+	// MARK: Bulk Re-sign State
+	@AppStorage("Quill.selectedCert") private var _storedSelectedCert: Int = 0
+	@State private var _bulkSigner: BulkSigner?
+	@State private var _isBulkChecking = false
+	
 	@State private var _searchText = ""
 	@State private var _selectedScope: Scope = .all
 	
@@ -67,6 +72,12 @@ struct LibraryView: View {
 		sortDescriptors: [NSSortDescriptor(keyPath: \AltSource.name, ascending: true)],
 		animation: .snappy
 	) private var _sources: FetchedResults<AltSource>
+	
+	@FetchRequest(
+		entity: CertificatePair.entity(),
+		sortDescriptors: [NSSortDescriptor(keyPath: \CertificatePair.date, ascending: false)],
+		animation: .snappy
+	) private var _certificates: FetchedResults<CertificatePair>
 	
 	// MARK: Body
 	var body: some View {
@@ -148,6 +159,14 @@ struct LibraryView: View {
 				
 				if _editMode.isEditing {
 					NBToolbarButton(
+						_selectedAppUUIDs.isEmpty ? .localized("Sign All Imported") : .localized("Re-sign"),
+						systemImage: "signature",
+						isDisabled: _isBulkChecking || (_selectedAppUUIDs.isEmpty && _importedApps.isEmpty)
+					) {
+						_startBulkResign()
+					}
+					
+					NBToolbarButton(
 						.localized("Delete"),
 						systemImage: "trash",
 						isDisabled: _selectedAppUUIDs.isEmpty
@@ -195,6 +214,16 @@ struct LibraryView: View {
 			.fullScreenCover(item: $_selectedSigningAppPresenting) { app in
 				SigningView(app: app.base)
 					.compatNavigationTransition(id: app.base.uuid ?? "", ns: _namespace)
+			}
+			.sheet(isPresented: Binding(
+				get: { _bulkSigner != nil },
+				set: { if !$0 { _bulkSigner = nil } }
+			), onDismiss: _finishBulkResign) {
+				if let signer = _bulkSigner {
+					BulkSigningView(signer: signer) {
+						_bulkSigner = nil
+					}
+				}
 			}
 			.sheet(isPresented: $_isImportingPresenting) {
 				FileImporterRepresentableView(
@@ -254,6 +283,76 @@ extension LibraryView {
 		Button(.localized("Import from URL"), systemImage: "globe") {
 			_isDownloadingPresenting = true
 		}
+	}
+}
+
+// MARK: - Extension: Bulk Re-sign
+extension LibraryView {
+	/// Single cleanup path (Close button and swipe dismiss).
+	private func _finishBulkResign() {
+		_bulkSigner = nil
+		_selectedAppUUIDs.removeAll()
+		_editMode = .inactive
+	}
+	
+	private func _startBulkResign() {
+		// Unfiltered lists: search/scope must not change what gets signed.
+		// No selection: only imported (unsigned) apps; re-signing signed apps would add copies.
+		let apps: [AppInfoPresentable]
+		if _selectedAppUUIDs.isEmpty {
+			apps = _importedApps.map { $0 as AppInfoPresentable }
+		} else {
+			let everything = _signedApps.map { $0 as AppInfoPresentable } + _importedApps.map { $0 as AppInfoPresentable }
+			apps = everything.filter { app in app.uuid.map { _selectedAppUUIDs.contains($0) } ?? false }
+		}
+		guard !apps.isEmpty else { return }
+		
+		let options = OptionsManager.shared.options
+		let cert: CertificatePair? = _certificates.indices.contains(_storedSelectedCert)
+			? _certificates[_storedSelectedCert]
+			: nil
+		
+		guard cert != nil || options.signingOption != .default else {
+			UIAlertController.showAlertWithOk(
+				title: .localized("No Certificate"),
+				message: .localized("Please go to settings and import a valid certificate"),
+				isCancel: true
+			)
+			return
+		}
+		
+		let begin = {
+			let signer = BulkSigner(apps: apps, options: options, certificate: cert)
+			_bulkSigner = signer
+			signer.start()
+		}
+		
+		// Check the certificate/profile pair once before the whole batch.
+		if options.signingOption == .default, let cert {
+			guard
+				let p12URL = Storage.shared.getFile(.certificate, from: cert),
+				let provisionURL = Storage.shared.getFile(.provision, from: cert)
+			else {
+				UIAlertController.showAlertWithOk(
+					title: .localized("No Certificate"),
+					message: .localized("Please go to settings and import a valid certificate"),
+					isCancel: true
+				)
+				return
+			}
+			_isBulkChecking = true
+			CertificatePairValidator.check(
+				p12URL: p12URL,
+				password: cert.password ?? "",
+				provisionURL: provisionURL,
+				continueTitle: .localized("Sign Anyway"),
+				proceed: { _isBulkChecking = false; begin() },
+				cancel: { _isBulkChecking = false }
+			)
+			return
+		}
+		
+		begin()
 	}
 }
 
