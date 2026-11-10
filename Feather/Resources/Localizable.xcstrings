@@ -1,6 +1,57 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "The selected provisioning profile is not a wildcard profile, so the keychain cannot be isolated." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The selected provisioning profile is not a wildcard profile, so the keychain cannot be isolated."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seçilen sağlama profili joker (wildcard) profil olmadığı için anahtarlık ayrılamaz."
+          }
+        }
+      }
+    },
+    "Gives the app its own keychain group so other apps signed with the same profile cannot read its keychain items. Only works with wildcard provisioning profiles." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gives the app its own keychain group so other apps signed with the same profile cannot read its keychain items. Only works with wildcard provisioning profiles."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uygulamaya kendine ait bir anahtarlık grubu verir; aynı profille imzalanan diğer uygulamalar anahtarlık öğelerini okuyamaz. Yalnızca joker (wildcard) sağlama profilleriyle çalışır."
+          }
+        }
+      }
+    },
+    "Isolate Keychain" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isolate Keychain"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anahtarlığı Ayır"
+          }
+        }
+      }
+    },
     "Inject into Watch App" : {
       "extractionState" : "manual",
       "localizations" : {

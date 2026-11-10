@@ -123,6 +123,8 @@ struct Options: Codable, Equatable {
 	var injectIntoWatchApp: Bool
 	/// If app should merge entitlements with the binary.
 	var mergeEntitlements: Bool
+	/// If the keychain access group should be unique to this app (`TEAMID.<bundle id>`), wildcard profiles only
+	var isolateKeychain: Bool
 
 	// MARK: Experiments
 	
@@ -174,6 +176,7 @@ struct Options: Codable, Equatable {
 		injectIntoExtensions: false,
 		injectIntoWatchApp: false,
 		mergeEntitlements: false,
+		isolateKeychain: false,
 		
 		// MARK: Experiments
 		
