@@ -75,6 +75,13 @@ struct SigningOptionsView: View {
 					isOn: $options.injectIntoExtensions,
 					temporaryValue: temporaryOptions?.injectIntoExtensions
 				)
+				
+				_toggle(
+					.localized("Inject into Watch App"),
+					systemImage: "applewatch",
+					isOn: $options.injectIntoWatchApp,
+					temporaryValue: temporaryOptions?.injectIntoWatchApp
+				)
 			}
 		}
 		

@@ -1,6 +1,23 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Inject into Watch App" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inject into Watch App"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch Uygulamasına Dahil Et"
+          }
+        }
+      }
+    },
     "%lld Apps" : {
       "comment" : "Repository app count",
       "extractionState" : "manual",
