@@ -121,6 +121,16 @@ bool ZMachO::CheckSignature() const
 	);
 }
 
+bool ZMachO::IsLoadableCode() const
+{
+	return std::any_of(m_arrArchOes.cbegin(), m_arrArchOes.cend(),
+		[](ZArchO const * archo) {
+			return MH_EXECUTE == archo->m_uFileType || MH_DYLIB == archo->m_uFileType ||
+				MH_BUNDLE == archo->m_uFileType || MH_DYLINKER == archo->m_uFileType;
+		}
+	);
+}
+
 bool ZMachO::Sign(ZSignAsset* pSignAsset, bool bForce, string strBundleId, string strInfoSHA1, string strInfoSHA256, const string& strCodeResourcesData)
 {
 	if (NULL == m_pBase || m_arrArchOes.empty()) {

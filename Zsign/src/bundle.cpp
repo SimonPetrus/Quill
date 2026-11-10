@@ -276,11 +276,11 @@ void ZBundle::GetChangedFiles(jvalue& jvNode, vector<string>& arrChangedFiles)
 	}
 }
 
-void ZBundle::GetNodeChangedFiles(jvalue& jvNode, bool excludeProvisioning)
+void ZBundle::GetNodeChangedFiles(jvalue& jvNode)
 {
 	if (jvNode.has("folders")) {
 		for (size_t i = 0; i < jvNode["folders"].size(); i++) {
-			GetNodeChangedFiles(jvNode["folders"][i], excludeProvisioning);
+			GetNodeChangedFiles(jvNode["folders"][i]);
 		}
 	}
 
@@ -289,11 +289,10 @@ void ZBundle::GetNodeChangedFiles(jvalue& jvNode, bool excludeProvisioning)
 	for (size_t i = 0; i < arrChangedFiles.size(); i++) {
 		jvNode["changed"].push_back(arrChangedFiles[i]);
 	}
-	
-	if (excludeProvisioning) {
-		if ("/" == jvNode["path"]) { // root
-			jvNode["changed"].push_back("embedded.mobileprovision");
-		}
+
+	// the profile is only part of the seal when it is embedded (not removed with bRemoveProvision)
+	if ("/" == jvNode["path"] && !m_bRemoveProvision && NULL != m_pSignAsset && !m_pSignAsset->m_strProvData.empty()) { // root
+		jvNode["changed"].push_back("embedded.mobileprovision");
 	}
 }
 
@@ -314,15 +313,32 @@ static bool IsAppExtensionPath(const string& strPath)
 bool ZBundle::SignNode(jvalue& jvNode)
 {
 	if (jvNode.has("files")) {
+		vector<string> arrFailedFiles;
 		for (size_t i = 0; i < jvNode["files"].size(); i++) {
 			string strFile = jvNode["files"][i];
 			ZLog::PrintV(">>> SignFile: \t%s\n", strFile.c_str());
 			ZMachO macho;
 			if (macho.InitV("%s/%s", m_strAppFolder.c_str(), strFile.c_str())) {
-				macho.Sign(m_pSignAsset, m_bForceSign, "", "", "", "");
+				bool bLoadable = macho.IsLoadableCode(); // before Sign: a failed realloc frees the arches
+				if (!macho.Sign(m_pSignAsset, m_bForceSign, "", "", "", "")) {
+					// loadable code (executable, dylib, bundle) left unsigned makes the app fail to
+					// install or crash on launch, so it is an error; other Mach-O types (e.g. object
+					// files shipped as resources) are only sealed as resources, as before
+					if (bLoadable) {
+						arrFailedFiles.push_back(strFile);
+					} else {
+						ZLog::WarnV(">>> Warning: Can't sign non-loadable Mach-O file: \t%s\n", strFile.c_str());
+					}
+				}
 			} else {
 				ZLog::WarnV(">>> Warning: Skipping non-Mach-O file: \t%s\n", strFile.c_str());
 			}
+		}
+		if (!arrFailedFiles.empty()) {
+			for (const string& strFile : arrFailedFiles) {
+				ZLog::ErrorV(">>> Can't sign Mach-O file! %s\n", strFile.c_str());
+			}
+			return false;
 		}
 	}
 	
@@ -364,12 +380,15 @@ bool ZBundle::SignNode(jvalue& jvNode)
 
 	ZMachO macho;
 	if (!macho.Init(strExePath.c_str())) {
-		ZLog::ErrorV(">>> Can't parse BundleExecute file! %s\n", strExePath.c_str());
-#if !TARGET_OS_IOS
-		return false;
-#else
+		// apps and app extensions need a valid executable; a framework (or other bundle) whose
+		// executable is missing or not Mach-O is skipped as before (resource-only bundles)
+		bool bAppBundle = ("/" == strFolder) || ZFile::IsPathSuffix(strFolder, ".app") || ZFile::IsPathSuffix(strFolder, ".appex");
+		if (bAppBundle) {
+			ZLog::ErrorV(">>> Can't parse BundleExecute file! %s\n", strExePath.c_str());
+			return false;
+		}
+		ZLog::WarnV(">>> Warning: Skipping bundle without a valid executable: %s\n", strExePath.c_str());
 		return true;
-#endif
 	}
 
 	bool bForceSign = m_bForceSign;
@@ -830,13 +849,14 @@ bool ZBundle::SignFolder(ZSignAsset* pSignAsset,
 		}
 	}
 
+	// bRemoveProvision has the upstream meaning (-R): true = do not embed the profile.
+	// (Zsign-Package used it inverted, which together with upstream's removal in
+	// GenerateCodeResources dropped the profile from every signed app.)
 	ZFile::RemoveFileV("%s/embedded.mobileprovision", m_strAppFolder.c_str());
-	if (!pSignAsset->m_strProvData.empty()) {
-		if (bRemoveProvision) {
-			if (!ZFile::WriteFileV(pSignAsset->m_strProvData, "%s/embedded.mobileprovision", m_strAppFolder.c_str())) { // embedded.mobileprovision
-				ZLog::ErrorV(">>> Can't write embedded.mobileprovision!\n");
-				return false;
-			}
+	if (!bRemoveProvision && !pSignAsset->m_strProvData.empty()) {
+		if (!ZFile::WriteFileV(pSignAsset->m_strProvData, "%s/embedded.mobileprovision", m_strAppFolder.c_str())) { // embedded.mobileprovision
+			ZLog::ErrorV(">>> Can't write embedded.mobileprovision!\n");
+			return false;
 		}
 	}
 
@@ -868,7 +888,7 @@ bool ZBundle::SignFolder(ZSignAsset* pSignAsset,
 		if (!GetObjectsToSign(m_strAppFolder, jvRoot)) {
 			return false;
 		}
-		GetNodeChangedFiles(jvRoot, bRemoveProvision);
+		GetNodeChangedFiles(jvRoot);
 	} else {
 		jvRoot.read_from_file("./.zsign_cache/%s.json", strCacheName.c_str());
 	}
@@ -887,7 +907,7 @@ bool ZBundle::SignFolder(ZSignAsset* pSignAsset,
 	ZLog::PrintV(">>> TeamId: \t%s\n", m_pSignAsset->m_strTeamId.c_str());
 	ZLog::PrintV(">>> SubjectCN: \t%s\n", m_pSignAsset->m_strSubjectCN.c_str());
 	ZLog::PrintV(">>> ReadCache: \t%s\n", m_bForceSign ? "NO" : "YES");
-	ZLog::PrintV(">>> Exclude MobileProvision: \t%s\n", bRemoveProvision ? "NO" : "YES");
+	ZLog::PrintV(">>> Remove MobileProvision: \t%s\n", bRemoveProvision ? "YES" : "NO");
 
 	if (SignNode(jvRoot)) {
 		if (bEnableCache) {

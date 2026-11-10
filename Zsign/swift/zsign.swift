@@ -57,7 +57,7 @@ public enum Zsign {
 	///   - customName: Custom display name for the app bundle
 	///   - customVersion: Custom version for the app bundle
 	///   - adhoc: If the app bundle should be signed using Adhoc (no signing identity)
-	///   - removeProvision: If `embedded.mobileprovision` should be excluded when signing
+	///   - removeProvision: If `embedded.mobileprovision` should be left out of the app bundle (default: embed it)
 	/// - Returns: True if its successful
 	static public func sign(
 		appPath: String = "",

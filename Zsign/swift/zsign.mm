@@ -177,7 +177,7 @@ int zsign(
 	NSString *displayname,
 	NSString *bundleversion,
 	bool adhoc,
-	bool excludeprovion,
+	bool removeProvision,
 	void(^completionHandler)(BOOL success)
 ) {
 	ZTimer atimer;
@@ -224,7 +224,7 @@ int zsign(
 	
 	atimer.Reset();
 	ZBundle bundle;
-	bool bRet = bundle.SignFolder(&zsa, strFolder, strBundleId, strBundleVersion, strDisplayName, arrDylibFiles, arrDisDylibFiles, bForce, bWeakInject, bEnableCache, excludeprovion);
+	bool bRet = bundle.SignFolder(&zsa, strFolder, strBundleId, strBundleVersion, strDisplayName, arrDylibFiles, arrDisDylibFiles, bForce, bWeakInject, bEnableCache, removeProvision);
 	ZLog::PrintV(">>> Signing:\t%s %s\n", strPath.c_str(), (bAdhoc ? " (Ad-hoc)" : ""));
 	atimer.PrintResult(bRet, ">>> Signed %s!", bRet ? "OK" : "Failed");
 	

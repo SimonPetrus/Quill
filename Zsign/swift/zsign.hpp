@@ -31,7 +31,7 @@ int zsign(
 	NSString *displayname,
 	NSString *bundleversion,
 	bool adhoc,
-	bool dontGenerateEmbeddedMobileProvision,
+	bool removeProvision, // true: do not embed embedded.mobileprovision
 	void(^completionHandler)(BOOL success)
 );
 

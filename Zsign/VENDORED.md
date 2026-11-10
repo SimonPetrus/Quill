@@ -34,8 +34,15 @@ Keep these when syncing with upstream again.
 ### From Zsign-Package
 - `src/archo.cpp`, `src/archo.h`, `src/macho.cpp`, `src/macho.h`: `ListDylibs`, `ChangeDylibPath`,
   `ZMachO::CheckSignature` / `ZArchO::IsSigned` (used by the Swift wrapper).
-- `src/bundle.cpp`, `src/bundle.h`: iOS patches (provision flag, nonstrict signing,
-  `GetNodeChangedFiles(..., bool)`); see the later commits on this file for their current state.
+- `src/bundle.cpp`, `src/bundle.h`: Zsign-Package's iOS patches were reworked by Quill:
+  - `bRemoveProvision` has the upstream meaning again (true = do not embed the profile); the
+    Zsign-Package inversion plus upstream's removal in `GenerateCodeResources` had dropped
+    `embedded.mobileprovision` from every signed app. The profile is written only when it is
+    kept; `GetNodeChangedFiles` has the upstream signature.
+  - Signing is strict again for loadable code: a nested executable/dylib/bundle that can't be
+    signed fails the whole signing (other Mach-O types only warn); an app or app extension whose
+    executable can't be parsed fails; a framework without a valid executable is still skipped.
+  - `ZMachO::IsLoadableCode` (`src/macho.cpp`, `src/macho.h`) supports the above.
 - `src/common/mach-o.h`: `#ifndef _H_CSCOMMON` guard around `eSecRequirementType`
   (Xcode 27 SDK clash).
 - `src/openssl.h`: `m_evpPKey`, `m_x509Cert`, `m_caCerts` are `public` (`swift/zsign.mm`
