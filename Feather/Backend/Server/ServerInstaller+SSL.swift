@@ -16,8 +16,10 @@ import Security
 
 // MARK: - Local CA (generated on device, replaces the expired backloop.dev certificate)
 extension ServerInstaller {
-	/// Host used by Fully Local mode (SAN + endpoints).
+	/// DNS name in the server certificate SAN.
 	static let localHostname = "localhost"
+	/// Host used by Fully Local mode endpoints (IP SAN of the server certificate).
+	static let localAddress = "127.0.0.1"
 	/// Extra SAN kept from the original PR.
 	static let serverHostname = "quill.localhost"
 
@@ -69,7 +71,8 @@ extension ServerInstaller {
 			return false
 		}
 
-		let policy = SecPolicyCreateSSL(true, localHostname as CFString)
+		// Same host as the Fully Local endpoints: validates the IP SAN and the IP name constraint.
+		let policy = SecPolicyCreateSSL(true, localAddress as CFString)
 		var trust: SecTrust?
 		guard
 			SecTrustCreateWithCertificates([serverCert, rootCert] as CFArray, policy, &trust) == errSecSuccess,

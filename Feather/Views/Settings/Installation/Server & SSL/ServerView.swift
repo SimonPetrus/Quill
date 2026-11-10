@@ -12,6 +12,7 @@ import NimbleViews
 struct ServerView: View {
 	@Environment(\.scenePhase) private var _scenePhase
 	@State private var _isTrusted: Bool?
+	@State private var _isTestingConnection = false
 	
 	@AppStorage("Quill.ipFix") private var _ipFix: Bool = false
 	@AppStorage("Quill.serverMethod") private var _serverMethod: Int = 0
@@ -48,6 +49,19 @@ struct ServerView: View {
 						}
 					}
 					
+					Button {
+						_testConnection()
+					} label: {
+						HStack {
+							Label(.localized("Test Connection"), systemImage: "network")
+							if _isTestingConnection {
+								Spacer()
+								ProgressView()
+							}
+						}
+					}
+					.disabled(_isTestingConnection)
+					
 					HStack {
 						Label {
 							Text(.localized("Trust Status"))
@@ -70,6 +84,22 @@ struct ServerView: View {
 			if phase == .active { _refreshTrust() }
 		}
 		.onChange(of: _serverMethod) { _ in _refreshTrust() }
+	}
+	
+	private func _testConnection() {
+		guard !_isTestingConnection else { return }
+		_isTestingConnection = true
+		
+		Task.detached(priority: .userInitiated) {
+			let lines = await LocalConnectionTester.run()
+			await MainActor.run {
+				_isTestingConnection = false
+				UIAlertController.showAlertWithOk(
+					title: .localized("Test Connection"),
+					message: lines.joined(separator: "\n")
+				)
+			}
+		}
 	}
 	
 	private func _refreshTrust() {
