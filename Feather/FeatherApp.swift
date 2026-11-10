@@ -17,6 +17,8 @@ struct QuillApp: App {
 	/// Evaluated while the App struct is created, before the stored properties below that touch
 	/// storage (initializers run in declaration order): moves pre-rename data first.
 	private let _legacyMigration: Void = LegacyMigration.runIfNeeded()
+	/// Registers UserDefaults defaults (server type = Semi Local) before any view reads them.
+	private let _registerDefaults: Void = ServerInstaller.registerDefaults()
 	
 	let heartbeat = HeartbeatManager.shared
 	

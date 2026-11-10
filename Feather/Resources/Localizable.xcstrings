@@ -14339,6 +14339,74 @@
         }
       }
     },
+    "Fully Local Blocked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fully Local Blocked"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tamamen Yerel Engelli"
+          }
+        }
+      }
+    },
+    "On iOS 27.2 and later, Fully Local installs are blocked by iOS. Use Semi Local (needs internet) or idevice (offline)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On iOS 27.2 and later, Fully Local installs are blocked by iOS. Use Semi Local (needs internet) or idevice (offline)."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS 27.2 ve sonrasında Tamamen Yerel kurulum iOS tarafından engelleniyor. Yarı Yerel (internet gerekir) veya idevice (çevrimdışı) kullanın."
+          }
+        }
+      }
+    },
+    "Switch to Semi Local" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch to Semi Local"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yarı Yerel'e Geç"
+          }
+        }
+      }
+    },
+    "Try Anyway" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try Anyway"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yine de Dene"
+          }
+        }
+      }
+    },
     "Semi Local" : {
       "extractionState" : "manual",
       "localizations" : {
