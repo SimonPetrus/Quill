@@ -112,15 +112,6 @@ extension Storage {
 		return read.decoded
 	}
 	
-	func getUuidDirectory(for cert: CertificatePair) -> URL? {
-		guard let uuid = cert.uuid else {
-			return nil
-		}
-		
-		let fm = FileManager.default
-		return fm.certificateDirectories(uuid).first { fm.fileExists(atPath: $0.path) } ?? fm.secureCertificates(uuid)
-	}
-	
 	func getAllCertificates() -> [CertificatePair] {
 		let fetchRequest: NSFetchRequest<CertificatePair> = CertificatePair.fetchRequest()
 		fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \CertificatePair.date, ascending: false)]
@@ -138,4 +129,55 @@ extension CertificatePair {
 		}
 		return password ?? ""
 	}
+}
+
+// MARK: - Missing password (e.g. device restored from a backup: Keychain items do not move between devices)
+extension CertificatePair {
+	/// True when no password is stored anywhere for this certificate AND its p12 actually needs one.
+	var isPasswordMissing: Bool {
+		guard resolvedPassword.isEmpty else { return false }
+		return !Storage.verifyPassword("", for: self)
+	}
+
+	/// Verifies `newPassword` against the p12 and, if correct, stores it in the Keychain (never in Core Data).
+	/// Returns false when the password is wrong or the Keychain write failed.
+	func updatePassword(_ newPassword: String) -> Bool {
+		guard let uuid, Storage.verifyPassword(newPassword, for: self) else { return false }
+		if newPassword.isEmpty {
+			KeychainHelper.delete(uuid)
+		} else if !KeychainHelper.set(newPassword, for: uuid) {
+			return false
+		}
+		if password != nil {
+			password = nil
+			Storage.shared.saveContext()
+		}
+		return true
+	}
+}
+
+extension Storage {
+	/// Checks a password against the stored p12 on temporary copies (the check helper patches the profile).
+	/// Returns true also when files are missing, so a missing file is never reported as a missing password.
+	static func verifyPassword(_ password: String, for cert: CertificatePair) -> Bool {
+		guard
+			let p12 = Storage.shared.getFile(.certificate, from: cert),
+			let provision = Storage.shared.getFile(.provision, from: cert)
+		else { return true }
+		let fm = FileManager.default
+		let dir = fm.temporaryDirectory.appendingPathComponent("QuillPwCheck-\(UUID().uuidString)", isDirectory: true)
+		defer { try? fm.removeItem(at: dir) }
+		do {
+			try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+			let p12Copy = dir.appendingPathComponent("c.p12")
+			let provisionCopy = dir.appendingPathComponent("c.mobileprovision")
+			try fm.copyItem(at: p12, to: p12Copy)
+			try fm.copyItem(at: provision, to: provisionCopy)
+			return FR.checkPasswordForCertificate(for: p12Copy, with: password, using: provisionCopy)
+		} catch {
+			return true
+		}
+	}
+
+	static let missingPasswordMessage = String.localized("This certificate's password is not on this device. Re-enter the password in the certificate details.")
 }

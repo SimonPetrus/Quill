@@ -11,6 +11,7 @@ import NimbleViews
 // MARK: - View
 struct CertificatesCellView: View {
 	@State var data: Certificate?
+	@State private var _passwordMissing = false
 	
 	@ObservedObject var cert: CertificatePair
 	
@@ -41,6 +42,7 @@ struct CertificatesCellView: View {
 			withAnimation {
 				data = Storage.shared.getProvisionFileDecoded(for: cert)
 			}
+			_passwordMissing = cert.isPasswordMissing
 		}
 	}
 }
@@ -69,6 +71,10 @@ extension CertificatesCellView {
 		
 		if cert.ppQCheck == true {
 			pills.append(NBPillItem(title: .localized("PPQCheck"), icon: "checkmark.shield", color: .red))
+		}
+		
+		if _passwordMissing {
+			pills.append(NBPillItem(title: .localized("Password Missing"), icon: "exclamationmark.triangle", color: .orange))
 		}
 		
 		if cert.revoked == true {

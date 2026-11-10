@@ -167,6 +167,8 @@ struct BackupSummary {
 	var certificatesAdded = 0
 	var certificatesSkipped = 0
 	var certificatesFailed = 0
+	/// The backup was not encrypted but contained certificates: they were ignored.
+	var certificatesIgnored = false
 }
 
 // MARK: - Handler
@@ -321,7 +323,7 @@ enum BackupHandler {
 			let shareDir = FileManager.default.temporaryDirectory.appendingPathComponent("QuillBackupShare-\(UUID().uuidString)", isDirectory: true)
 			try FileManager.default.createDirectory(at: shareDir, withIntermediateDirectories: true)
 			let final = shareDir.appendingPathComponent("Quill-Backup-\(stamp.string(from: Date())).quillbackup")
-			try output.write(to: final, options: .atomic)
+			try output.write(to: final, options: [.atomic, .completeFileProtection])
 			return final
 		}.value
 	}
@@ -345,10 +347,11 @@ enum BackupHandler {
 		defer { try? FileManager.default.removeItem(at: work) }
 
 		// Decrypt / unzip off-main
-		let extracted = try await Task.detached(priority: .userInitiated) { () -> URL in
+		let (extracted, wasEncrypted) = try await Task.detached(priority: .userInitiated) { () -> (URL, Bool) in
 			let raw = try Data(contentsOf: url)
 			var zipData = raw
-			if BackupCrypto.isEncrypted(raw) {
+			let encrypted = BackupCrypto.isEncrypted(raw)
+			if encrypted {
 				guard let password, !password.isEmpty else { throw BackupError.passwordRequired }
 				zipData = try BackupCrypto.decrypt(raw, password: password)
 			} else if !raw.starts(with: Data("PK".utf8)) {
@@ -363,14 +366,14 @@ enum BackupHandler {
 			} catch {
 				throw BackupError.invalidFile
 			}
-			return dest
+			return (dest, encrypted)
 		}.value
 
-		return try await MainActor.run { try _apply(from: extracted) }
+		return try await MainActor.run { try _apply(from: extracted, encrypted: wasEncrypted) }
 	}
 
 	@MainActor
-	private static func _apply(from dir: URL) throws -> BackupSummary {
+	private static func _apply(from dir: URL, encrypted: Bool) throws -> BackupSummary {
 		let fm = FileManager.default
 		let decoder = _makeDecoder()
 		guard
@@ -449,9 +452,15 @@ enum BackupHandler {
 			try? Storage.shared.context.save()
 		}
 
-		// Certificates (same path as a normal import: secure folder + Keychain)
+		// Certificates (same path as a normal import: secure folder + Keychain).
+		// Only from the encrypted container: a plain zip never carries certificates written by Quill.
+		let certificatesURL = dir.appendingPathComponent("certificates.json")
+		if !encrypted && fm.fileExists(atPath: certificatesURL.path) {
+			summary.certificatesIgnored = true
+		}
 		if
-			let data = try? Data(contentsOf: dir.appendingPathComponent("certificates.json")),
+			encrypted,
+			let data = try? Data(contentsOf: certificatesURL),
 			let certs = try? decoder.decode([BackupCertificate].self, from: data)
 		{
 			var knownUUIDs = Set(Storage.shared.getAllCertificates().compactMap { $0.uuid?.uppercased() })

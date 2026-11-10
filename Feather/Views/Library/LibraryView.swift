@@ -327,6 +327,15 @@ extension LibraryView {
 			signer.start()
 		}
 		
+		if options.signingOption == .default, let cert, cert.isPasswordMissing {
+			UIAlertController.showAlertWithOk(
+				title: .localized("Password Missing"),
+				message: Storage.missingPasswordMessage,
+				isCancel: true
+			)
+			return
+		}
+		
 		// Check the certificate/profile pair once before the whole batch.
 		if options.signingOption == .default, let cert {
 			guard

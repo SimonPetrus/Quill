@@ -11,6 +11,9 @@ import OSLog
 
 // MARK: - View
 struct BackupView: View {
+	/// Set when a `.quillbackup` file was opened from outside the app ("Open in Quill").
+	var initialURL: URL?
+
 	@State private var _includeCertificates = false
 	@State private var _password = ""
 	@State private var _passwordRepeat = ""
@@ -83,6 +86,11 @@ struct BackupView: View {
 		} message: {
 			Text(.localized("This backup is encrypted. Enter its password."))
 		}
+		.onAppear {
+			if let url = initialURL, _pickedURL == nil, !_isWorking {
+				_didPick(url)
+			}
+		}
 		.overlay {
 			if _isWorking { ProgressView().controlSize(.large) }
 		}
@@ -102,11 +110,33 @@ extension BackupView {
 					password: includeCertificates ? password : nil
 				)
 				_isWorking = false
-				UIActivityViewController.show(activityItems: [url])
+				_password = ""
+				_passwordRepeat = ""
+				_share(url)
 			} catch {
 				_isWorking = false
 				_show(title: .localized("Error"), message: error.localizedDescription)
 			}
+		}
+	}
+
+	/// Share sheet; the temporary backup file (and its folder) is removed when the sheet is done.
+	private func _share(_ url: URL) {
+		DispatchQueue.main.async {
+			guard let presenter = UIApplication.topViewController() else {
+				try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
+				return
+			}
+			let controller = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+			controller.completionWithItemsHandler = { _, _, _, _ in
+				try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
+			}
+			if let popover = controller.popoverPresentationController {
+				popover.sourceView = presenter.view
+				popover.sourceRect = CGRect(x: presenter.view.bounds.midX, y: presenter.view.bounds.midY, width: 0, height: 0)
+				popover.permittedArrowDirections = []
+			}
+			presenter.present(controller, animated: true)
 		}
 	}
 
@@ -160,6 +190,7 @@ extension BackupView {
 		if s.settingsRestored { lines.append(.localized("Settings restored.")) }
 		lines.append(.localized("Sources: %d added, %d skipped.", arguments: s.sourcesAdded, s.sourcesSkipped))
 		lines.append(.localized("Certificates: %d added, %d skipped, %d failed.", arguments: s.certificatesAdded, s.certificatesSkipped, s.certificatesFailed))
+		if s.certificatesIgnored { lines.append(.localized("This backup was not encrypted, so the certificates in it were ignored.")) }
 		return lines.joined(separator: "\n")
 	}
 

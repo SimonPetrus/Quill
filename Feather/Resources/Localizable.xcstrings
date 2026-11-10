@@ -19025,6 +19025,108 @@
           }
         }
       }
+    },
+    "Password Missing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password Missing"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parola Eksik"
+          }
+        }
+      }
+    },
+    "This certificate's password is not on this device. Re-enter the password in the certificate details." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This certificate's password is not on this device. Re-enter the password in the certificate details."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu sertifikanın parolası bu cihazda yok. Sertifika bilgilerinden parolayı yeniden girin."
+          }
+        }
+      }
+    },
+    "Enter / Update Password" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter / Update Password"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parolayı Gir / Güncelle"
+          }
+        }
+      }
+    },
+    "Certificate Password" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certificate Password"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sertifika Parolası"
+          }
+        }
+      }
+    },
+    "Wrong password, or it could not be saved securely." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wrong password, or it could not be saved securely."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parola yanlış ya da güvenli şekilde kaydedilemedi."
+          }
+        }
+      }
+    },
+    "This backup was not encrypted, so the certificates in it were ignored." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This backup was not encrypted, so the certificates in it were ignored."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu yedek şifreli olmadığı için içindeki sertifikalar yok sayıldı."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -13,6 +13,9 @@ import Zsign
 struct CertificatesInfoView: View {
 	@Environment(\.dismiss) var dismiss
 	@State var data: Certificate?
+	@State private var _isEnteringPassword = false
+	@State private var _newPassword = ""
+	@State private var _passwordMissing = false
 	
 	var cert: CertificatePair
 	
@@ -28,6 +31,18 @@ struct CertificatesInfoView: View {
 						.frame(maxWidth: .infinity, alignment: .center)
 				}
 				
+				Section {
+					Button(.localized("Enter / Update Password"), systemImage: "key") {
+						_newPassword = ""
+						_isEnteringPassword = true
+					}
+				} footer: {
+					if _passwordMissing {
+						Text(Storage.missingPasswordMessage)
+							.foregroundStyle(.orange)
+					}
+				}
+				
 				if let data {
 					_infoSection(data: data)
 					_entitlementsSection(data: data)
@@ -38,8 +53,25 @@ struct CertificatesInfoView: View {
 				NBToolbarButton(role: .close)
 			}
 		}
+		.alert(.localized("Certificate Password"), isPresented: $_isEnteringPassword) {
+			SecureField(.localized("Password"), text: $_newPassword)
+			Button(.localized("Cancel"), role: .cancel) { _newPassword = "" }
+			Button(.localized("OK")) {
+				let entered = _newPassword
+				_newPassword = ""
+				if cert.updatePassword(entered) {
+					_passwordMissing = false
+				} else {
+					UIAlertController.showAlertWithOk(
+						title: .localized("Error"),
+						message: .localized("Wrong password, or it could not be saved securely.")
+					)
+				}
+			}
+		}
 		.onAppear {
 			data = Storage.shared.getProvisionFileDecoded(for: cert)
+			_passwordMissing = cert.isPasswordMissing
 		}
 	}
 }
