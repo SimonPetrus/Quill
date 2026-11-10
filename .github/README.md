@@ -50,7 +50,7 @@ The IPA is unsigned; sign it with your own method.
 
 ## Local CA setup
 
-1. In Quill, open Settings > Install > Server Type and choose "Fully Local".
+1. In Quill, open Settings > Installation, set "Server Type" to "Fully Local".
 2. Tap "Install Local CA".
 3. Download the profile in Safari.
 4. On the iPhone, open Settings and tap "Profile Downloaded", then Install.
@@ -102,7 +102,7 @@ Quill, kişisel kullanım için bir iOS sideloading uygulamasıdır: IPA'ları k
 
 Quill ile eklenenler:
 
-- Cihazda üretilen Yerel CA ile çevrimdışı "Fully Local" kurulum.
+- Cihazda üretilen Yerel CA ile çevrimdışı "Tamamen Yerel" kurulum.
 - Kurulumdan sonra imzalı IPA'yı silme seçeneği.
 - Kaynak sabitleme.
 - Daha fazlası geliyor.
@@ -123,12 +123,12 @@ IPA imzasızdır; kendi yönteminle imzala.
 
 ## Yerel CA kurulumu
 
-1. Quill'de Ayarlar > Kurulum > Sunucu Türü bölümüne gir ve "Fully Local" seç.
-2. "Install Local CA" düğmesine dokun.
+1. Quill'de Ayarlar > Kurulum ekranında "Sunucu Türü" seçeneğini "Tamamen Yerel" yap.
+2. "Yerel CA'yı Yükle" düğmesine dokun.
 3. Profili Safari'de indir.
 4. iPhone'da Ayarlar'ı aç, "Profil İndirildi"ye dokun ve Yükle'yi seç.
 5. Ayarlar > Genel > Hakkında > Sertifika Güven Ayarları'na git ve "Quill Local Root CA" için tam güveni aç.
-6. Quill'e dön; durum "Trusted" olmalı.
+6. Quill'e dön; durum "Güvenilir" olmalı.
 
 Ayrıntılar için [Nasıl çalışır](HOW_IT_WORKS.md) sayfasına bak.
 
