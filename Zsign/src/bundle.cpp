@@ -37,6 +37,26 @@ static bool IsInsideFolder(const string& strPath, const string& strRealRoot, boo
 #endif
 }
 
+// True when the file starts with a thin (non-fat) Mach-O magic
+static bool IsThinMachOFile(const string& strPath)
+{
+	bool bThin = false;
+	FILE* fp = NULL;
+#ifdef _WIN32
+	fopen_s(&fp, strPath.c_str(), "rb");
+#else
+	fp = fopen(strPath.c_str(), "rb");
+#endif
+	if (fp) {
+		uint32_t magic = 0;
+		if (1 == fread(&magic, sizeof(magic), 1, fp)) {
+			bThin = (magic == MH_MAGIC || magic == MH_CIGAM || magic == MH_MAGIC_64 || magic == MH_CIGAM_64);
+		}
+		fclose(fp);
+	}
+	return bThin;
+}
+
 // CFBundleExecutable comes from an untrusted Info.plist: a plain file name only
 static bool IsValidBundleExecutableName(const string& strName)
 {
@@ -380,12 +400,16 @@ bool ZBundle::SignNode(jvalue& jvNode)
 						arrFailedFiles.push_back(strFile);
 					} else {
 						ZLog::WarnV(">>> Warning: Can't sign non-loadable Mach-O file: \t%s\n", strFile.c_str());
-						ZLog::ClearFirstError(); // tolerated: errors logged while trying are not the reason of a later failure
+						if (arrFailedFiles.empty()) { ZLog::ClearFirstError(); } // tolerated; keep a failed file's error
 					}
 				}
+			} else if (IsThinMachOFile(m_strAppFolder + "/" + strFile)) {
+				// a thin Mach-O that can't be parsed is malformed code, not a resource (the fat
+				// magic is shared with Java .class files, so only those are still skipped)
+				arrFailedFiles.push_back(strFile);
 			} else {
 				ZLog::WarnV(">>> Warning: Skipping non-Mach-O file: \t%s\n", strFile.c_str());
-				ZLog::ClearFirstError();
+				if (arrFailedFiles.empty()) { ZLog::ClearFirstError(); }
 			}
 		}
 		if (!arrFailedFiles.empty()) {
@@ -944,6 +968,25 @@ bool ZBundle::SignFolder(ZSignAsset* pSignAsset,
 	// (Zsign-Package used it inverted, which together with upstream's removal in
 	// GenerateCodeResources dropped the profile from every signed app.)
 	ZFile::RemoveFileV("%s/embedded.mobileprovision", m_strAppFolder.c_str());
+
+	// Nested bundles (app extensions, watch app, plugins) still carry the original developer's
+	// profile, which would be sealed with our signature and mismatch at install time. They are
+	// removed in both settings, as the old behaviour did; only the root app gets our profile.
+	if (NULL == m_pSignAssets) {
+		vector<string> arrNestedProfiles;
+		ZFile::EnumFolder(m_strAppFolder.c_str(), true, NULL, [&](bool bFolder, const string& strPath) {
+			if (!bFolder && "embedded.mobileprovision" == string(ZUtil::GetBaseName(strPath.c_str()))) {
+				arrNestedProfiles.push_back(strPath);
+			}
+			return false;
+		});
+		for (const string& strProfile : arrNestedProfiles) {
+			if (0 == remove(strProfile.c_str())) {
+				ZLog::PrintV(">>> Removed nested profile: %s\n", strProfile.substr(m_strAppFolder.size() + 1).c_str());
+			}
+		}
+	}
+
 	if (!bRemoveProvision && !pSignAsset->m_strProvData.empty()) {
 		if (!ZFile::WriteFileV(pSignAsset->m_strProvData, "%s/embedded.mobileprovision", m_strAppFolder.c_str())) { // embedded.mobileprovision
 			ZLog::ErrorV(">>> Can't write embedded.mobileprovision!\n");

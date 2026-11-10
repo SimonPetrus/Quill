@@ -954,7 +954,7 @@ bool ZArchO::ChangeDylibPath(const char *oldPath, const char *newPath) {
 			uint32_t uNameOffset = BO(dlc->dylib.name.offset);
 			string strDylib;
 
-			if (ReadLoadCommandString(pLoadCommand, uCmdSize, uNameOffset, strDylib) && strDylib == oldPath) {
+			if (uNameOffset >= sizeof(dylib_command) && ReadLoadCommandString(pLoadCommand, uCmdSize, uNameOffset, strDylib) && strDylib == oldPath) {
 				// the new path and its NUL must fit in the existing command (it is not resized)
 				if ((uint64_t)newPathLength + 1 > uCmdSize - uNameOffset) {
 					ZLog::Error(">>> Insufficient space to update dylib path!\n");

@@ -39,8 +39,14 @@ Keep these when syncing with upstream again.
     Zsign-Package inversion plus upstream's removal in `GenerateCodeResources` had dropped
     `embedded.mobileprovision` from every signed app. The profile is written only when it is
     kept; `GetNodeChangedFiles` has the upstream signature.
+  - Every `embedded.mobileprovision` inside the app other than the root one (app extensions,
+    watch app, plugins: the original developer's profiles) is deleted before signing, in both
+    settings (the old Zsign-Package behaviour removed them too). Only the root app gets the
+    signing profile, and only when "Remove provisioning" is off. Multi-profile mode (CLI) is
+    unchanged.
   - Signing is strict again for loadable code: a nested executable/dylib/bundle that can't be
-    signed fails the whole signing (other Mach-O types only warn); an app or app extension whose
+    signed fails the whole signing (other Mach-O types only warn), as does a thin Mach-O that can't
+    be parsed (fat magic is shared with Java .class files, those are skipped); an app or app extension whose
     executable can't be parsed fails; a framework without a valid executable is still skipped.
   - `ZMachO::IsLoadableCode` (`src/macho.cpp`, `src/macho.h`) supports the above.
 
@@ -76,7 +82,8 @@ Keep these when syncing with upstream again.
 ### Leaks (Quill)
 - `src/openssl.h`, `src/openssl.cpp`: `ZSignAsset` owns and frees its private key, certificate and
   CA chain (destructor; copies take OpenSSL references); `Init` frees them on its error paths and a
-  leaked BIO; the legacy provider is loaded once per process.
+  leaked BIO; the legacy provider is loaded once per process. `GenerateCMS` frees the CMS
+  structure, BIOs, OIDs, attribute and chain on every exit.
 - `src/macho.cpp`: `FreeArchOes` no longer drops the mapping without unmapping; `CloseFile` unmaps
   once and the destructor unmaps on every exit path.
 

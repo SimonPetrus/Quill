@@ -367,9 +367,34 @@ bool ZSignAsset::GenerateCMS(void* pscert, void* pspkey, const string& strCDHash
 	X509* scert = (X509*)pscert;
 	EVP_PKEY* spkey = (EVP_PKEY*)pspkey;
 
-	STACK_OF(X509)* otherCerts = sk_X509_new_null();
+	// Quill: every exit frees what was allocated (cms, BIOs, objects, attribute, chain)
+	STACK_OF(X509)* otherCerts = NULL;
+	BIO* in = NULL;
+	BIO* out = NULL;
+	CMS_ContentInfo* cms = NULL;
+	ASN1_OBJECT* obj = NULL;
+	ASN1_OBJECT* obj2 = NULL;
+	X509_ATTRIBUTE* attr = NULL;
+	ASN1_TYPE* type_256 = NULL;
+	auto cleanup = [&]() {
+		if (type_256) ASN1_TYPE_free(type_256);
+		if (attr) X509_ATTRIBUTE_free(attr);
+		if (obj2) ASN1_OBJECT_free(obj2);
+		if (obj) ASN1_OBJECT_free(obj);
+		if (cms) CMS_ContentInfo_free(cms);
+		if (out) BIO_free(out);
+		if (in) BIO_free(in);
+		if (otherCerts) sk_X509_pop_free(otherCerts, X509_free); // CMS_sign holds its own references
+	};
+	auto fail = [&]() -> bool {
+		CMSError();
+		cleanup();
+		return false;
+	};
+
+	otherCerts = sk_X509_new_null();
 	if (!otherCerts) {
-		return CMSError();
+		return fail();
 	}
 
 	// Prefer the CA chain shipped inside the input p12, but only when it actually
@@ -380,11 +405,11 @@ bool ZSignAsset::GenerateCMS(void* pscert, void* pspkey, const string& strCDHash
 		for (int i = 0; i < sk_X509_num(caCerts); i++) {
 			X509* cert = sk_X509_value(caCerts, i);
 			if (!X509_up_ref(cert)) {
-				return CMSError();
+				return fail();
 			}
 			if (!sk_X509_push(otherCerts, cert)) {
 				X509_free(cert);
-				return CMSError();
+				return fail();
 			}
 		}
 	} else {
@@ -393,10 +418,11 @@ bool ZSignAsset::GenerateCMS(void* pscert, void* pspkey, const string& strCDHash
 		const char* szIssuerCert = WWDRIntermediatePEM(issuerHash);
 		if (NULL == szIssuerCert) {
 			ZLog::ErrorV(">>> Unknown issuer hash 0x%08lx! No embedded WWDR intermediate matches and the p12 carries no usable CA chain.\n", issuerHash);
+			cleanup();
 			return false;
 		}
 		if (!AppendPEMCert(otherCerts, szIssuerCert)) {
-			return CMSError();
+			return fail();
 		}
 	}
 
@@ -409,7 +435,7 @@ bool ZSignAsset::GenerateCMS(void* pscert, void* pspkey, const string& strCDHash
 		X509* root = (NULL != bio) ? PEM_read_bio_X509(bio, NULL, 0, NULL) : NULL;
 		BIO_free(bio);
 		if (!root) {
-			return CMSError();
+			return fail();
 		}
 
 		bool bIssuedChain = false;
@@ -425,40 +451,40 @@ bool ZSignAsset::GenerateCMS(void* pscert, void* pspkey, const string& strCDHash
 		if (bIssuedChain && !bPresent) {
 			if (!sk_X509_push(otherCerts, root)) {
 				X509_free(root);
-				return CMSError();
+				return fail();
 			}
 		} else {
 			X509_free(root);
 		}
 	}
 
-	BIO* in = BIO_new_mem_buf(strCDHashData.c_str(), (int)strCDHashData.size());
+	in = BIO_new_mem_buf(strCDHashData.c_str(), (int)strCDHashData.size());
 	if (!in) {
-		return CMSError();
+		return fail();
 	}
 
 	int nFlags = CMS_PARTIAL | CMS_DETACHED | CMS_NOSMIMECAP | CMS_BINARY;
-	CMS_ContentInfo* cms = CMS_sign(NULL, NULL, otherCerts, NULL, nFlags);
+	cms = CMS_sign(NULL, NULL, otherCerts, NULL, nFlags);
 	if (!cms) {
-		return CMSError();
+		return fail();
 	}
 
 	CMS_SignerInfo* si = CMS_add1_signer(cms, scert, spkey, EVP_sha256(), nFlags);
 	//    CMS_add1_signer(cms, NULL, NULL, EVP_sha1(), nFlags);
 	if (!si) {
-		return CMSError();
+		return fail();
 	}
 
 	// add plist
-	ASN1_OBJECT* obj = OBJ_txt2obj("1.2.840.113635.100.9.1", 1);
+	obj = OBJ_txt2obj("1.2.840.113635.100.9.1", 1);
 	if (!obj) {
-		return CMSError();
+		return fail();
 	}
 
 	int addHashPlist = CMS_signed_add1_attr_by_OBJ(si, obj, 0x4, strCDHashesPlist.c_str(), (int)strCDHashesPlist.size());
 
 	if (!addHashPlist) {
-		return CMSError();
+		return fail();
 	}
 
 	// add CDHashes
@@ -471,52 +497,51 @@ bool ZSignAsset::GenerateCMS(void* pscert, void* pspkey, const string& strCDHash
 		sha256 += hex_upper[c & 0x0F];
 	}
 
-	ASN1_OBJECT* obj2 = OBJ_txt2obj("1.2.840.113635.100.9.2", 1);
+	obj2 = OBJ_txt2obj("1.2.840.113635.100.9.2", 1);
 	if (!obj2) {
-		return CMSError();
+		return fail();
 	}
 
-	X509_ATTRIBUTE* attr = X509_ATTRIBUTE_new();
+	attr = X509_ATTRIBUTE_new();
 	if (!attr) {
-		return CMSError();
+		return fail();
 	}
 	X509_ATTRIBUTE_set1_object(attr, obj2);
 
-	ASN1_TYPE* type_256 = (ASN1_TYPE*)GenerateASN1Type(sha256);
+	type_256 = (ASN1_TYPE*)GenerateASN1Type(sha256);
 	if (!type_256) {
-		return CMSError();
+		return fail();
 	}
 	X509_ATTRIBUTE_set1_data(attr, V_ASN1_SEQUENCE,
 		ASN1_STRING_get0_data(type_256->value.asn1_string), ASN1_STRING_length(type_256->value.asn1_string));
 	int addHashSHA = CMS_signed_add1_attr(si, attr);
 	if (!addHashSHA) {
-		return CMSError();
+		return fail();
 	}
 
 	if (!CMS_final(cms, in, NULL, nFlags)) {
-		return CMSError();
+		return fail();
 	}
 
-	BIO* out = BIO_new(BIO_s_mem());
+	out = BIO_new(BIO_s_mem());
 	if (!out) {
-		return CMSError();
+		return fail();
 	}
 
 	//PEM_write_bio_CMS(out, cms);
 	if (!i2d_CMS_bio(out, cms)) {
-		return CMSError();
+		return fail();
 	}
 
 	BUF_MEM* bptr = NULL;
 	BIO_get_mem_ptr(out, &bptr);
 	if (!bptr) {
-		return CMSError();
+		return fail();
 	}
 
 	strCMSOutput.clear();
 	strCMSOutput.append(bptr->data, bptr->length);
-	ASN1_TYPE_free(type_256);
-	sk_X509_pop_free(otherCerts, X509_free); // CMS_sign holds its own references
+	cleanup();
 	return (!strCMSOutput.empty());
 }
 
