@@ -22,6 +22,8 @@ struct SigningView: View {
 	@State private var _isSigning = false
 	@State private var _isChecking = false
 	@State private var _selectedPhoto: PhotosPickerItem? = nil
+	@State private var _idEditedByUser = false
+	@State private var _idFromProfile = false
 	@State var appIcon: UIImage?
 	
 	// MARK: Fetch
@@ -94,6 +96,8 @@ struct SigningView: View {
 				) {
 					_temporaryOptions = OptionsManager.shared.options
 					appIcon = nil
+					_idEditedByUser = false
+					_applyAutoIdentifier()
 				}
 			}
 			.sheet(isPresented: $_isAltPickerPresenting) { SigningAlternativeIconView(app: app, appIcon: $appIcon, isModifing: .constant(true)) }
@@ -120,6 +124,9 @@ struct SigningView: View {
 			}
 			.disabled(_isSigning)
 			.animation(.smooth, value: _isSigning)
+			.onChange(of: _temporaryCertificate) { _ in
+				_applyAutoIdentifier()
+			}
 		}
 		.onAppear {
 			// Quill itself: keep the bundle ID (no PPQ suffix, no rename) so the install replaces this app.
@@ -128,24 +135,7 @@ struct SigningView: View {
 				_temporaryOptions.appIdentifier = Bundle.main.bundleIdentifier
 			}
 			
-			// ppq protection
-			if
-				!app.isQuillItself,
-				_optionsManager.options.ppqProtection,
-				let identifier = app.identifier,
-				let cert = _selectedCert(),
-				cert.ppQCheck
-			{
-				_temporaryOptions.appIdentifier = "\(identifier).\(_optionsManager.options.ppqString)"
-			}
-			
-			if
-				!app.isQuillItself,
-				let currentBundleId = app.identifier,
-				let newBundleId = _temporaryOptions.identifiers[currentBundleId]
-			{
-				_temporaryOptions.appIdentifier = newBundleId
-			}
+			_applyAutoIdentifier()
 			
 			if
 				let currentName = app.name,
@@ -153,6 +143,57 @@ struct SigningView: View {
 			{
 				_temporaryOptions.appName = newName
 			}
+		}
+	}
+}
+
+// MARK: - Extension: bundle ID suggestion
+extension SigningView {
+	/// Bundle ID from the selected certificate's profile, or nil when it is a wildcard / unreadable.
+	private func _profileBundleId() -> String? {
+		guard
+			let cert = _selectedCert(),
+			let url = Storage.shared.getFile(.provision, from: cert),
+			let profile = CertificateReader(url).decoded,
+			let full = profile.Entitlements?["application-identifier"]?.value as? String,
+			!full.contains("*")
+		else { return nil }
+		
+		let prefix = profile.ApplicationIdentifierPrefix?.first ?? profile.TeamIdentifier.first
+		var id = full
+		if let prefix, full.hasPrefix(prefix + ".") {
+			id = String(full.dropFirst(prefix.count + 1))
+		} else if let dot = full.firstIndex(of: ".") {
+			id = String(full[full.index(after: dot)...])
+		}
+		return id.isEmpty ? nil : id
+	}
+	
+	/// Layers: profile suggestion, PPQ suffix, then user-defined identifier mappings.
+	/// Never touches Quill itself, and never overwrites a manual edit.
+	private func _applyAutoIdentifier() {
+		guard !app.isQuillItself, !_idEditedByUser else { return }
+		
+		let ppqActive = _optionsManager.options.ppqProtection && (_selectedCert()?.ppQCheck ?? false)
+		_temporaryOptions.appIdentifier = _optionsManager.options.appIdentifier
+		_idFromProfile = false
+		
+		if ppqActive {
+			// A fixed profile ID and the PPQ suffix conflict, so PPQ keeps its existing behaviour.
+			if let identifier = app.identifier {
+				_temporaryOptions.appIdentifier = "\(identifier).\(_optionsManager.options.ppqString)"
+			}
+		} else if let profileId = _profileBundleId() {
+			_temporaryOptions.appIdentifier = profileId
+			_idFromProfile = true
+		}
+		
+		if
+			let currentBundleId = app.identifier,
+			let newBundleId = _temporaryOptions.identifiers[currentBundleId]
+		{
+			_temporaryOptions.appIdentifier = newBundleId
+			_idFromProfile = false
 		}
 	}
 }
@@ -194,8 +235,20 @@ extension SigningView {
 					SigningPropertiesView(
 						title: .localized("Identifier"),
 						initialValue: _temporaryOptions.appIdentifier ?? (app.identifier ?? ""),
-						bindingValue: $_temporaryOptions.appIdentifier
+						bindingValue: Binding(
+							get: { _temporaryOptions.appIdentifier },
+							set: {
+								_temporaryOptions.appIdentifier = $0
+								_idEditedByUser = true
+								_idFromProfile = false
+							}
+						)
 					)
+				}
+				if _idFromProfile {
+					Text(.localized("From provisioning profile"))
+						.font(.footnote)
+						.foregroundStyle(.secondary)
 				}
 			}
 			_infoCell(.localized("Version"), desc: _temporaryOptions.appVersion ?? app.version) {
