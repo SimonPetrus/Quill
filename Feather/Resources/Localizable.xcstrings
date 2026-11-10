@@ -3628,95 +3628,6 @@
         }
       }
     },
-    "Credits" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "الشكر والتقدير"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Poděkování"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mitwirkende"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Credits"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Créditos"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Crédits"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kredit"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Crediti"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "크레딧"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Podziękowania"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Авторы"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Katkıda Bulunanlar"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ghi công"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "致谢"
-          }
-        }
-      }
-    },
     "Custom Theme Color" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -18295,23 +18206,6 @@
         }
       }
     },
-    "Update source URL" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Update source URL"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Güncelleme kaynağı URL'si"
-          }
-        }
-      }
-    },
     "Check automatically on launch" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -18444,23 +18338,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quill güncelleme kaynağında bulunamadı."
-          }
-        }
-      }
-    },
-    "Add a source JSON or GitHub releases API URL to check for new versions of Quill. Updates are never downloaded automatically." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add a source JSON or GitHub releases API URL to check for new versions of Quill. Updates are never downloaded automatically."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quill'in yeni sürümlerini denetlemek için bir kaynak JSON'u veya GitHub releases API URL'si ekleyin. Güncellemeler hiçbir zaman otomatik indirilmez."
           }
         }
       }
@@ -18631,6 +18508,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Watch Uygulamasını Kaldır seçeneği Watch klasörünün tamamını siler; Apple Watch yardımcı uygulaması kurulmaz."
+          }
+        }
+      }
+    },
+    "Quill checks GitHub for new versions. Updates are never downloaded automatically." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill checks GitHub for new versions. Updates are never downloaded automatically."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill yeni sürümleri GitHub'dan denetler. Güncellemeler hiçbir zaman otomatik indirilmez."
+          }
+        }
+      }
+    },
+    "SimonPetrus" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SimonPetrus"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SimonPetrus"
           }
         }
       }
