@@ -5,8 +5,16 @@
 #include "signing.h"
 #include "macho.h"
 
+#if defined(ZSIGN_SYSTEM_MINIZIP_NG)
+#include <zip.h>
+#include <unzip.h>
+#elif defined(ZSIGN_SYSTEM_MINIZIP)
+#include <minizip/zip.h>
+#include <minizip/unzip.h>
+#else
 #include "third-party/minizip/zip.h"
 #include "third-party/minizip/unzip.h"
+#endif
 
 #include <openssl/pem.h>
 #include <openssl/pkcs12.h>
@@ -30,7 +38,7 @@ typedef int ssize_t;
 #define OCSP_CLOSE_SOCKET(s) close(s)
 #endif
 
-// ─── helpers ───────────────────────────────────────────────────────
+// --- helpers -------------------------------------------------------
 
 static string SerialToHex(X509* cert)
 {
@@ -70,14 +78,14 @@ static int DaysRemaining(const ASN1_TIME* t)
 	return day;
 }
 
-static string GetNameField(X509_NAME* name, int nid)
+static string GetNameField(const X509_NAME* name, int nid)
 {
 	if (!name) return "";
 	int idx = X509_NAME_get_index_by_NID(name, nid, -1);
 	if (idx < 0) return "";
-	X509_NAME_ENTRY* entry = X509_NAME_get_entry(name, idx);
+	const X509_NAME_ENTRY* entry = X509_NAME_get_entry(name, idx);
 	if (!entry) return "";
-	ASN1_STRING* data = X509_NAME_ENTRY_get_data(entry);
+	const ASN1_STRING* data = X509_NAME_ENTRY_get_data(entry);
 	if (!data) return "";
 	unsigned char* utf8 = NULL;
 	int len = ASN1_STRING_to_UTF8(&utf8, data);
@@ -117,7 +125,7 @@ static string DetectCertType(const string& cn)
 	return "Certificate";
 }
 
-// ─── issuer resolution ──────────────────────────────────────────────
+// --- issuer resolution ----------------------------------------------
 
 static X509* LoadEmbeddedCert(const char* pem)
 {
@@ -130,11 +138,9 @@ static X509* LoadEmbeddedCert(const char* pem)
 
 static X509* ResolveIssuer(X509* cert)
 {
-	unsigned long issuerHash = X509_issuer_name_hash(cert);
-	if (issuerHash == 0x817d2f7a)
-		return LoadEmbeddedCert(ZSignAsset::s_szAppleDevCACert);
-	if (issuerHash == 0x9b16b75c)
-		return LoadEmbeddedCert(ZSignAsset::s_szAppleDevCACertG3);
+	const char* pem = ZSignAsset::WWDRIntermediatePEM(X509_issuer_name_hash(cert));
+	if (pem)
+		return LoadEmbeddedCert(pem);
 
 	X509* issuer = LoadEmbeddedCert(ZSignAsset::s_szAppleDevCACertG3);
 	if (issuer && X509_check_issued(issuer, cert) == X509_V_OK) return issuer;
@@ -147,7 +153,20 @@ static X509* ResolveIssuer(X509* cert)
 	return NULL;
 }
 
-// ─── file type detection ────────────────────────────────────────────
+static X509* FindIssuerInChain(STACK_OF(X509)* certs, X509* cert)
+{
+	if (!certs || !cert) return NULL;
+	for (int i = 0; i < sk_X509_num(certs); i++) {
+		X509* issuer = sk_X509_value(certs, i);
+		if (issuer && X509_check_issued(issuer, cert) == X509_V_OK) {
+			X509_up_ref(issuer);
+			return issuer;
+		}
+	}
+	return NULL;
+}
+
+// --- file type detection --------------------------------------------
 
 enum CertFileType {
 	CERT_FILE_UNKNOWN = 0,
@@ -185,14 +204,21 @@ static CertFileType DetectFileType(const string& path, const string& data)
 			return CERT_FILE_MACHO;
 		if (data.find("<?xml") != string::npos && data.find("</plist>") != string::npos)
 			return CERT_FILE_PROVISION;
-		if (d[0] == 0x30 && data.size() > 500) return CERT_FILE_P12;
-		if (d[0] == 0x30) return CERT_FILE_CER;
 		if (data.find("-----BEGIN") != string::npos) return CERT_FILE_PEM;
+		if (d[0] == 0x30) {
+			const uint8_t* p = (const uint8_t*)data.data();
+			PKCS12* p12 = d2i_PKCS12(NULL, &p, (long)data.size());
+			if (p12) {
+				PKCS12_free(p12);
+				return CERT_FILE_P12;
+			}
+			return CERT_FILE_CER;
+		}
 	}
 	return CERT_FILE_UNKNOWN;
 }
 
-// ─── cert extraction ────────────────────────────────────────────────
+// --- cert extraction ------------------------------------------------
 
 static X509* LoadFromProvision(const string& data)
 {
@@ -204,7 +230,7 @@ static X509* LoadFromProvision(const string& data)
 
 	ASN1_OCTET_STRING** pos = CMS_get0_content(cms);
 	if (!pos || !(*pos)) { CMS_ContentInfo_free(cms); return NULL; }
-	string xmlContent((const char*)(*pos)->data, (*pos)->length);
+	string xmlContent((const char*)ASN1_STRING_get0_data(*pos), ASN1_STRING_length(*pos));
 	CMS_ContentInfo_free(cms);
 
 	size_t keyPos = xmlContent.find("<key>DeveloperCertificates</key>");
@@ -261,7 +287,7 @@ static X509* LoadFromCER(const string& data)
 	return cert;
 }
 
-// ─── Leaf cert from CMS ─────────────────────────────────────────────
+// --- Leaf cert from CMS ---------------------------------------------
 
 static X509* FindLeafCert(STACK_OF(X509)* certs)
 {
@@ -293,7 +319,7 @@ static X509* ExtractCertFromCMS(uint8_t* pCMSData, uint32_t uCMSLength)
 	return leaf;
 }
 
-// ─── Mach-O cert extraction ─────────────────────────────────────────
+// --- Mach-O cert extraction -----------------------------------------
 
 struct MachOSignInfo {
 	bool isSigned;
@@ -323,7 +349,7 @@ static MachOSignInfo ExtractFromMachOData(uint8_t* pBase, uint32_t uLength)
 	return info;
 }
 
-// ─── Read from zip (no extraction) ──────────────────────────────────
+// --- Read from zip (no extraction) ----------------------------------
 
 static bool ReadFileFromZipToMemory(unzFile uf, string& outData)
 {
@@ -387,7 +413,7 @@ static MachOSignInfo LoadFromIPA(const string& ipaPath)
 	return ExtractFromMachOData((uint8_t*)strBinaryData.data(), (uint32_t)strBinaryData.size());
 }
 
-// ─── OCSP check ─────────────────────────────────────────────────────
+// --- OCSP check -----------------------------------------------------
 
 struct OCSPResult {
 	string status;
@@ -564,7 +590,7 @@ static OCSPResult PerformOCSP(X509* cert, X509* issuer)
 	return result;
 }
 
-// ─── display (simple text, matches zsign style) ──────────────────────
+// --- display (simple text, matches zsign style) ----------------------
 
 static void PrintCertInfo(X509* cert, const string& fileTypeStr, bool showSigned, bool isSigned)
 {
@@ -623,7 +649,7 @@ static int PrintOCSPResult(const OCSPResult& result)
 	return -1;
 }
 
-// ─── main entry ─────────────────────────────────────────────────────
+// --- main entry -----------------------------------------------------
 
 int CheckCertificate(const string& strFilePath, const string& strPassword)
 {
@@ -689,7 +715,7 @@ int CheckCertificate(const string& strFilePath, const string& strPassword)
 	bool expired = (daysLeft < 0);
 
 	X509* issuer = NULL;
-	if (ca && sk_X509_num(ca) > 0) { issuer = sk_X509_value(ca, 0); X509_up_ref(issuer); }
+	if (ca && sk_X509_num(ca) > 0) issuer = FindIssuerInChain(ca, cert);
 	if (!issuer) issuer = ResolveIssuer(cert);
 
 	int retCode = 0;
@@ -717,7 +743,7 @@ int CheckCertificate(const string& strFilePath, const string& strPassword)
 	return retCode;
 }
 
-// ─── Post-sign binary check ─────────────────────────────────────────
+// --- Post-sign binary check -----------------------------------------
 
 int CheckSignedBinary(const string& strAppFolder)
 {

@@ -44,7 +44,6 @@ let package = Package(
 				"swift/utils.mm",
 				"src/signing.cpp",
 				"swift/zsign.mm",
-				"src/common/base64.cpp",
 				"src/common/fs.cpp",
 				"src/common/json.cpp",
 				"src/common/log.cpp",

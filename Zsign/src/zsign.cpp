@@ -9,12 +9,10 @@
 #include "metadata.h"
 #include "certcheck.h"
 
-#if defined(__APPLE__)
-#include "TargetConditionals.h"
-#endif
-
 #ifdef _WIN32
 #include "common_win32.h"
+#else
+#include <sys/wait.h>
 #endif
 
 #ifndef ZSIGN_VERSION
@@ -27,7 +25,7 @@
 const struct option options[] = {
 	{"debug", no_argument, NULL, 'd'},
 	{"force", no_argument, NULL, 'f'},
-	{"verbose", no_argument, NULL, 'V'},
+	{"version", no_argument, NULL, 'v'},
 	{"adhoc", no_argument, NULL, 'a'},
 	{"cert", required_argument, NULL, 'c'},
 	{"pkey", required_argument, NULL, 'k'},
@@ -37,6 +35,7 @@ const struct option options[] = {
 	{"bundle_name", required_argument, NULL, 'n'},
 	{"bundle_version", required_argument, NULL, 'r'},
 	{"entitlements", required_argument, NULL, 'e'},
+	{"icon", required_argument, NULL, 'I'},
 	{"output", required_argument, NULL, 'o'},
 	{"zip_level", required_argument, NULL, 'z'},
 	{"dylib", required_argument, NULL, 'l'},
@@ -44,6 +43,7 @@ const struct option options[] = {
 	{"weak", no_argument, NULL, 'w'},
 	{"temp_folder", required_argument, NULL, 't'},
 	{"sha256_only", no_argument, NULL, '2'},
+	{"legacy_sha1", no_argument, NULL, 'L'},
 	{"install", no_argument, NULL, 'i'},
 	{"check", no_argument, NULL, 'C'},
 	{"quiet", no_argument, NULL, 'q'},
@@ -54,9 +54,68 @@ const struct option options[] = {
 	{"rm_extensions", no_argument, NULL, 'E'},
 	{"rm_watch", no_argument, NULL, 'W'},
 	{"rm_uisd", no_argument, NULL, 'U'},
+	{"inject_extensions", no_argument, NULL, 'P'},
 	{"help", no_argument, NULL, 'h'},
 	{}
 };
+
+static bool InstallSignedIpa(const string& strOutputFile)
+{
+	if (strOutputFile.empty()) {
+		return false;
+	}
+
+#ifdef _WIN32
+	string strCommand = "ideviceinstaller install \"";
+	strCommand += strOutputFile;
+	strCommand += "\"";
+
+	STARTUPINFOA si;
+	PROCESS_INFORMATION pi;
+	memset(&si, 0, sizeof(si));
+	memset(&pi, 0, sizeof(pi));
+	si.cb = sizeof(si);
+
+	vector<char> arrCommand(strCommand.begin(), strCommand.end());
+	arrCommand.push_back('\0');
+	if (!CreateProcessA(NULL, arrCommand.data(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+		ZLog::ErrorV(">>> Install failed to start ideviceinstaller! %s\n", strOutputFile.c_str());
+		return false;
+	}
+
+	WaitForSingleObject(pi.hProcess, INFINITE);
+	DWORD dwExitCode = 1;
+	GetExitCodeProcess(pi.hProcess, &dwExitCode);
+	CloseHandle(pi.hThread);
+	CloseHandle(pi.hProcess);
+	if (0 != dwExitCode) {
+		ZLog::ErrorV(">>> ideviceinstaller install failed! %s\n", strOutputFile.c_str());
+		return false;
+	}
+	return true;
+#else
+	pid_t pid = fork();
+	if (pid < 0) {
+		ZLog::ErrorV(">>> Install failed to fork ideviceinstaller! %s\n", strOutputFile.c_str());
+		return false;
+	}
+	if (0 == pid) {
+		execlp("ideviceinstaller", "ideviceinstaller", "install", strOutputFile.c_str(), (char*)NULL);
+		_exit(127);
+	}
+
+	int nStatus = 0;
+	if (waitpid(pid, &nStatus, 0) < 0) {
+		ZLog::ErrorV(">>> Install failed to wait ideviceinstaller! %s\n", strOutputFile.c_str());
+		return false;
+	}
+	if (!WIFEXITED(nStatus) || 0 != WEXITSTATUS(nStatus)) {
+		ZLog::ErrorV(">>> ideviceinstaller install failed! %s\n", strOutputFile.c_str());
+		return false;
+	}
+	return true;
+#endif
+}
 
 int usage()
 {
@@ -75,13 +134,15 @@ int usage()
 	ZLog::Print("-n, --bundle_name\tNew bundle name to change.\n");
 	ZLog::Print("-r, --bundle_version\tNew bundle version to change.\n");
 	ZLog::Print("-e, --entitlements\tNew entitlements to change.\n");
+	ZLog::Print("-I, --icon\t\tPath to new app icon to replace the primary icon. (PNG format)\n");
 	ZLog::Print("-z, --zip_level\t\tCompressed level when output the ipa file. (0-9)\n");
 	ZLog::Print("-l, --dylib\t\tPath to inject dylib file. Use -l multiple time to inject multiple dylib files at once.\n");
 	ZLog::Print("-D, --rm_dylib\t\tName of dylib to remove. Use -D multiple times to remove multiple dylibs at once.\n");
 	ZLog::Print("-w, --weak\t\tInject dylib as LC_LOAD_WEAK_DYLIB.\n");
 	ZLog::Print("-i, --install\t\tInstall ipa file using ideviceinstaller command for test.\n");
 	ZLog::Print("-t, --temp_folder\tPath to temporary folder for intermediate files.\n");
-	ZLog::Print("-2, --sha256_only\tSerialize a single code directory that uses SHA256.\n");
+	ZLog::Print("-2, --sha256_only\t(Deprecated, now the default.) Kept for backward compatibility.\n");
+	ZLog::Print("-L, --legacy_sha1\tEmit a dual SHA1+SHA256 CodeDirectory for iOS <= 10 compatibility.\n");
 	ZLog::Print("-C, --check\t\tCheck certificate validity and OCSP revocation status.\n");
 	ZLog::Print("-q, --quiet\t\tQuiet operation.\n");
 	ZLog::Print("-x, --metadata\t\tExtract metadata and icon to the specified directory.\n");
@@ -91,6 +152,7 @@ int usage()
 	ZLog::Print("-E, --rm_extensions\tRemove all app extensions (PlugIns/Extensions).\n");
 	ZLog::Print("-W, --rm_watch\t\tRemove watch app from the bundle.\n");
 	ZLog::Print("-U, --rm_uisd\t\tRemove UISupportedDevices from Info.plist.\n");
+	ZLog::Print("-P, --inject_extensions\tAlso inject -l dylibs into app extensions (PlugIns/Extensions).\n");
 	ZLog::Print("-v, --version\t\tShows version.\n");
 	ZLog::Print("-h, --help\t\tShows help (this message).\n");
 
@@ -106,7 +168,7 @@ int main(int argc, char* argv[])
 	bool bInstall = false;
 	bool bWeakInject = false;
 	bool bAdhoc = false;
-	bool bSHA256Only = false;
+	bool bSHA256Only = true;
 	bool bCheckSignature = false;
 	bool bRemoveProvision = false;
 	bool bEnableDocuments = false;
@@ -114,6 +176,7 @@ int main(int argc, char* argv[])
 	bool bRemoveExtensions = false;
 	bool bRemoveWatchApp = false;
 	bool bRemoveUISupportedDevices = false;
+	bool bInjectExtensions = false;
 	uint32_t uZipLevel = 0;
 
 	string strCertFile;
@@ -126,6 +189,7 @@ int main(int argc, char* argv[])
 	string strOutputFile;
 	string strDisplayName;
 	string strEntitleFile;
+	string strIconFile;
 	vector<string> arrDylibFiles;
 	vector<string> arrRemoveDylibNames;
 	string strMetadataDir;
@@ -133,7 +197,7 @@ int main(int argc, char* argv[])
 
 	int opt = 0;
 	int argslot = -1;
-	while (-1 != (opt = getopt_long(argc, argv, "dfva2hiqwCRSEWUc:k:m:o:p:e:b:n:z:l:D:t:r:x:M:",
+	while (-1 != (opt = getopt_long(argc, argv, "dfva2LhiqwCRSEWUPc:k:m:o:p:e:b:n:z:l:D:t:r:x:M:I:",
 		options, &argslot))) {
 		switch (opt) {
 		case 'd':
@@ -170,6 +234,9 @@ int main(int argc, char* argv[])
 		case 'e':
 			strEntitleFile = ZFile::GetFullPath(optarg);
 			break;
+		case 'I':
+			strIconFile = ZFile::GetFullPath(optarg);
+			break;
 		case 'l':
 			arrDylibFiles.push_back(ZFile::GetFullPath(optarg));
 			break;
@@ -192,7 +259,11 @@ int main(int argc, char* argv[])
 			strTempFolder = ZFile::GetFullPath(optarg);
 			break;
 		case '2':
+			// Kept for backward compatibility; SHA256-only is the default now.
 			bSHA256Only = true;
+			break;
+		case 'L':
+			bSHA256Only = false;
 			break;
 		case 'C':
 			bCheckSignature = true;
@@ -221,6 +292,9 @@ int main(int argc, char* argv[])
 		case 'U':
 			bRemoveUISupportedDevices = true;
 			break;
+		case 'P':
+			bInjectExtensions = true;
+			break;
 		case 'v': {
 			printf("version: %s\n", ZSIGN_VERSION_STR);
 			return 0;
@@ -232,7 +306,7 @@ int main(int argc, char* argv[])
 			break;
 		}
 
-		ZLog::DebugV(">>> Option:\t-%c, %s\n", opt, optarg);
+		ZLog::DebugV(">>> Option:\t-%c, %s\n", opt, optarg ? optarg : "");
 	}
 
 	if (optind >= argc) {
@@ -263,6 +337,15 @@ int main(int argc, char* argv[])
 		ZMachO dylibMachO;
 		if (!dylibMachO.Init(strDylibFile.c_str())) {
 			ZLog::ErrorV(">>> Invalid dylib file! Not a valid Mach-O format. %s\n", strDylibFile.c_str());
+			return -1;
+		}
+	}
+
+	if (!strIconFile.empty()) {
+		string strIconData;
+		if (!ZFile::ReadFile(strIconFile.c_str(), strIconData) || strIconData.size() < 8 ||
+			0 != memcmp(strIconData.data(), "\x89PNG\r\n\x1a\n", 8)) {
+			ZLog::ErrorV(">>> Invalid icon file! Only PNG format is supported. %s\n", strIconFile.c_str());
 			return -1;
 		}
 	}
@@ -365,9 +448,11 @@ int main(int argc, char* argv[])
 	ZBundle bundle;
 	bundle.m_bEnableDocuments = bEnableDocuments;
 	bundle.m_strMinVersion = strMinVersion;
+	bundle.m_strIconFile = strIconFile;
 	bundle.m_bRemoveExtensions = bRemoveExtensions;
 	bundle.m_bRemoveWatchApp = bRemoveWatchApp;
 	bundle.m_bRemoveUISupportedDevices = bRemoveUISupportedDevices;
+	bundle.m_bInjectExtensions = bInjectExtensions;
 
 	bool bRet;
 	if (arrProvFiles.size() > 1) {
@@ -414,11 +499,8 @@ int main(int argc, char* argv[])
 	}
 
 	//install
-	
 	if (bRet && bInstall) {
-#if !TARGET_OS_IOS
-		bRet = ZUtil::SystemExecV("ideviceinstaller install  \"%s\"", strOutputFile.c_str());
-#endif
+		bRet = InstallSignedIpa(strOutputFile);
 	}
 
 	//clean

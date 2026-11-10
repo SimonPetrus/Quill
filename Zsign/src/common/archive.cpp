@@ -1,7 +1,15 @@
 #include "archive.h"
 
+#if defined(ZSIGN_SYSTEM_MINIZIP_NG)
+#include <zip.h>
+#include <unzip.h>
+#elif defined(ZSIGN_SYSTEM_MINIZIP)
+#include <minizip/zip.h>
+#include <minizip/unzip.h>
+#else
 #include "third-party/minizip/zip.h"
 #include "third-party/minizip/unzip.h"
+#endif
 
 void Zip::GetModificationTime(const char* path, void* zfi)
 {
@@ -209,11 +217,14 @@ bool Zip::_ReadFileFromZip(void* hZip, const string& strPath, const string& strR
 	if (NULL != pbuff) {
 		int32_t nReaded = unzReadCurrentFile(hZip, pbuff, uBufSize);
 		while (nReaded > 0) {
-			if (nReaded != fwrite(pbuff, 1, nReaded, fp)) {
+			if ((size_t)nReaded != fwrite(pbuff, 1, (size_t)nReaded, fp)) {
 				bRet = false;
 				break;
 			}
 			nReaded = unzReadCurrentFile(hZip, pbuff, uBufSize);
+		}
+		if (nReaded < 0) {
+			bRet = false;
 		}
 		free(pbuff);
 	} else {
@@ -227,19 +238,28 @@ bool Zip::_ReadFileFromZip(void* hZip, const string& strPath, const string& strR
 
 static bool _IsPathSafe(const string& strPath)
 {
-	if (strPath.empty() || strPath[0] == '/') {
+	if (strPath.empty()) {
+		return false;
+	}
+
+	string strNormalized = strPath;
+	ZUtil::StringReplace(strNormalized, "\\", "/");
+	if (strNormalized[0] == '/' || strNormalized[0] == '\\') {
+		return false;
+	}
+	if (string::npos != strNormalized.find(':')) {
 		return false;
 	}
 
 	size_t start = 0;
-	size_t len = strPath.size();
+	size_t len = strNormalized.size();
 	while (start < len) {
-		size_t end = strPath.find('/', start);
+		size_t end = strNormalized.find('/', start);
 		if (end == string::npos) {
 			end = len;
 		}
 		size_t compLen = end - start;
-		if (compLen == 2 && strPath[start] == '.' && strPath[start + 1] == '.') {
+		if (compLen == 2 && strNormalized[start] == '.' && strNormalized[start + 1] == '.') {
 			return false;
 		}
 		start = end + 1;

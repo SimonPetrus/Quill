@@ -1,5 +1,4 @@
 #include "bundle.h"
-#include "base64.h"
 #include "common.h"
 #include "macho.h"
 #include "sys/stat.h"
@@ -16,6 +15,7 @@ ZBundle::ZBundle()
 	m_bRemoveExtensions = false;
 	m_bRemoveWatchApp = false;
 	m_bRemoveUISupportedDevices = false;
+	m_bInjectExtensions = false;
 }
 
 bool ZBundle::FindAppFolder(const string& strFolder, string& strAppFolder)
@@ -191,7 +191,10 @@ bool ZBundle::GenerateCodeResources(const string& strFolder, jvalue& jvCodeRes)
 		string strFile = strFolder + "/" + strKey;
 		string strSHA1Base64;
 		string strSHA256Base64;
-		ZSHA::SHABase64File(strFile.c_str(), strSHA1Base64, strSHA256Base64);
+		if (!ZSHA::SHABase64File(strFile.c_str(), strSHA1Base64, strSHA256Base64)) {
+			ZLog::ErrorV(">>> Can't get file SHASum! %s\n", strFile.c_str());
+			return false;
+		}
 
 #ifdef _WIN32
 		strKey = ic.A2U8(strKey);
@@ -294,6 +297,20 @@ void ZBundle::GetNodeChangedFiles(jvalue& jvNode, bool excludeProvisioning)
 	}
 }
 
+static bool IsAppExtensionPath(const string& strPath)
+{
+	// Top-level app extension: PlugIns/<name>.appex or Extensions/<name>.appex.
+	// Restrict to a single path component under PlugIns/Extensions so watch-app
+	// and other nested .appex bundles (different arch/container) are left alone.
+	if (!ZFile::IsPathSuffix(strPath, ".appex")) {
+		return false;
+	}
+	if (1 != count(strPath.begin(), strPath.end(), '/')) {
+		return false;
+	}
+	return (0 == strPath.rfind("PlugIns/", 0) || 0 == strPath.rfind("Extensions/", 0));
+}
+
 bool ZBundle::SignNode(jvalue& jvNode)
 {
 	if (jvNode.has("files")) {
@@ -373,6 +390,42 @@ bool ZBundle::SignNode(jvalue& jvNode)
 			}
 			bForceSign = true;
 		}
+	} else if (m_bInjectExtensions && !m_arrInjectDylibNames.empty() && IsAppExtensionPath(strFolder)) {
+		// App extensions run as separate processes and don't inherit the main
+		// app's injected dylibs, so inject them here too. The dylibs stay as a
+		// single shared copy at the app root, referenced from the extension
+		// executable via a relative path back up to it.
+		string strPrefix;
+		for (size_t i = 0, n = 1 + (size_t)count(strFolder.begin(), strFolder.end(), '/'); i < n; i++) {
+			strPrefix += "../";
+		}
+		for (const string& strName : m_arrInjectDylibNames) {
+			string strLoadPath = "@executable_path/" + strPrefix + strName;
+			if (macho.InjectDylib(m_bWeakInject, strLoadPath.c_str())) {
+				bForceSign = true;
+			}
+		}
+	}
+
+	// The matched profile must land in the bundle BEFORE CodeResources is
+	// generated: the seal hashes every file in the bundle, so a profile
+	// written after sealing leaves the bundle failing Apple's verifier with
+	// "a sealed resource is missing or invalid" (codesign --verify --strict).
+	if (m_pSignAssets) {
+		auto endsWith = [](const string& str, const string& suffix) {
+			return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
+		};
+		for (auto it = m_pSignAssets->rbegin(); it != m_pSignAssets->rend(); ++it) {
+			m_pSignAsset = &(*it);
+			if (endsWith(m_pSignAsset->m_strApplicationId, strBundleId)) {
+				if (!ZFile::WriteFileV(m_pSignAsset->m_strProvData, "%s/%s/embedded.mobileprovision", m_strAppFolder.c_str(), strFolder.c_str())) {
+					ZLog::ErrorV(">>> Can't write embedded.mobileprovision!\n");
+					return false;
+				}
+				bForceSign = true;
+				break;
+			}
+		}
 	}
 
 	ZFile::CreateFolderV("%s/_CodeSignature", strBaseFolder.c_str());
@@ -418,40 +471,6 @@ bool ZBundle::SignNode(jvalue& jvNode)
 	if (!ZFile::WriteFile(strCodeResFile.c_str(), strCodeResData)) {
 		ZLog::ErrorV("\tWriting CodeResources failed! %s\n", strCodeResFile.c_str());
 		return false;
-	}
-
-	if (m_pSignAssets) {
-		auto endsWith = [](const string& str, const string& suffix) {
-			return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
-		};
-
-		for (auto it = m_pSignAssets->rbegin(); it != m_pSignAssets->rend(); ++it) {
-			m_pSignAsset = &(*it);
-			if (endsWith(m_pSignAsset->m_strApplicationId, strBundleId)) {
-				if (!ZFile::WriteFileV(m_pSignAsset->m_strProvData, "%s/%s/embedded.mobileprovision", m_strAppFolder.c_str(), strFolder.c_str())) {
-					ZLog::ErrorV(">>> Can't write embedded.mobileprovision!\n");
-					return false;
-				}
-				break;
-			}
-		}
-	}
-
-	if (m_pSignAssets) {
-		auto endsWith = [](const string& str, const string& suffix) {
-			return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
-		};
-
-		for (auto it = m_pSignAssets->rbegin(); it != m_pSignAssets->rend(); ++it) {
-			m_pSignAsset = &(*it);
-			if (endsWith(m_pSignAsset->m_strApplicationId, strBundleId)) {
-				if (!ZFile::WriteFileV(m_pSignAsset->m_strProvData, "%s/%s/embedded.mobileprovision", m_strAppFolder.c_str(), strFolder.c_str())) {
-					ZLog::ErrorV(">>> Can't write embedded.mobileprovision!\n");
-					return false;
-				}
-				break;
-			}
-		}
 	}
 
 	if (!macho.Sign(m_pSignAsset, bForceSign, strBundleId, strInfoSHA1, strInfoSHA256, strCodeResData)) {
@@ -509,6 +528,132 @@ bool ZBundle::ModifyPluginsBundleId(const string& strOldBundleId, const string& 
 		jvInfo.style_write_plist_to_file("%s/Info.plist", strFolder.c_str());
 	}
 
+	return true;
+}
+
+static bool GetPngSize(const string& strData, uint32_t& uWidth, uint32_t& uHeight)
+{
+	static const uint8_t pngMagic[8] = { 0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a };
+	if (strData.size() < 24 || 0 != memcmp(strData.data(), pngMagic, 8)) {
+		return false;
+	}
+	const uint8_t* p = (const uint8_t*)strData.data();
+	if (0 != memcmp(p + 12, "IHDR", 4)) {
+		return false;
+	}
+	uWidth = ((uint32_t)p[16] << 24) | ((uint32_t)p[17] << 16) | ((uint32_t)p[18] << 8) | p[19];
+	uHeight = ((uint32_t)p[20] << 24) | ((uint32_t)p[21] << 16) | ((uint32_t)p[22] << 8) | p[23];
+	return (uWidth > 0 && uHeight > 0);
+}
+
+bool ZBundle::ChangeAppIcon()
+{
+	string strIconData;
+	if (!ZFile::ReadFile(m_strIconFile.c_str(), strIconData)) {
+		ZLog::ErrorV(">>> Can't read icon file! %s\n", m_strIconFile.c_str());
+		return false;
+	}
+
+	uint32_t uWidth = 0;
+	uint32_t uHeight = 0;
+	if (!GetPngSize(strIconData, uWidth, uHeight)) {
+		ZLog::ErrorV(">>> Invalid icon file! Only PNG format is supported. %s\n", m_strIconFile.c_str());
+		return false;
+	}
+	if (uWidth != uHeight) {
+		ZLog::WarnV(">>> Warning: Icon is not square! (%ux%u)\n", uWidth, uHeight);
+	}
+
+	jvalue jvInfo;
+	if (!jvInfo.read_plist_from_file("%s/Info.plist", m_strAppFolder.c_str())) {
+		ZLog::ErrorV(">>> Can't find app's Info.plist! %s\n", m_strAppFolder.c_str());
+		return false;
+	}
+
+	vector<string> arrIconNames;
+	const char* arrIconKeys[] = { "CFBundleIcons", "CFBundleIcons~ipad" };
+	for (const char* szKey : arrIconKeys) {
+		if (jvInfo.has(szKey) && jvInfo[szKey].has("CFBundlePrimaryIcon")) {
+			jvalue& jvPrimary = jvInfo[szKey]["CFBundlePrimaryIcon"];
+			if (jvPrimary.has("CFBundleIconFiles") && jvPrimary["CFBundleIconFiles"].is_array()) {
+				jvalue& jvFiles = jvPrimary["CFBundleIconFiles"];
+				for (size_t i = 0; i < jvFiles.size(); i++) {
+					string strName = jvFiles[i];
+					if (!strName.empty()) {
+						arrIconNames.push_back(strName);
+					}
+				}
+			}
+			// iOS 11+ prefers the Assets.car icon referenced by CFBundleIconName;
+			// drop it so the replaced PNG files take effect
+			jvPrimary.erase("CFBundleIconName");
+		}
+	}
+
+	if (arrIconNames.empty() && jvInfo.has("CFBundleIconFiles") && jvInfo["CFBundleIconFiles"].is_array()) {
+		jvalue& jvFiles = jvInfo["CFBundleIconFiles"];
+		for (size_t i = 0; i < jvFiles.size(); i++) {
+			string strName = jvFiles[i];
+			if (!strName.empty()) {
+				arrIconNames.push_back(strName);
+			}
+		}
+	}
+
+	if (arrIconNames.empty() && jvInfo.has("CFBundleIconFile")) {
+		string strName = jvInfo["CFBundleIconFile"];
+		if (!strName.empty()) {
+			arrIconNames.push_back(strName);
+		}
+	}
+
+	if (arrIconNames.empty()) { // no icon declared at all, create fresh entries
+		jvalue jvFiles;
+		jvFiles.push_back("AppIcon60x60");
+		jvInfo["CFBundleIcons"]["CFBundlePrimaryIcon"]["CFBundleIconFiles"] = jvFiles;
+		jvInfo["CFBundleIcons~ipad"]["CFBundlePrimaryIcon"]["CFBundleIconFiles"] = jvFiles;
+		arrIconNames.push_back("AppIcon60x60");
+	}
+
+	// overwrite every bundle-root png matching a declared icon name prefix
+	vector<string> arrIconFiles;
+	ZFile::EnumFolder(m_strAppFolder.c_str(), false, NULL, [&](bool bFolder, const string& strPath) {
+		if (!bFolder && ZFile::IsPathSuffix(strPath, ".png")) {
+			string strBaseName = ZUtil::GetBaseName(strPath.c_str());
+			for (const string& strName : arrIconNames) {
+				if (0 == strncmp(strBaseName.c_str(), strName.c_str(), strName.size())) {
+					arrIconFiles.push_back(strPath);
+					break;
+				}
+			}
+		}
+		return false;
+	});
+
+	if (arrIconFiles.empty()) { // declared but missing on disk
+		arrIconFiles.push_back(m_strAppFolder + "/" + arrIconNames[0] + "@2x.png");
+	}
+
+	int nReplaced = 0;
+	for (const string& strPath : arrIconFiles) {
+		if (ZFile::WriteFile(strPath.c_str(), strIconData)) {
+			nReplaced++;
+			ZLog::DebugV("\t\tIcon: %s\n", strPath.substr(m_strAppFolder.size() + 1).c_str());
+		} else {
+			ZLog::WarnV(">>> Warning: Can't write icon file! %s\n", strPath.c_str());
+		}
+	}
+	if (0 == nReplaced) {
+		ZLog::ErrorV(">>> Can't write any icon file!\n");
+		return false;
+	}
+
+	if (!jvInfo.style_write_plist_to_file("%s/Info.plist", m_strAppFolder.c_str())) {
+		ZLog::ErrorV(">>> Can't write app's Info.plist! %s\n", m_strAppFolder.c_str());
+		return false;
+	}
+
+	ZLog::PrintV(">>> AppIcon: \t%s (%ux%u) -> %d file(s)\n", ZUtil::GetBaseName(m_strIconFile.c_str()), uWidth, uHeight, nReplaced);
 	return true;
 }
 
@@ -671,6 +816,13 @@ bool ZBundle::SignFolder(ZSignAsset* pSignAsset,
 
 	ApplyAppModifications();
 
+	if (!m_strIconFile.empty()) {
+		m_bForceSign = true;
+		if (!ChangeAppIcon()) {
+			return false;
+		}
+	}
+
 	if (!strBundleId.empty() || !strDisplayName.empty() || !strBundleVersion.empty()) {
 		m_bForceSign = true;
 		if (!ModifyBundleInfo(strBundleId, strBundleVersion, strDisplayName)) {
@@ -694,6 +846,7 @@ bool ZBundle::SignFolder(ZSignAsset* pSignAsset,
 			string strFileName = ZUtil::GetBaseName(strDylibFile.c_str());
 			if (ZFile::CopyFileV(strDylibFile.c_str(), "%s/%s", m_strAppFolder.c_str(), strFileName.c_str())) {
 				m_arrInjectDylibs.push_back("@executable_path/" + strFileName);
+				m_arrInjectDylibNames.push_back(strFileName);
 			}
 		}
 	}
