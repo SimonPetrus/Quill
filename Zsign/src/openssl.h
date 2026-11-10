@@ -5,6 +5,11 @@ class ZSignAsset
 {
 public:
 	ZSignAsset();
+	// Quill: owns m_evpPKey / m_x509Cert / m_caCerts (the private key no longer leaks per signing);
+	// copies take their own OpenSSL references
+	~ZSignAsset();
+	ZSignAsset(const ZSignAsset& other);
+	ZSignAsset& operator=(const ZSignAsset& other);
 
 public:
 	bool Init(const string& strCertFile, 
@@ -32,6 +37,8 @@ private:
 						string& strCMSOutput);
 
 	bool GetCertSubjectCN(void* cert, string& strSubjectCN);
+	void ReleaseKeys();
+	void CopyFrom(const ZSignAsset& other);
 	bool GetCertSubjectCN(const string& strCertData, string& strSubjectCN);
 
 public:

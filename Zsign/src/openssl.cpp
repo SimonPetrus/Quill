@@ -825,6 +825,65 @@ ZSignAsset::ZSignAsset()
 	m_bSHA256Only = false;
 }
 
+ZSignAsset::~ZSignAsset()
+{
+	ReleaseKeys();
+}
+
+ZSignAsset::ZSignAsset(const ZSignAsset& other)
+{
+	m_evpPKey = NULL;
+	m_x509Cert = NULL;
+	m_caCerts = NULL;
+	CopyFrom(other);
+}
+
+ZSignAsset& ZSignAsset::operator=(const ZSignAsset& other)
+{
+	if (this != &other) {
+		ReleaseKeys();
+		CopyFrom(other);
+	}
+	return *this;
+}
+
+void ZSignAsset::ReleaseKeys()
+{
+	if (NULL != m_evpPKey) {
+		EVP_PKEY_free((EVP_PKEY*)m_evpPKey);
+		m_evpPKey = NULL;
+	}
+	if (NULL != m_x509Cert) {
+		X509_free((X509*)m_x509Cert);
+		m_x509Cert = NULL;
+	}
+	if (NULL != m_caCerts) {
+		sk_X509_pop_free((STACK_OF(X509)*)m_caCerts, X509_free);
+		m_caCerts = NULL;
+	}
+}
+
+void ZSignAsset::CopyFrom(const ZSignAsset& other)
+{
+	m_bAdhoc = other.m_bAdhoc;
+	m_bSHA256Only = other.m_bSHA256Only;
+	m_bSingleBinary = other.m_bSingleBinary;
+	m_strTeamId = other.m_strTeamId;
+	m_strSubjectCN = other.m_strSubjectCN;
+	m_strProvData = other.m_strProvData;
+	m_strEntitleData = other.m_strEntitleData;
+	m_strApplicationId = other.m_strApplicationId;
+	if (NULL != other.m_evpPKey && EVP_PKEY_up_ref((EVP_PKEY*)other.m_evpPKey)) {
+		m_evpPKey = other.m_evpPKey;
+	}
+	if (NULL != other.m_x509Cert && X509_up_ref((X509*)other.m_x509Cert)) {
+		m_x509Cert = other.m_x509Cert;
+	}
+	if (NULL != other.m_caCerts) {
+		m_caCerts = X509_chain_up_ref((STACK_OF(X509)*)other.m_caCerts);
+	}
+}
+
 bool ZSignAsset::Init(
 	const string& strCertFile,
 	const string& strPKeyFile, 
@@ -835,6 +894,7 @@ bool ZSignAsset::Init(
 	bool bSHA256Only,
 	bool bSingleBinary)
 {
+	ReleaseKeys(); // Init may be called again on the same asset
 	m_bAdhoc = bAdhoc;
 	m_bSHA256Only = bSHA256Only;
 	m_bSingleBinary = bSingleBinary;
@@ -899,7 +959,9 @@ bool ZSignAsset::Init(
 			evpPKey = d2i_PrivateKey_bio(bioPKey, NULL);
 			if (NULL == evpPKey) {
 				BIO_reset(bioPKey);
-				OSSL_PROVIDER_load(NULL, "legacy");
+				// once per process: every load adds a provider reference that is never released
+				static OSSL_PROVIDER* s_pLegacyProvider = OSSL_PROVIDER_load(NULL, "legacy");
+				(void)s_pLegacyProvider;
 				PKCS12* p12 = d2i_PKCS12_bio(bioPKey, NULL);
 				if (NULL != p12) {
 					STACK_OF(X509)* caCerts = NULL;
@@ -950,6 +1012,7 @@ bool ZSignAsset::Init(
 				x509Cert = d2i_X509_bio(bioCert, NULL);
 				if (NULL != x509Cert) {
 					if (X509_check_private_key(x509Cert, evpPKey)) {
+						BIO_free(bioCert);
 						break;
 					}
 					X509_free(x509Cert);
@@ -961,11 +1024,14 @@ bool ZSignAsset::Init(
 	}
 
 	if (NULL == x509Cert) {
+		EVP_PKEY_free(evpPKey);
 		ZLog::Error(">>> Can't find paired certificate and private key!\n");
 		return false;
 	}
 
 	if (!GetCertSubjectCN(x509Cert, m_strSubjectCN)) {
+		X509_free(x509Cert);
+		EVP_PKEY_free(evpPKey);
 		ZLog::Error(">>> Can't find paired certificate subject common name!\n");
 		return false;
 	}

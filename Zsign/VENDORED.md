@@ -73,6 +73,13 @@ Keep these when syncing with upstream again.
 - `src/common/fs.cpp`: the `chmod(0755)` retry only applies to regular files (`lstat`), never to the
   target of a symbolic link.
 
+### Leaks (Quill)
+- `src/openssl.h`, `src/openssl.cpp`: `ZSignAsset` owns and frees its private key, certificate and
+  CA chain (destructor; copies take OpenSSL references); `Init` frees them on its error paths and a
+  leaked BIO; the legacy provider is loaded once per process.
+- `src/macho.cpp`: `FreeArchOes` no longer drops the mapping without unmapping; `CloseFile` unmaps
+  once and the destructor unmaps on every exit path.
+
 ### Entitlements (Quill)
 - `src/openssl.cpp` `ZSignAsset::Init`: a custom entitlements file that can't be read, is empty or
   is not a plist dictionary fails signing (it used to fall back to the profile's entitlements);

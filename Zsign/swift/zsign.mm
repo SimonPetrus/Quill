@@ -226,7 +226,11 @@ int zsign(
 	}
 
 	ZSignAsset zsa;
-	if (!zsa.Init(strCertFile, strPKeyFile, strProvFile, strEntitleFile, strPassword, bAdhoc, bSHA256Only, false)) {
+	bool bInit = zsa.Init(strCertFile, strPKeyFile, strProvFile, strEntitleFile, strPassword, bAdhoc, bSHA256Only, false);
+	if (!strPassword.empty()) {
+		OPENSSL_cleanse(&strPassword[0], strPassword.size()); // the decoded key lives in zsa now
+	}
+	if (!bInit) {
 		return finish(false);
 	}
 
@@ -280,9 +284,13 @@ int checkCert(
 	strProvFile = [prov cStringUsingEncoding:NSUTF8StringEncoding];
 	strPassword = [pass cStringUsingEncoding:NSUTF8StringEncoding];
 
-	__block ZSignAsset zsa;
-		
-	if (!zsa.Init(strCertFile, strPKeyFile, strProvFile, strEntitleFile, strPassword, false, false, false)) {
+	ZSignAsset zsa;
+	
+	bool bInit = zsa.Init(strCertFile, strPKeyFile, strProvFile, strEntitleFile, strPassword, false, false, false);
+	if (!strPassword.empty()) {
+		OPENSSL_cleanse(&strPassword[0], strPassword.size());
+	}
+	if (!bInit) {
 		completionHandler(2, nil, @"Unable to initialize certificate. Please check your password.");
 		return -1;
 	}

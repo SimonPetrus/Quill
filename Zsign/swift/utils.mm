@@ -31,7 +31,9 @@ bool p12_password_check(NSString *file, NSString *pass) {
 		return false;
 	}
 	
-	OSSL_PROVIDER_load(NULL, "legacy");
+	// once per process: every load adds a provider reference that is never released
+	static OSSL_PROVIDER *legacyProvider = OSSL_PROVIDER_load(NULL, "legacy");
+	(void)legacyProvider;
 	
 	PKCS12 *p12 = d2i_PKCS12_bio(bio, NULL);
 	BIO_free(bio);
@@ -41,16 +43,9 @@ bool p12_password_check(NSString *file, NSString *pass) {
 		return false;
 	}
 	
-	if( PKCS12_verify_mac(p12, NULL, 0) ) {
-		return true;
-	} else if( PKCS12_verify_mac(p12, strPass.c_str(), -1) ) {
-		return true;
-	} else {
-		return false;
-	}
-	
+	bool valid = PKCS12_verify_mac(p12, NULL, 0) || PKCS12_verify_mac(p12, strPass.c_str(), -1);
 	PKCS12_free(p12);
-	return false;
+	return valid;
 }
 
 // This is fucking bullshit IMO.
