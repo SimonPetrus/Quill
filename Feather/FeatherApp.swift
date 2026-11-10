@@ -68,6 +68,7 @@ struct QuillApp: App {
 				}
 				
 				_showStartupNoticeIfPossible()
+				Storage.shared.removeLegacyUpstreamSourceIfNeeded()
 				Storage.shared.addOwnSourceIfNeeded()
 				SelfUpdateManager.shared.autoCheckIfNeeded()
 				
