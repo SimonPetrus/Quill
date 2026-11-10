@@ -280,6 +280,7 @@ Upstream issue linki: `https://github.com/claration/Feather/issues/<no>`.
   **Submodule önerisi (Zsign-Package):** `src/archo.cpp:342`'de `IsExecute() ? m_strEntitleData : strEmptyEntitlements`
   yerine `IsExecute() ? m_strEntitleData : ""` kullan (`SlotBuildEntitlements` boş girdide boş slot döner, `archo.cpp:296`;
   bu durumda `uEntitlementsSlotLength == 0` olur ve slot hiç yazılmaz, 343'teki DER zaten boş). Cihazda doğrulanmadı.
+- **Durum: uygulandı (build/vendor-zsign).** Zsign vendor edildi (`Zsign/VENDORED.md`); `Zsign/src/archo.cpp` artık dylib/framework'lere entitlement slotu yazmıyor (yalnız MH_EXECUTE). Cihazda doğrulama bekliyor.
 
 #### 23. Büyük IPA içe aktarma / kurulum sonrası hata — #661, #659
 - **Bulgu:** 2.7 GB IPA'da içe aktarma başarısız, ilerleme çubuğu yok (#661); #659 yalnızca ekran görüntüsü (iOS 26.5).
