@@ -81,15 +81,15 @@ extension AboutView {
 			case .checking:
 				ProgressView()
 			case .upToDate(let version):
-				Text(.localized("Quill is up to date (%@)", arguments: version))
+				Text(verbatim: .localized("Quill is up to date (%@)", arguments: version))
 					.foregroundStyle(.secondary)
 			case .available(let version, let url):
-				Text(.localized("Update available: %@", arguments: version))
+				Text(verbatim: .localized("Update available: %@", arguments: version))
 				Button(.localized("Open"), systemImage: "safari") {
 					UIApplication.shared.open(url)
 				}
 			case .failed(let message):
-				Text(message)
+				Text(verbatim: message)
 					.foregroundStyle(.red)
 			}
 		} footer: {
