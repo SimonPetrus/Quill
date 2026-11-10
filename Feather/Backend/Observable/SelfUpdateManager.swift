@@ -9,6 +9,16 @@
 import Foundation
 import UIKit
 
+/// True when `identifier` is the running bundle ID `own`, or `own` is `identifier` plus exactly one
+/// extra component (SideStore/AltStore suffixing). Identifiers without a "." never match by prefix.
+func bundleIDMatchesRunningApp(_ identifier: String, own: String) -> Bool {
+	guard identifier.contains(".") else { return false }
+	if identifier == own { return true }
+	guard own.hasPrefix(identifier + ".") else { return false }
+	let suffix = own.dropFirst(identifier.count + 1)
+	return !suffix.isEmpty && !suffix.contains(".")
+}
+
 extension AppInfoPresentable {
 	/// True when this library item is Quill itself (same bundle ID as the running app).
 	/// Determined at runtime so no Core Data schema change is needed.
@@ -17,11 +27,7 @@ extension AppInfoPresentable {
 		// Tools like SideStore/AltStore can rewrite the installed bundle ID (e.g. "app.quill.sign.TEAMID"),
 		// so a library item whose ID is a prefix of the running one is Quill too. Require a dotted
 		// identifier and exactly one extra suffix component so short IDs ("app") never match broadly.
-		guard identifier.contains(".") else { return false }
-		if identifier == own { return true }
-		guard own.hasPrefix(identifier + ".") else { return false }
-		let suffix = own.dropFirst(identifier.count + 1)
-		return !suffix.isEmpty && !suffix.contains(".")
+		return bundleIDMatchesRunningApp(identifier, own: own)
 	}
 }
 
@@ -159,7 +165,7 @@ final class SelfUpdateManager: ObservableObject {
 		guard
 			let apps = json["apps"] as? [[String: Any]],
 			let own = Bundle.main.bundleIdentifier,
-			let app = apps.first(where: { ($0["bundleIdentifier"] as? String) == own })
+			let app = apps.first(where: { bundleIDMatchesRunningApp(($0["bundleIdentifier"] as? String) ?? "", own: own) })
 		else { return nil }
 		
 		let latest = (app["versions"] as? [[String: Any]])?.first

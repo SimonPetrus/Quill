@@ -21,6 +21,11 @@ on:
         required: true
         type: boolean
         default: true
+      source_only:
+        description: 'Only regenerate and publish source.json from existing Releases (rescue a half-finished release)'
+        required: false
+        type: boolean
+        default: false
       xcode:
         description: 'Xcode version'
         required: false
@@ -40,12 +45,28 @@ jobs:
     env:
       VERSION: ${{ inputs.version }}
       NOTES: ${{ inputs.notes }}
+      XCODE_WANT: ${{ inputs.xcode }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      SOURCE_ONLY: ${{ inputs.source_only }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Validate version
         run: |
-          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
-            echo "Invalid version '$VERSION' (expected e.g. 1.0.1)"; exit 1
+          RE='^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'
+          if ! [[ "$VERSION" =~ $RE ]]; then
+            echo "Invalid version (expected e.g. 1.0.1)"; exit 1
+          fi
+          if [ "$SOURCE_ONLY" != "true" ]; then
+            EXISTS=0
+            gh release view "v${VERSION}" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 && EXISTS=1
+            [ -n "$(git ls-remote --tags "https://github.com/${GITHUB_REPOSITORY}.git" "refs/tags/v${VERSION}")" ] && EXISTS=1
+            if [ "$EXISTS" = "1" ]; then
+              if [ "$DRY_RUN" = "true" ]; then
+                echo "::warning::v${VERSION} already exists (a real release would fail)"
+              else
+                echo "v${VERSION} already exists; use source_only to republish the source"; exit 1
+              fi
+            fi
           fi
 
       - name: Checkout quill
@@ -63,13 +84,16 @@ jobs:
           sparse-checkout: .github/scripts
 
       - name: Set version
+        if: ${{ !inputs.source_only }}
         run: |
           sed -i '' "s/^QUILL_PROJECT_VERSION=.*/QUILL_PROJECT_VERSION=${VERSION}/" Quill.xcconfig
           grep QUILL_PROJECT_VERSION Quill.xcconfig
 
       - name: Select Xcode
+        if: ${{ !inputs.source_only }}
         run: |
-          WANT="${{ inputs.xcode || '26.3.0' }}"
+          WANT="${XCODE_WANT:-26.3.0}"
+          case "$WANT" in *[!0-9.]*) echo "Invalid Xcode version"; exit 1 ;; esac
           if [ -d "/Applications/Xcode_${WANT}.app" ]; then
             XCODE="/Applications/Xcode_${WANT}.app"
           else
@@ -80,6 +104,7 @@ jobs:
           xcodebuild -version
 
       - name: Cache Swift packages
+        if: ${{ !inputs.source_only }}
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/Quill/iphoneos/SourcePackages
@@ -87,6 +112,7 @@ jobs:
           restore-keys: spm-${{ runner.os }}-
 
       - name: Resolve Swift packages
+        if: ${{ !inputs.source_only }}
         run: |
           for i in 1 2 3; do
             echo "Resolve attempt $i"
@@ -101,6 +127,7 @@ jobs:
           exit 1
 
       - name: Build
+        if: ${{ !inputs.source_only }}
         env:
           TMPDIR: ${{ runner.temp }}/
         run: |
@@ -108,6 +135,7 @@ jobs:
           make iphoneos
 
       - name: Show result
+        if: ${{ !inputs.source_only }}
         run: |
           ls -la packages
           /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" _build/Payload/*.app/Info.plist
@@ -115,7 +143,7 @@ jobs:
 
       # Only the xcconfig change is committed (agvtool touches project files, which are reverted first).
       - name: Commit version bump to quill
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && !inputs.source_only }}
         run: |
           git checkout -- Feather.xcodeproj Feather
           git add Quill.xcconfig
@@ -125,9 +153,11 @@ jobs:
           git push origin HEAD:quill
 
       - name: Create tag and GitHub Release
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && !inputs.source_only }}
         run: |
-          gh release create "v${VERSION}" packages/Quill.ipa \
+          PRE=""
+          case "$VERSION" in *-*) PRE="--prerelease" ;; esac
+          gh release create "v${VERSION}" packages/Quill.ipa $PRE \
             --target "$(git rev-parse HEAD)" \
             --title "Quill ${VERSION}" \
             --notes "${NOTES:-Quill ${VERSION}}"
