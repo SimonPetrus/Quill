@@ -95,6 +95,16 @@ extension Storage {
 		completion(nil)
 	}
 
+	/// Adds the official Quill source once per installation (new and existing installs). A source the
+	/// user deleted afterwards is not re-added because the flag stays set.
+	func addOwnSourceIfNeeded() {
+		let defaults = UserDefaults.standard
+		guard !defaults.bool(forKey: SelfUpdateManager.didAddOwnSourceKey) else { return }
+		defaults.set(true, forKey: SelfUpdateManager.didAddOwnSourceKey)
+		guard let url = URL(string: SelfUpdateManager.defaultSourceURL) else { return }
+		addSource(url, name: "Quill", identifier: SelfUpdateManager.ownSourceIdentifier) { _ in }
+	}
+
 	func deleteSource(for source: AltSource) {
 		context.delete(source)
 		saveContext()

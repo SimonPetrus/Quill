@@ -32,6 +32,8 @@
   + yalnızca CI commit'leri. **Uygulama koduna henüz dokunulmadı.**
 - Yeni maddeler için branch'leri bu branch'ten aç (CI workflow'u burada).
 
+- Yayın akışı: `.github/workflows/release.yml` (workflow_dispatch). Sürüm: `gh workflow run release.yml -R SimonPetrus/Quill -f version=X -f dry_run=false` — YALNIZCA kullanıcı onayıyla. `dry_run=true` (varsayılan) tag/Release/`source` dalı oluşturmaz. Kaynak: `https://raw.githubusercontent.com/SimonPetrus/Quill/source/source.json`.
+
 ### Proje yapısı
 - `Feather.xcodeproj` (tek app hedefi `Feather`, SwiftUI, iOS 16+, iPhone+iPad,
   `SUPPORTED_PLATFORMS = iphoneos iphonesimulator` — Catalyst hedeflenmiyor).
@@ -60,8 +62,7 @@
     `git fetch origin ipa-builds && git show FETCH_HEAD:Quill.ipa > Quill.ipa`
     Kullanıcı IPA'sı `ipa-builds` (= quill dalı), ara derlemeler (diğer dallar) `ipa-builds-dev`.
   - Artifact yükleme `continue-on-error` — kota açılınca artifact olarak da gelir.
-- Upstream'den gelen `release.yml` (tag'de draft release) ve `update_repo.yml` (release yayınlanınca
-  `main`'e push) dokunulmadı; tag/release oluşturulmadıkça çalışmazlar.
+- Upstream'den kalan `release.yml` yeniden yazıldı (manuel `workflow_dispatch` yayın akışı, §1); `update_repo.yml` ve `app-repo.json` silindi.
 
 ---
 
@@ -156,8 +157,7 @@ Upstream issue linki: `https://github.com/claration/Feather/issues/<no>`.
 
 #### 6. Feather için uygulama içi güncelleme kontrolü — #646
 - **Bulgu:** #654 yalnızca **kütüphanedeki uygulamaların** kaynaklardan güncellemesini kontrol ediyor; Feather'ın kendisini değil.
-- **Karar gerekli (başlamadan kullanıcıya sor):** fork'un yayınlanmış sürümü yok. Seçenekler: upstream `app-repo.json`,
-  fork'un `app-repo.json`'u, ya da GitHub Releases API. Kontrol yalnızca bilgi verip sayfayı açmalı, otomatik indirmemeli.
+- **Karar (uygulandı):** kaynak = Quill'in kendi AltStore kaynağı (`source` dalındaki `source.json`, release.yml üretir); `app-repo.json` kaldırıldı. Kontrol yalnızca bilgi verip sayfayı açar, otomatik indirmez.
 - **Dosyalar:** yeni küçük `Backend/Observable/SelfUpdateManager.swift`, `Views/Settings/SettingsView.swift` / `AboutView.swift`, xcstrings.
 - **Zorluk:** Kolay–orta. **Cihazsız:** kısmen (sürüm karşılaştırma mantığı). **Cihaz testi:** Ayarlar'da "Güncellemeleri kontrol et" → doğru sürüm mesajı.
 

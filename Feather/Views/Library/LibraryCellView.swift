@@ -125,7 +125,8 @@ struct LibraryCellView: View {
 	
 	private var _desc: String {
 		if let version = app.version, let id = app.identifier {
-			return "\(version) • \(id)"
+			let base = "\(version) • \(id)"
+			return app.isQuillItself ? base + "\n" + .localized("This is Quill itself") : base
 		} else {
 			return .localized("Unknown")
 		}

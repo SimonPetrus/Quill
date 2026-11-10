@@ -2973,6 +2973,12 @@
             "state" : "translated",
             "value" : "Sprawdź aktualizacje"
           }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Güncellemeleri Denetle"
+          }
         }
       }
     },
@@ -16995,6 +17001,12 @@
             "state" : "translated",
             "value" : "Dostępna aktualizacja"
           }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Güncelleme Mevcut"
+          }
         }
       }
     },
@@ -18075,6 +18087,278 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İmzalı uygulamaları yeniden imzalamak yeni kopyalar oluşturur; orijinaller korundu."
+          }
+        }
+      }
+    },
+    "Updates" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Updates"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Güncellemeler"
+          }
+        }
+      }
+    },
+    "Update source URL" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update source URL"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Güncelleme kaynağı URL'si"
+          }
+        }
+      }
+    },
+    "Check automatically on launch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check automatically on launch"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Açılışta otomatik kontrol et"
+          }
+        }
+      }
+    },
+    "Quill is up to date (%@)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill is up to date (%@)"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill güncel (%@)"
+          }
+        }
+      }
+    },
+    "Update available: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update available: %@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Güncelleme mevcut: %@"
+          }
+        }
+      }
+    },
+    "Quill %@ is available." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill %@ is available."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill %@ sürümü mevcut."
+          }
+        }
+      }
+    },
+    "The update source URL is not valid." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The update source URL is not valid."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Güncelleme kaynağı URL'si geçerli değil."
+          }
+        }
+      }
+    },
+    "The update source returned an error (%@)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The update source returned an error (%@)."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Güncelleme kaynağı hata döndürdü (%@)."
+          }
+        }
+      }
+    },
+    "The update source could not be read." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The update source could not be read."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Güncelleme kaynağı okunamadı."
+          }
+        }
+      }
+    },
+    "Quill was not found in the update source." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill was not found in the update source."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill güncelleme kaynağında bulunamadı."
+          }
+        }
+      }
+    },
+    "Add a source JSON or GitHub releases API URL to check for new versions of Quill. Updates are never downloaded automatically." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a source JSON or GitHub releases API URL to check for new versions of Quill. Updates are never downloaded automatically."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill'in yeni sürümlerini denetlemek için bir kaynak JSON'u veya GitHub releases API URL'si ekleyin. Güncellemeler hiçbir zaman otomatik indirilmez."
+          }
+        }
+      }
+    },
+    "This is Quill itself" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is Quill itself"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu, Quill'in kendisi"
+          }
+        }
+      }
+    },
+    "This is Quill itself. Bundle ID is kept so your data stays." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is Quill itself. Bundle ID is kept so your data stays."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu, Quill'in kendisi. Verileriniz kalsın diye Bundle ID korunur."
+          }
+        }
+      }
+    },
+    "Quill can't install over itself with the server method. Switch Installation Type to idevice (needs pairing file + VPN), then try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill can't install over itself with the server method. Switch Installation Type to idevice (needs pairing file + VPN), then try again."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill, sunucu yöntemiyle kendi üzerine kurulamaz. Kurulum Türü'nü idevice'a çevirin (eşleştirme dosyası + VPN gerekir), sonra tekrar deneyin."
+          }
+        }
+      }
+    },
+    "Quill will close during the update; reopen it from the home screen." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill will close during the update; reopen it from the home screen."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill güncelleme sırasında kapanacak; ana ekrandan yeniden açın."
+          }
+        }
+      }
+    },
+    "Open Settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayarları Aç"
           }
         }
       }

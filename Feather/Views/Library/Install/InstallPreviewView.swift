@@ -31,6 +31,8 @@ struct InstallPreviewView: View {
 	/// Set once the IPA is fully handed to iOS (server) or the install finished (idevice).
 	@State private var _installReached = false
 	@State private var _deleteScheduled = false
+	/// Set once the user acknowledged that Quill closes while it updates itself.
+	@State private var _selfUpdateConfirmed = false
 	
 	init(app: AppInfoPresentable, isSharing: Bool = false, deleteSignedAfterInstall: Bool? = nil) {
 		self.app = app
@@ -205,7 +207,7 @@ struct InstallPreviewView: View {
 	
 	/// Fully Local + server install: warn first if the local CA is not trusted yet.
 	private func _checkTrustThenInstall() {
-		guard !isSharing, _installationMethod == 0, _serverMethod == 0 else {
+		guard !isSharing, !app.isQuillItself, _installationMethod == 0, _serverMethod == 0 else {
 			_install()
 			return
 		}
@@ -246,14 +248,40 @@ struct InstallPreviewView: View {
 	}
 	
 	private func _install() {
-		guard isSharing || app.identifier != Bundle.main.bundleIdentifier! || _installationMethod == 1 else {
-			UIAlertController.showAlertWithOk(
-				title: .localized("Install"),
-				message: .localized("You cannot update ‘%@‘ with itself, please use an alternative tool to update it.", arguments: Bundle.main.name)
-			)
-			return
+		if !isSharing, app.isQuillItself {
+			guard _installationMethod == 1 else {
+				// The server dies together with Quill when iOS closes it, so the server method can't work.
+				UIAlertController.showAlert(
+					title: .localized("Install"),
+					message: .localized("Quill can't install over itself with the server method. Switch Installation Type to idevice (needs pairing file + VPN), then try again."),
+					actions: [
+						UIAlertAction(title: .localized("Open Settings"), style: .default) { _ in
+							dismiss()
+							DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+								Self._presentInstallationSettings()
+							}
+						},
+						UIAlertAction(title: .localized("Cancel"), style: .cancel) { _ in dismiss() }
+					]
+				)
+				return
+			}
+			if !_selfUpdateConfirmed {
+				UIAlertController.showAlert(
+					title: .localized("Install"),
+					message: .localized("Quill will close during the update; reopen it from the home screen."),
+					actions: [
+						UIAlertAction(title: .localized("Install"), style: .default) { _ in
+							_selfUpdateConfirmed = true
+							_install()
+						},
+						UIAlertAction(title: .localized("Cancel"), style: .cancel) { _ in dismiss() }
+					]
+				)
+				return
+			}
 		}
-				
+		
 		Task.detached {
 			do {
 				let handler = await ArchiveHandler(app: app, viewModel: viewModel)
@@ -313,6 +341,13 @@ struct InstallPreviewView: View {
 				}
 			}
 		}
+	}
+	
+	/// Shows Settings → Installation in a sheet (the tab bar has no programmatic selection).
+	@MainActor
+	private static func _presentInstallationSettings() {
+		let root = NBNavigationView(.localized("Installation")) { InstallationView() }
+		UIApplication.topViewController()?.present(UIHostingController(rootView: root), animated: true)
 	}
 	
 	private func startInstallProgressPolling(

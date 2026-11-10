@@ -44,6 +44,10 @@ struct QuillApp: App {
 			}
 			.onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
 				_showStartupNoticeIfPossible()
+				// Delayed so a startup notice shown just above wins; the update alert then waits for the next activation.
+				DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+					SelfUpdateManager.shared.presentPendingIfPossible()
+				}
 			}
 			// dear god help me
 			.onAppear {
@@ -52,6 +56,8 @@ struct QuillApp: App {
 				}
 				
 				_showStartupNoticeIfPossible()
+				Storage.shared.addOwnSourceIfNeeded()
+				SelfUpdateManager.shared.autoCheckIfNeeded()
 				
 				UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "Quill.userTintColor") ?? "#848ef9"))
 			}
