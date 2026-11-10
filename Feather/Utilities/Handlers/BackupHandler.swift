@@ -210,7 +210,7 @@ enum BackupHandler {
 	/// Builds the backup file and returns its URL (in a temporary folder, ready for the share sheet).
 	/// Reads Core Data on the main actor; the heavy part (zip, key derivation) runs off-main.
 	@MainActor
-	static func createBackup(includeCertificates: Bool, password: String?) async throws -> URL {
+	static func createBackup(includeCertificates: Bool, password: String?) async throws -> (url: URL, skippedCertificates: Int) {
 		if includeCertificates {
 			guard let password, password.count >= minPasswordLength else { throw BackupError.passwordTooShort }
 		}
@@ -242,6 +242,7 @@ enum BackupHandler {
 			)
 		}
 
+		var skippedCertificates = 0
 		var certEntries: [BackupCertificate] = []
 		var certFiles: [(name: String, url: URL)] = []
 		if includeCertificates {
@@ -252,7 +253,8 @@ enum BackupHandler {
 					let p12 = Storage.shared.getFile(.certificate, from: cert),
 					let provision = Storage.shared.getFile(.provision, from: cert)
 				else {
-					throw BackupError.failed(.localized("A certificate file is missing; the backup was not created."))
+					skippedCertificates += 1
+					continue
 				}
 				let p12Name = "cert-\(uuid).p12"
 				let provisionName = "cert-\(uuid).mobileprovision"
@@ -286,7 +288,8 @@ enum BackupHandler {
 		let certEntriesFinal = certEntries
 		let certFilesFinal = certFiles
 		let passwordFinal = password
-		return try await Task.detached(priority: .userInitiated) { () -> URL in
+		let skipped = skippedCertificates
+		let url = try await Task.detached(priority: .userInitiated) { () -> URL in
 			let work = try _workDirectory()
 			defer { try? FileManager.default.removeItem(at: work) }
 
@@ -326,6 +329,7 @@ enum BackupHandler {
 			try output.write(to: final, options: [.atomic, .completeFileProtection])
 			return final
 		}.value
+		return (url, skipped)
 	}
 
 	// MARK: Restore

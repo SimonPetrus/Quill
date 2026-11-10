@@ -36,6 +36,7 @@ extension Storage {
 		new.expiration = expiration
 		new.nickname = nickname
 		new.isDefault = isDefault
+		CertificatePasswordCache.shared.invalidate(uuid)
 		Storage.shared.revokagedCertificate(for: new)
 		saveContext()
 		generator.impactOccurred()
@@ -48,6 +49,7 @@ extension Storage {
 				try? FileManager.default.removeItem(at: url)
 			}
 			KeychainHelper.delete(uuid)
+			CertificatePasswordCache.shared.invalidate(uuid)
 		}
 		context.delete(cert)
 		saveContext()
@@ -132,50 +134,121 @@ extension CertificatePair {
 }
 
 // MARK: - Missing password (e.g. device restored from a backup: Keychain items do not move between devices)
-extension CertificatePair {
-	/// True when no password is stored anywhere for this certificate AND its p12 actually needs one.
-	var isPasswordMissing: Bool {
-		guard resolvedPassword.isEmpty else { return false }
-		return !Storage.verifyPassword("", for: self)
+enum PasswordCheck {
+	case ok
+	case wrong
+	/// Files missing / could not be copied: nothing can be said about the password.
+	case unverifiable
+}
+
+enum PasswordUpdateResult {
+	case ok, wrong, unverifiable, keychainFailed
+}
+
+extension Notification.Name {
+	/// Posted on the main thread when a certificate password state may have changed.
+	static let certificatePasswordStateChanged = Notification.Name("Quill.certificatePasswordStateChanged")
+}
+
+/// In-memory cache: uuid -> "password is missing". The p12 check is not free, so it runs once per uuid.
+final class CertificatePasswordCache {
+	static let shared = CertificatePasswordCache()
+	private let _lock = NSLock()
+	private var _missing: [String: Bool] = [:]
+
+	func value(for uuid: String) -> Bool? {
+		_lock.lock(); defer { _lock.unlock() }
+		return _missing[uuid]
 	}
 
-	/// Verifies `newPassword` against the p12 and, if correct, stores it in the Keychain (never in Core Data).
-	/// Returns false when the password is wrong or the Keychain write failed.
-	func updatePassword(_ newPassword: String) -> Bool {
-		guard let uuid, Storage.verifyPassword(newPassword, for: self) else { return false }
+	func set(_ value: Bool, for uuid: String) {
+		_lock.lock(); defer { _lock.unlock() }
+		_missing[uuid] = value
+	}
+
+	/// Drops the cached state (all when `uuid` is nil) and tells the UI to refresh.
+	func invalidate(_ uuid: String? = nil) {
+		_lock.lock()
+		if let uuid { _missing.removeValue(forKey: uuid) } else { _missing.removeAll() }
+		_lock.unlock()
+		DispatchQueue.main.async {
+			NotificationCenter.default.post(name: .certificatePasswordStateChanged, object: nil)
+		}
+	}
+}
+
+extension CertificatePair {
+	/// True when no password is stored anywhere for this certificate AND its p12 actually needs one.
+	/// Cached per uuid; "unverifiable" counts as not missing.
+	var isPasswordMissing: Bool {
+		guard let uuid, resolvedPassword.isEmpty else { return false }
+		if let cached = CertificatePasswordCache.shared.value(for: uuid) { return cached }
+		let missing = Storage.checkPassword("", for: self) == .wrong
+		CertificatePasswordCache.shared.set(missing, for: uuid)
+		return missing
+	}
+
+	/// Same as `isPasswordMissing`, but the p12 check runs in the background.
+	func loadPasswordMissing(_ completion: @escaping (Bool) -> Void) {
+		guard let uuid, resolvedPassword.isEmpty else { return completion(false) }
+		if let cached = CertificatePasswordCache.shared.value(for: uuid) { return completion(cached) }
+		let p12 = Storage.shared.getFile(.certificate, from: self)
+		let provision = Storage.shared.getFile(.provision, from: self)
+		Task.detached(priority: .utility) {
+			let missing = Storage.checkPassword("", p12: p12, provision: provision) == .wrong
+			CertificatePasswordCache.shared.set(missing, for: uuid)
+			await MainActor.run { completion(missing) }
+		}
+	}
+
+	/// Verifies `newPassword` against the p12 and writes it to the Keychain (never Core Data) only if it is
+	/// verified correct. A password that cannot be verified is never written.
+	func updatePassword(_ newPassword: String) -> PasswordUpdateResult {
+		guard let uuid else { return .unverifiable }
+		switch Storage.checkPassword(newPassword, for: self) {
+		case .wrong: return .wrong
+		case .unverifiable: return .unverifiable
+		case .ok: break
+		}
 		if newPassword.isEmpty {
 			KeychainHelper.delete(uuid)
 		} else if !KeychainHelper.set(newPassword, for: uuid) {
-			return false
+			return .keychainFailed
 		}
 		if password != nil {
 			password = nil
 			Storage.shared.saveContext()
 		}
-		return true
+		CertificatePasswordCache.shared.invalidate(uuid)
+		return .ok
 	}
 }
 
 extension Storage {
-	/// Checks a password against the stored p12 on temporary copies (the check helper patches the profile).
-	/// Returns true also when files are missing, so a missing file is never reported as a missing password.
-	static func verifyPassword(_ password: String, for cert: CertificatePair) -> Bool {
-		guard
-			let p12 = Storage.shared.getFile(.certificate, from: cert),
-			let provision = Storage.shared.getFile(.provision, from: cert)
-		else { return true }
+	static func checkPassword(_ password: String, for cert: CertificatePair) -> PasswordCheck {
+		checkPassword(
+			password,
+			p12: Storage.shared.getFile(.certificate, from: cert),
+			provision: Storage.shared.getFile(.provision, from: cert)
+		)
+	}
+
+	/// Checks a password against temporary, protected copies of the files (the check helper patches the profile).
+	/// Thread-safe: touches no Core Data objects.
+	static func checkPassword(_ password: String, p12: URL?, provision: URL?) -> PasswordCheck {
+		guard let p12, let provision else { return .unverifiable }
 		let fm = FileManager.default
 		let dir = fm.temporaryDirectory.appendingPathComponent("QuillPwCheck-\(UUID().uuidString)", isDirectory: true)
 		defer { try? fm.removeItem(at: dir) }
 		do {
-			try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+			try fm.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.protectionKey: FileProtectionType.complete])
 			let p12Copy = dir.appendingPathComponent("c.p12")
 			let provisionCopy = dir.appendingPathComponent("c.mobileprovision")
 			try fm.copyItem(at: p12, to: p12Copy)
 			try fm.copyItem(at: provision, to: provisionCopy)
-			return FR.checkPasswordForCertificate(for: p12Copy, with: password, using: provisionCopy)
+			return FR.checkPasswordForCertificate(for: p12Copy, with: password, using: provisionCopy) ? .ok : .wrong
 		} catch {
-			return true
+			return .unverifiable
 		}
 	}
 

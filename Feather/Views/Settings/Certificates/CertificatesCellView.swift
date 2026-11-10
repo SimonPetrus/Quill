@@ -38,11 +38,14 @@ struct CertificatesCellView: View {
 		.frame(height: 80)
 		.contentTransition(.opacity)
 		.frame(maxWidth: .infinity, alignment: .leading)
+		.onReceive(NotificationCenter.default.publisher(for: .certificatePasswordStateChanged)) { _ in
+			cert.loadPasswordMissing { _passwordMissing = $0 }
+		}
 		.onAppear {
 			withAnimation {
 				data = Storage.shared.getProvisionFileDecoded(for: cert)
 			}
-			_passwordMissing = cert.isPasswordMissing
+			cert.loadPasswordMissing { _passwordMissing = $0 }
 		}
 	}
 }

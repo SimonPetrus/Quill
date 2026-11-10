@@ -59,19 +59,24 @@ struct CertificatesInfoView: View {
 			Button(.localized("OK")) {
 				let entered = _newPassword
 				_newPassword = ""
-				if cert.updatePassword(entered) {
-					_passwordMissing = false
-				} else {
-					UIAlertController.showAlertWithOk(
-						title: .localized("Error"),
-						message: .localized("Wrong password, or it could not be saved securely.")
-					)
+				let message: String?
+				switch cert.updatePassword(entered) {
+				case .ok: message = nil
+				case .wrong: message = .localized("The password is wrong.")
+				case .unverifiable: message = .localized("The password could not be verified: the certificate files are not accessible.")
+				case .keychainFailed: message = .localized("The password could not be saved securely.")
+				}
+				if let message {
+					UIAlertController.showAlertWithOk(title: .localized("Error"), message: message)
 				}
 			}
 		}
 		.onAppear {
 			data = Storage.shared.getProvisionFileDecoded(for: cert)
-			_passwordMissing = cert.isPasswordMissing
+			cert.loadPasswordMissing { _passwordMissing = $0 }
+		}
+		.onReceive(NotificationCenter.default.publisher(for: .certificatePasswordStateChanged)) { _ in
+			cert.loadPasswordMissing { _passwordMissing = $0 }
 		}
 	}
 }

@@ -189,6 +189,7 @@ extension ResetView {
 		try? FileManager.default.removeFileIfNeeded(at: FileManager.default.certificates)
 		try? FileManager.default.removeFileIfNeeded(at: FileManager.default.secureCertificates)
 		KeychainHelper.deleteAll()
+		CertificatePasswordCache.shared.invalidate()
 	}
 	
 	static func resetUserDefaults() {

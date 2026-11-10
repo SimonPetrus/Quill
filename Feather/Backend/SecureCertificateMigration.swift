@@ -129,6 +129,17 @@ enum SecureCertificateMigration {
 
 	/// Equal file content, or equal directory trees (names, nested content).
 	private static func _same(_ a: URL, _ b: URL, _ fm: FileManager) -> Bool {
+		// Symbolic links are compared by target and never followed (no loops).
+		let aType = (try? fm.attributesOfItem(atPath: a.path))?[.type] as? FileAttributeType
+		let bType = (try? fm.attributesOfItem(atPath: b.path))?[.type] as? FileAttributeType
+		if aType == .typeSymbolicLink || bType == .typeSymbolicLink {
+			guard
+				aType == bType,
+				let at = try? fm.destinationOfSymbolicLink(atPath: a.path),
+				let bt = try? fm.destinationOfSymbolicLink(atPath: b.path)
+			else { return false }
+			return at == bt
+		}
 		var aDir: ObjCBool = false, bDir: ObjCBool = false
 		guard
 			fm.fileExists(atPath: a.path, isDirectory: &aDir),

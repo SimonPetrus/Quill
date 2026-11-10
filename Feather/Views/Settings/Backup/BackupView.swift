@@ -105,14 +105,20 @@ extension BackupView {
 		let password = _password
 		Task {
 			do {
-				let url = try await BackupHandler.createBackup(
+				let result = try await BackupHandler.createBackup(
 					includeCertificates: includeCertificates,
 					password: includeCertificates ? password : nil
 				)
 				_isWorking = false
 				_password = ""
 				_passwordRepeat = ""
-				_share(url)
+				if result.skippedCertificates > 0 {
+					_show(
+						title: .localized("Warning"),
+						message: .localized("%d certificate(s) were not included because their files are missing.", arguments: result.skippedCertificates)
+					)
+				}
+				_share(result.url)
 			} catch {
 				_isWorking = false
 				_show(title: .localized("Error"), message: error.localizedDescription)
@@ -148,6 +154,11 @@ extension BackupView {
 			.appendingPathComponent("QuillRestore-\(UUID().uuidString).quillbackup")
 		do {
 			try FileManager.default.copyItem(at: url, to: copy)
+			// A file opened via "Open in Quill" (AirDrop/Mail) lands in Documents/Inbox, visible in Files:
+			// the temporary copy is all that is needed now.
+			if url.standardizedFileURL.path.hasPrefix(URL.documentsDirectory.standardizedFileURL.path) {
+				try? FileManager.default.removeItem(at: url)
+			}
 			if try BackupHandler.isEncrypted(at: copy) {
 				_pickedURL = copy
 				_restorePassword = ""
