@@ -17,7 +17,7 @@ struct InstallPreviewView: View {
 
 	@AppStorage("Quill.useShareSheetForArchiving") private var _useShareSheet: Bool = false
 	@AppStorage("Quill.installationMethod") private var _installationMethod: Int = 0
-	@AppStorage("Quill.serverMethod") private var _serverMethod: Int = 0
+	@AppStorage(ServerInstaller.serverMethodKey) private var _serverMethod: Int = ServerInstaller.defaultServerMethod
 	@State private var _isWebviewPresenting = false
 	@State private var _isLogPresenting = false
 	@State private var progressTask: Task<Void, Never>?
@@ -216,6 +216,34 @@ struct InstallPreviewView: View {
 			return
 		}
 		
+		// iOS 27.2+ blocks Fully Local: offer Semi Local first (one alert at a time), then the CA check.
+		if ServerInstaller.isFullyLocalBlockedByOS {
+			_showFullyLocalBlockedAlert()
+			return
+		}
+		_checkTrustThenInstallLocal()
+	}
+	
+	private func _showFullyLocalBlockedAlert() {
+		UIAlertController.showAlert(
+			title: .localized("Fully Local Blocked"),
+			message: .localized("On iOS 27.2 and later, Fully Local installs are blocked by iOS. Use Semi Local (needs internet) or idevice (offline)."),
+			actions: [
+				UIAlertAction(title: .localized("Switch to Semi Local"), style: .default) { _ in
+					_serverMethod = 1
+					_install()
+				},
+				UIAlertAction(title: .localized("Try Anyway"), style: .destructive) { _ in
+					_checkTrustThenInstallLocal()
+				},
+				UIAlertAction(title: .localized("Cancel"), style: .cancel) { _ in
+					dismiss()
+				}
+			]
+		)
+	}
+	
+	private func _checkTrustThenInstallLocal() {
 		Task.detached(priority: .userInitiated) {
 			let trusted = ServerInstaller.isLocalCATrusted()
 			await MainActor.run {

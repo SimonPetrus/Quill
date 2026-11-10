@@ -15,7 +15,7 @@ struct ServerView: View {
 	@State private var _isTestingConnection = false
 	
 	@AppStorage("Quill.ipFix") private var _ipFix: Bool = false
-	@AppStorage("Quill.serverMethod") private var _serverMethod: Int = 0
+	@AppStorage(ServerInstaller.serverMethodKey) private var _serverMethod: Int = ServerInstaller.defaultServerMethod
 	@AppStorage(ServerInstaller.nameConstraintsKey) private var _nameConstraints: Bool = true
 	@AppStorage(ServerInstaller.diagnosticsKey) private var _diagnostics: Bool = false
 	private let _serverMethods: [String] = [.localized("Fully Local"), .localized("Semi Local")]
@@ -39,6 +39,12 @@ struct ServerView: View {
 					isOn: $_ipFix
 				)
 				.disabled(_serverMethod != 1)
+				
+				if _serverMethod == 0, ServerInstaller.isFullyLocalBlockedByOS {
+					Text(.localized("On iOS 27.2 and later, Fully Local installs are blocked by iOS. Use Semi Local (needs internet) or idevice (offline)."))
+						.font(.footnote)
+						.foregroundStyle(.orange)
+				}
 			}
 			
 			if _serverMethod == 0 {

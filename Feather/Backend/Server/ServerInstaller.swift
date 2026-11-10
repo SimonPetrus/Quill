@@ -181,8 +181,22 @@ class ServerInstaller: Identifiable, ObservableObject {
 		}
 	}
 		
+	static let serverMethodKey = "Quill.serverMethod"
+	/// Default for fresh installs: Semi Local (1). Fully Local (0) is blocked by iOS 27.2+.
+	static let defaultServerMethod = 1
+	
+	/// Registers the default so a missing key reads as Semi Local; an explicit user choice is never touched.
+	static func registerDefaults() {
+		UserDefaults.standard.register(defaults: [serverMethodKey: defaultServerMethod])
+	}
+	
+	/// True on iOS 27.2+, where the install daemon refuses the local 127.0.0.1 manifest URL.
+	static var isFullyLocalBlockedByOS: Bool {
+		ProcessInfo.processInfo.isOperatingSystemAtLeast(OperatingSystemVersion(majorVersion: 27, minorVersion: 2, patchVersion: 0))
+	}
+	
 	func getServerMethod() -> Int {
-		UserDefaults.standard.integer(forKey: "Quill.serverMethod")
+		UserDefaults.standard.object(forKey: Self.serverMethodKey) as? Int ?? Self.defaultServerMethod
 	}
 	
 	func getIPFix() -> Bool {
