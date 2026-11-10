@@ -17272,7 +17272,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@’ı kendisi üzerinden güncelleyemezsiniz. Lütfen güncelleme için alternatif bir araç kullanın."
+            "value" : "%@ kendi üzerinden güncellenemez. Lütfen güncelleme için alternatif bir araç kullanın."
           }
         },
         "vi" : {

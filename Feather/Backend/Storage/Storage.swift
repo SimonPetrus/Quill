@@ -7,6 +7,7 @@
 
 import CoreData
 import Foundation
+import OSLog
 
 // MARK: - Storage
 final class Storage: ObservableObject {
@@ -56,7 +57,16 @@ final class Storage: ObservableObject {
 
 	private func _loadPersistentStoreAggressively() {
 		container.loadPersistentStores { description, error in
-			if error != nil {
+			if let error, LegacyMigration.isPending {
+				// Migration from the old store name is incomplete: never wipe user data here.
+				Logger.misc.error("Store load failed while legacy migration is pending: \(error.localizedDescription)")
+				self.container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
+				self.container.loadPersistentStores { _, error in
+					if let error {
+						fatalError("Core Data unrecoverable: \(error)")
+					}
+				}
+			} else if error != nil {
 				self._destroyStore(at: description.url)
 				self.container.loadPersistentStores { _, error in
 					if let error {

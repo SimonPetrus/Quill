@@ -14,7 +14,8 @@ import OSLog
 struct QuillApp: App {
 	@UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 	
-	/// Must stay the first stored property: moves pre-rename data before anything reads it.
+	/// Evaluated while the App struct is created, before the stored properties below that touch
+	/// storage (initializers run in declaration order): moves pre-rename data first.
 	private let _legacyMigration: Void = LegacyMigration.runIfNeeded()
 	
 	let heartbeat = HeartbeatManager.shared
@@ -159,6 +160,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		_ application: UIApplication,
 		didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
 	) -> Bool {
+		LegacyMigration.runIfNeeded()
+		LegacyMigration.resetAlternateIcon()
 		_createPipeline()
 		_createDocumentsDirectories()
 		ResetView.clearWorkCache()

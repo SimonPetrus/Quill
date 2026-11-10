@@ -19,7 +19,7 @@ extension ServerInstaller {
 	/// Host used by Fully Local mode (SAN + endpoints).
 	static let localHostname = "localhost"
 	/// Extra SAN kept from the original PR.
-	static let serverHostname = "Quill.localhost"
+	static let serverHostname = "quill.localhost"
 
 	private static let _caLock = NSLock()
 	private static let _renewWindow: TimeInterval = 60 * 60 * 24 * 30
@@ -110,7 +110,8 @@ extension ServerInstaller {
 		try? dir.setResourceValues(values)
 
 		// Leftovers: expired backloop.dev files (they were visible in Files).
-		for name in ["server.crt", "server.pem", "commonName.txt", "root.key", "QuillLocalCA.cer"] {
+		let leftovers = ["server.crt", "server.pem", "commonName.txt", "root.key", "QuillLocalCA.cer", "\(LegacyMigration.legacyName)LocalCA.cer"]
+		for name in leftovers {
 			let url = URL.documentsDirectory.appendingPathComponent(name)
 			if fm.fileExists(atPath: url.path) {
 				try? fm.removeItem(at: url)
