@@ -273,6 +273,13 @@ Upstream issue linki: `https://github.com/claration/Feather/issues/<no>`.
 - **Yaklaşım:** Zsign çağrısında yalnızca ana executable ve appex executable'larına entitlement ver; dylib/framework'leri entitlement'sız imzala.
 - **Dosyalar:** `Utilities/Handlers/ZsignHandler.swift`, `Zsign/swift/*`, gerekirse Zsign C++ (`bundle.cpp`).
 - **Zorluk:** Orta. **Cihaz:** gerekli (Frida Gadget ile issue'daki senaryo).
+- **Analiz (kod ajanı):** `Zsign/src/archo.cpp:342-343` entitlement'ı zaten yalnız `MH_EXECUTE` Mach-O'ya veriyor
+  (`IsExecute()`); dylib/framework (`MH_DYLIB`) ise `strEmptyEntitlements` (`<dict/>`) ile **boş ama mevcut** bir
+  entitlement slot'u alıyor. iOS 26.4+ AMFI'nin "has entitlements but is not a main binary" şikayeti büyük olasılıkla bu boş slot.
+  `Zsign.sign` tüm bundle'ı tek çağrıda imzaladığı için Swift tarafında (`ZsignHandler`) dylib'leri ayrı imzalama yolu yok.
+  **Submodule önerisi (Zsign-Package):** `src/archo.cpp:342`'de `IsExecute() ? m_strEntitleData : strEmptyEntitlements`
+  yerine `IsExecute() ? m_strEntitleData : ""` kullan (`SlotBuildEntitlements` boş girdide boş slot döner, `archo.cpp:296`;
+  bu durumda `uEntitlementsSlotLength == 0` olur ve slot hiç yazılmaz, 343'teki DER zaten boş). Cihazda doğrulanmadı.
 
 #### 23. Büyük IPA içe aktarma / kurulum sonrası hata — #661, #659
 - **Bulgu:** 2.7 GB IPA'da içe aktarma başarısız, ilerleme çubuğu yok (#661); #659 yalnızca ekran görüntüsü (iOS 26.5).
