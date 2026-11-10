@@ -26,11 +26,7 @@ struct SigningFrameworksView: View {
 				if !_frameworks.isEmpty {
 					NBSection(_frameworksPath) {
 						ForEach(_frameworks, id: \.self) { framework in
-							SigningToggleCellView(
-								title: "\(self._frameworksPath)/\(framework)",
-								options: $options,
-								arrayKeyPath: \.removeFiles
-							)
+							_row("\(self._frameworksPath)/\(framework)", file: framework, folder: self._frameworksPath)
 						}
 					}
 				}
@@ -38,11 +34,7 @@ struct SigningFrameworksView: View {
 				if !_plugins.isEmpty {
 					NBSection(_pluginsPath) {
 						ForEach(_plugins, id: \.self) { plugin in
-							SigningToggleCellView(
-								title: "\(self._pluginsPath)/\(plugin)",
-								options: $options,
-								arrayKeyPath: \.removeFiles
-							)
+							_row("\(self._pluginsPath)/\(plugin)", file: plugin, folder: self._pluginsPath)
 						}
 					}
 				}
@@ -59,6 +51,27 @@ struct SigningFrameworksView: View {
 			.disabled(options == nil)
 		}
 		.onAppear(perform: _listFrameworksAndPlugins)
+	}
+	
+	@ViewBuilder
+	private func _row(_ title: String, file: String, folder: String) -> some View {
+		SigningToggleCellView(
+			title: title,
+			options: $options,
+			arrayKeyPath: \.removeFiles
+		)
+		.contextMenu {
+			Button(.localized("Export"), systemImage: "square.and.arrow.up") { _export(folder: folder, file: file) }
+		}
+		.swipeActions(edge: .trailing) {
+			Button(.localized("Export"), systemImage: "square.and.arrow.up") { _export(folder: folder, file: file) }
+				.tint(.blue)
+		}
+	}
+	
+	private func _export(folder: String, file: String) {
+		guard let path = Storage.shared.getAppDirectory(for: app) else { return }
+		SigningExportHelper.share(path.appendingPathComponent(folder).appendingPathComponent(file))
 	}
 }
 
