@@ -9,6 +9,7 @@ import Foundation
 import Combine
 import UIKit.UIImpactFeedbackGenerator
 import BackgroundTasks
+import NimbleExtensions
 
 class Download: Identifiable, @unchecked Sendable {
 	@Published var progress: Double = 0.0
@@ -177,9 +178,13 @@ extension DownloadManager: URLSessionDownloadDelegate {
 	
 	func handlePachageFile(url: URL, dl: Download) throws {
 		FR.handlePackageFile(url, download: dl) { err in
-			if err != nil {
+			if let err {
 				let generator = UINotificationFeedbackGenerator()
 				generator.notificationOccurred(.error)
+				UIAlertController.showAlertWithOk(
+					title: .localized("Import Failed"),
+					message: err.localizedDescription
+				)
 			}
 			
 			DispatchQueue.main.async {
