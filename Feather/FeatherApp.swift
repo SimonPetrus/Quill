@@ -46,6 +46,7 @@ struct QuillApp: App {
 			}
 			.onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
 				_showStartupNoticeIfPossible()
+				NotificationManager.shared.reschedule()
 				// Delayed so a startup notice shown just above wins; the update alert then waits for the next activation.
 				DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
 					SelfUpdateManager.shared.presentPendingIfPossible()
@@ -129,7 +130,7 @@ struct QuillApp: App {
 							p12Password: password
 						) { error in
 							if let error = error {
-								UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
+								UIAlertController.showAlertWithOk(title: .localized("Error"), message: ErrorExplainer.message(for: error))
 							} else {
 								generator.notificationOccurred(.success)
 							}
@@ -199,6 +200,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
 	) -> Bool {
 		LegacyMigration.runIfNeeded()
+		NotificationManager.shared.start()
 		LegacyMigration.resetAlternateIcon()
 		_createPipeline()
 		_createDocumentsDirectories()
@@ -292,7 +294,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 			}
 			UserDefaults.standard.set(true, forKey: "Quill.didImportDefaultCertificates")
 		} catch {
-			Logger.misc.error("Failed to list signing-assets: \(error)")
+			Logger.misc.error("Failed to list signing-assets: \(error, privacy: .public)")
 		}
 	}
 

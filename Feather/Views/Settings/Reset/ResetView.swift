@@ -193,6 +193,7 @@ extension ResetView {
 		if !resetAll { UserDefaults.standard.set(0, forKey: "Quill.selectedCert") }
 		Storage.shared.clearContext(request: CertificatePair.fetchRequest())
 		try? FileManager.default.removeFileIfNeeded(at: FileManager.default.certificates)
+		NotificationManager.shared.reschedule()
 	}
 	
 	static func resetSigningOptions() {

@@ -288,7 +288,7 @@ class TweakHandler {
 				
 				extensions.append(contentsOf: appexBundles)
 			} catch {
-				Logger.misc.warning("Failed to enumerate \(directory.path): \(error.localizedDescription)")
+				Logger.misc.warning("Failed to enumerate \(directory.path): \(error.localizedDescription, privacy: .public)")
 			}
 		}
 		

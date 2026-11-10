@@ -18614,6 +18614,499 @@
         }
       }
     },
+    "Expiry Notifications" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expiry Notifications"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bitiş Bildirimleri"
+          }
+        }
+      }
+    },
+    "Certificate Expiring Soon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certificate Expiring Soon"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sertifikanın Süresi Dolmak Üzere"
+          }
+        }
+      }
+    },
+    "%@ expires in 7 days." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ expires in 7 days."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sertifikasının süresi 7 gün içinde doluyor."
+          }
+        }
+      }
+    },
+    "%@ expires tomorrow." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ expires tomorrow."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sertifikasının süresi yarın doluyor."
+          }
+        }
+      }
+    },
+    "Certificate Revoked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certificate Revoked"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sertifika İptal Edildi"
+          }
+        }
+      }
+    },
+    "%@ has been revoked and can no longer sign apps." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ has been revoked and can no longer sign apps."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ iptal edildi ve artık uygulama imzalayamaz."
+          }
+        }
+      }
+    },
+    "Notifications Disabled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications Disabled"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bildirimler Kapalı"
+          }
+        }
+      }
+    },
+    "Notifications are turned off for Quill. Allow them in the system Settings to get certificate expiry reminders." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications are turned off for Quill. Allow them in the system Settings to get certificate expiry reminders."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill için bildirimler kapalı. Sertifika bitiş hatırlatmalarını almak için sistem Ayarlar'ından bildirimlere izin verin."
+          }
+        }
+      }
+    },
+    "The certificate and provisioning profile do not belong together." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The certificate and provisioning profile do not belong together."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sertifika ile provizyon profili birbirine ait değil."
+          }
+        }
+      }
+    },
+    "Select a certificate whose .p12 and .mobileprovision were issued as a pair, or import the pair again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select a certificate whose .p12 and .mobileprovision were issued as a pair, or import the pair again."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aynı çift olarak verilmiş .p12 ve .mobileprovision dosyalarına sahip bir sertifika seçin veya çifti yeniden içe aktarın."
+          }
+        }
+      }
+    },
+    "The certificate password is wrong." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The certificate password is wrong."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sertifika parolası yanlış."
+          }
+        }
+      }
+    },
+    "Check the .p12 password (it is case sensitive) and try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the .p12 password (it is case sensitive) and try again."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ".p12 parolasını kontrol edin (büyük/küçük harfe duyarlıdır) ve tekrar deneyin."
+          }
+        }
+      }
+    },
+    "The provisioning profile does not match this app or device." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The provisioning profile does not match this app or device."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Provizyon profili bu uygulamayla veya cihazla uyuşmuyor."
+          }
+        }
+      }
+    },
+    "Use a profile that includes this device and allows the app's bundle ID, or change the bundle ID in the signing options. Also check that the profile has not expired." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use a profile that includes this device and allows the app's bundle ID, or change the bundle ID in the signing options. Also check that the profile has not expired."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu cihazı içeren ve uygulamanın bundle ID'sine izin veren bir profil kullanın veya imzalama seçeneklerinde bundle ID'yi değiştirin. Profilin süresinin dolmadığını da kontrol edin."
+          }
+        }
+      }
+    },
+    "The device rejected the app signature (ApplicationVerificationFailed, 0xe8008001)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The device rejected the app signature (ApplicationVerificationFailed, 0xe8008001)."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cihaz uygulama imzasını reddetti (ApplicationVerificationFailed, 0xe8008001)."
+          }
+        }
+      }
+    },
+    "The certificate may be revoked or expired, or the profile does not include this device. Sign again with a valid certificate and profile, then reinstall." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The certificate may be revoked or expired, or the profile does not include this device. Sign again with a valid certificate and profile, then reinstall."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sertifika iptal edilmiş veya süresi dolmuş olabilir ya da profil bu cihazı içermiyor. Geçerli bir sertifika ve profille yeniden imzalayıp tekrar kurun."
+          }
+        }
+      }
+    },
+    "The device connection was lost (RSD error -7001)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The device connection was lost (RSD error -7001)."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cihaz bağlantısı koptu (RSD hatası -7001)."
+          }
+        }
+      }
+    },
+    "Check that the VPN/tunnel app is running and the pairing file is valid, then reconnect and try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check that the VPN/tunnel app is running and the pairing file is valid, then reconnect and try again."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN/tünel uygulamasının çalıştığını ve eşleştirme dosyasının geçerli olduğunu kontrol edin, sonra yeniden bağlanıp tekrar deneyin."
+          }
+        }
+      }
+    },
+    "A secure connection (SSL) could not be established." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A secure connection (SSL) could not be established."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Güvenli bağlantı (SSL) kurulamadı."
+          }
+        }
+      }
+    },
+    "Check the date and time on the device, and that the Local CA is installed and trusted if you use the Fully Local server mode. Try another network if the problem continues." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the date and time on the device, and that the Local CA is installed and trusted if you use the Fully Local server mode. Try another network if the problem continues."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cihazın tarih ve saatini kontrol edin; Tam Yerel sunucu modunu kullanıyorsanız Yerel CA'nın kurulu ve güvenilir olduğundan emin olun. Sorun sürerse başka bir ağ deneyin."
+          }
+        }
+      }
+    },
+    "Could not connect to the server." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not connect to the server."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sunucuya bağlanılamadı."
+          }
+        }
+      }
+    },
+    "Check your internet connection and that the address is correct. For installation, make sure Quill stays open and the install server settings are valid." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check your internet connection and that the address is correct. For installation, make sure Quill stays open and the install server settings are valid."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İnternet bağlantınızı ve adresin doğruluğunu kontrol edin. Kurulum için Quill'in açık kaldığından ve kurulum sunucusu ayarlarının geçerli olduğundan emin olun."
+          }
+        }
+      }
+    },
+    "There is not enough free storage on the device." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is not enough free storage on the device."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cihazda yeterli boş depolama alanı yok."
+          }
+        }
+      }
+    },
+    "Free up some space (delete old signed or unsigned apps in Quill, or other data) and try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Free up some space (delete old signed or unsigned apps in Quill, or other data) and try again."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biraz yer açın (Quill'deki eski imzalı/imzasız uygulamaları veya diğer verileri silin) ve tekrar deneyin."
+          }
+        }
+      }
+    },
+    "Signing failed." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signing failed."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İmzalama başarısız oldu."
+          }
+        }
+      }
+    },
+    "Check that the certificate is valid (not expired or revoked), matches its profile, and that the app is not corrupted." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check that the certificate is valid (not expired or revoked), matches its profile, and that the app is not corrupted."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sertifikanın geçerli (süresi dolmamış, iptal edilmemiş) olduğunu, profiliyle eşleştiğini ve uygulamanın bozuk olmadığını kontrol edin."
+          }
+        }
+      }
+    },
+    "(Details: %@)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "(Details: %@)"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "(Ayrıntılar: %@)"
+          }
+        }
+      }
+    },
+    "Export Logs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export Logs"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Logları Dışa Aktar"
+          }
+        }
+      }
+    },
+    "Logs could not be read." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Logs could not be read."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loglar okunamadı."
+          }
+        }
+      }
+    },
     "Quill checks GitHub for new versions. Updates are never downloaded automatically." : {
       "extractionState" : "manual",
       "localizations" : {

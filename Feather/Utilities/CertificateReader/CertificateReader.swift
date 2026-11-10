@@ -35,7 +35,7 @@ class CertificateReader: NSObject {
 			let data = try decoder.decode(Certificate.self, from: xmlData)
 			return data
 		} catch {
-			Logger.misc.error("Error extracting certificate: \(error.localizedDescription)")
+			Logger.misc.error("Error extracting certificate: \(error.localizedDescription, privacy: .public)")
 			return nil
 		}
 	}

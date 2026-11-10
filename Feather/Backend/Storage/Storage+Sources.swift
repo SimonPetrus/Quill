@@ -124,7 +124,7 @@ extension Storage {
 			let count = try context.count(for: fetchRequest)
 			return count > 0
 		} catch {
-			Logger.misc.error("Error checking if repository exists: \(error)")
+			Logger.misc.error("Error checking if repository exists: \(error, privacy: .public)")
 			return false
 		}
 	}

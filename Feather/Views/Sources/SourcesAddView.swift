@@ -196,7 +196,7 @@ struct SourcesAddView: View {
 									results.append((url: url, data: repo))
 								}
 							case .failure(let error):
-								Logger.misc.error("Failed to fetch \(url): \(error.localizedDescription)")
+								Logger.misc.error("Failed to fetch \(url): \(error.localizedDescription, privacy: .public)")
 							}
 							continuation.resume()
 						}

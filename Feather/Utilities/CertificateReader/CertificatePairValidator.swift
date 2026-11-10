@@ -69,7 +69,7 @@ enum CertificatePairValidator {
 		do {
 			parsed = try X509.Certificate(derEncoded: Array(certDER))
 		} catch {
-			Logger.misc.error("Certificate DER parse failed: \(error.localizedDescription)")
+			Logger.misc.error("Certificate DER parse failed: \(error.localizedDescription, privacy: .public)")
 		}
 		
 		if
@@ -105,7 +105,7 @@ enum CertificatePairValidator {
 		var items: CFArray?
 		let status = SecPKCS12Import(p12Data as CFData, options as CFDictionary, &items)
 		guard status == errSecSuccess else {
-			Logger.misc.error("SecPKCS12Import failed: \(status)")
+			Logger.misc.error("SecPKCS12Import failed: \(status, privacy: .public)")
 			return []
 		}
 		
@@ -129,7 +129,7 @@ enum CertificatePairValidator {
 		func delete(_ query: [String: Any], _ what: String) {
 			let status = SecItemDelete(query as CFDictionary)
 			if status != errSecSuccess && status != errSecItemNotFound {
-				Logger.misc.warning("Keychain cleanup (\(what)) failed: \(status)")
+				Logger.misc.warning("Keychain cleanup (\(what)) failed: \(status, privacy: .public)")
 			}
 		}
 		delete([kSecValueRef as String: identity], "identity")
@@ -170,7 +170,7 @@ extension CertificatePairValidator {
 			DispatchQueue.main.async {
 				if case .unreadable(let reason) = result {
 					// Could not verify: never block.
-					Logger.misc.warning("Certificate/profile check skipped: \(reason)")
+					Logger.misc.warning("Certificate/profile check skipped: \(reason, privacy: .public)")
 				}
 				presentAlert(for: result, continueTitle: continueTitle, onContinue: proceed, onCancel: cancel)
 			}
