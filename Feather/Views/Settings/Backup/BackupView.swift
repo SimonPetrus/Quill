@@ -112,13 +112,16 @@ extension BackupView {
 				_isWorking = false
 				_password = ""
 				_passwordRepeat = ""
-				if result.skippedCertificates > 0 {
-					_show(
-						title: .localized("Warning"),
-						message: .localized("%d certificate(s) were not included because their files are missing.", arguments: result.skippedCertificates)
-					)
+				let skipped = result.skippedCertificates
+				// The warning is shown after the share sheet closes, so two presentations never collide.
+				_share(result.url) {
+					if skipped > 0 {
+						_show(
+							title: .localized("Warning"),
+							message: .localized("%d certificate(s) were not included because their files are missing.", arguments: skipped)
+						)
+					}
 				}
-				_share(result.url)
 			} catch {
 				_isWorking = false
 				_show(title: .localized("Error"), message: error.localizedDescription)
@@ -127,15 +130,17 @@ extension BackupView {
 	}
 
 	/// Share sheet; the temporary backup file (and its folder) is removed when the sheet is done.
-	private func _share(_ url: URL) {
+	private func _share(_ url: URL, completion: @escaping () -> Void) {
 		DispatchQueue.main.async {
 			guard let presenter = UIApplication.topViewController() else {
 				try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
+				completion()
 				return
 			}
 			let controller = UIActivityViewController(activityItems: [url], applicationActivities: nil)
 			controller.completionWithItemsHandler = { _, _, _, _ in
 				try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
+				completion()
 			}
 			if let popover = controller.popoverPresentationController {
 				popover.sourceView = presenter.view
@@ -154,11 +159,7 @@ extension BackupView {
 			.appendingPathComponent("QuillRestore-\(UUID().uuidString).quillbackup")
 		do {
 			try FileManager.default.copyItem(at: url, to: copy)
-			// A file opened via "Open in Quill" (AirDrop/Mail) lands in Documents/Inbox, visible in Files:
-			// the temporary copy is all that is needed now.
-			if url.standardizedFileURL.path.hasPrefix(URL.documentsDirectory.standardizedFileURL.path) {
-				try? FileManager.default.removeItem(at: url)
-			}
+			// The picked / incoming file itself is never deleted; only our own temporary copy is.
 			if try BackupHandler.isEncrypted(at: copy) {
 				_pickedURL = copy
 				_restorePassword = ""

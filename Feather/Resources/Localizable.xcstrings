@@ -19651,23 +19651,6 @@
         }
       }
     },
-    "A certificate file is missing; the backup was not created." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A certificate file is missing; the backup was not created."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bir sertifika dosyası eksik; yedek oluşturulmadı."
-          }
-        }
-      }
-    },
     "Password Missing" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -19732,23 +19715,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sertifika Parolası"
-          }
-        }
-      }
-    },
-    "Wrong password, or it could not be saved securely." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wrong password, or it could not be saved securely."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Parola yanlış ya da güvenli şekilde kaydedilemedi."
           }
         }
       }
