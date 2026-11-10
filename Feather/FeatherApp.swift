@@ -48,6 +48,13 @@ struct QuillApp: App {
 					UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
 				}
 				
+				if let notice = Storage.startupNotice {
+					Storage.startupNotice = nil
+					DispatchQueue.main.async {
+						UIAlertController.showAlertWithOk(title: .localized("Error"), message: notice)
+					}
+				}
+				
 				UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "Quill.userTintColor") ?? "#848ef9"))
 			}
 		}

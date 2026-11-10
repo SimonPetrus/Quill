@@ -15,6 +15,9 @@ final class Storage: ObservableObject {
 	let container: NSPersistentContainer
 	
 	private let _name: String = "Quill"
+	
+	/// Set when the store had to be moved aside at launch; shown once by the app UI.
+	static var startupNotice: String?
 
 	init(inMemory: Bool = false) {
 		LegacyMigration.runIfNeeded()
@@ -71,36 +74,52 @@ final class Storage: ObservableObject {
 						fatalError("Core Data unrecoverable: \(error)")
 					}
 				}
-			} else if error != nil {
-				self._destroyStore(at: description.url)
+			} else if let error {
+				// Never delete user data: move the unreadable store aside and start with an empty one.
+				let code = (error as NSError).code
+				let backup = self._backupStore(at: description.url)
+				Logger.misc.error("Store load failed (Cocoa code \(code)), backup: \(backup ?? "none"): \(error.localizedDescription)")
+				if let backup {
+					Storage.startupNotice = String(format: .localized("The database could not be opened; the old data was backed up (%@)."), backup)
+				}
 				self.container.loadPersistentStores { _, error in
 					if let error {
-						fatalError("Core Data unrecoverable: \(error)")
+						Logger.misc.error("Fresh store failed to load, falling back to in-memory: \(error.localizedDescription)")
+						self.container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
+						self.container.loadPersistentStores { _, error in
+							if let error {
+								fatalError("Core Data unrecoverable: \(error)")
+							}
+						}
 					}
 				}
 			}
 		}
 	}
 
-	private func _destroyStore(at url: URL?) {
-		guard let url else { return }
-
-		let base = url.deletingPathExtension()
+	/// Moves the store files next to the original as `<name>.bak-<unix time>.sqlite` (+ wal/shm).
+	/// Returns the backup file name, or nil if there was nothing to move. Never touches other user files.
+	private func _backupStore(at url: URL?) -> String? {
+		guard let url, url.path != "/dev/null" else { return nil }
+		
 		let fm = FileManager.default
-
-		let files = [
-			base.appendingPathExtension("sqlite"),
-			base.appendingPathExtension("sqlite-wal"),
-			base.appendingPathExtension("sqlite-shm")
-		]
-
-		for file in files {
-			try? fm.removeItem(at: file)
+		let dir = url.deletingLastPathComponent()
+		let name = url.deletingPathExtension().lastPathComponent
+		let stamp = Int(Date().timeIntervalSince1970)
+		var mainBackup: String?
+		
+		for ext in ["sqlite", "sqlite-wal", "sqlite-shm"] {
+			let source = dir.appendingPathComponent("\(name).\(ext)")
+			guard fm.fileExists(atPath: source.path) else { continue }
+			let target = dir.appendingPathComponent("\(name).bak-\(stamp).\(ext)")
+			do {
+				try fm.moveItem(at: source, to: target)
+				if ext == "sqlite" { mainBackup = target.lastPathComponent }
+			} catch {
+				Logger.misc.error("Could not back up \(source.lastPathComponent): \(error.localizedDescription)")
+			}
 		}
 		
-		try? FileManager.default.removeFileIfNeeded(at: FileManager.default.signed)
-		try? FileManager.default.removeFileIfNeeded(at: FileManager.default.unsigned)
-		try? FileManager.default.removeFileIfNeeded(at: FileManager.default.certificates)
-		UserDefaults.standard.set(0, forKey: "Quill.selectedCert")
+		return mainBackup
 	}
 }

@@ -12518,6 +12518,23 @@
         }
       }
     },
+    "The database could not be opened; the old data was backed up (%@)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The database could not be opened; the old data was backed up (%@)."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Veritabanı açılamadı; eski veri yedeklendi (%@)."
+          }
+        }
+      }
+    },
     "Pin" : {
       "extractionState" : "manual",
       "localizations" : {
