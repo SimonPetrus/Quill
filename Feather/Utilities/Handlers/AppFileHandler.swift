@@ -86,6 +86,14 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 		try await withCheckedThrowingContinuation { continuation in
 			DispatchQueue.global(qos: .utility).async {
 				do {
+					// Zip does not reject "../" entry names: check them before anything is written
+					do {
+						try ZipEntryValidator.validate(self._ipa)
+					} catch ZipEntryValidator.Failure.unsafePath(let name) {
+						continuation.resume(throwing: ImportedFileHandlerError.unsafeArchive(name))
+						return
+					}
+					
 					try Zip.unzipFile(
 						self._ipa,
 						destination: self._uniqueWorkDir,
@@ -181,6 +189,7 @@ enum ImportedFileHandlerError: Error, LocalizedError {
 	case payloadNotFound
 	case insufficientSpace(required: Int64, available: Int64)
 	case extractionFailed(String)
+	case unsafeArchive(String)
 	
 	var errorDescription: String? {
 		switch self {
@@ -194,6 +203,8 @@ enum ImportedFileHandlerError: Error, LocalizedError {
 			)
 		case .extractionFailed(let reason):
 			return String(format: .localized("Could not extract the IPA: %@"), reason)
+		case .unsafeArchive(let path):
+			return String(format: .localized("The IPA was not imported because it contains a file path that leads outside the app: %@"), path)
 		}
 	}
 }

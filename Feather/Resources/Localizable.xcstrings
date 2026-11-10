@@ -19276,6 +19276,23 @@
           }
         }
       }
+    },
+    "The IPA was not imported because it contains a file path that leads outside the app: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The IPA was not imported because it contains a file path that leads outside the app: %@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IPA, uygulamanın dışına çıkan bir dosya yolu içerdiği için içe aktarılmadı: %@"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
