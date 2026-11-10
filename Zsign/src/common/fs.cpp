@@ -44,7 +44,10 @@ void* ZFile::MapFile(const char* path, size_t offset, size_t size, size_t* psize
 
 	int fd = open(path, ro ? O_RDONLY : O_RDWR);
 	if (fd < 0) {
-		if (chmod(path, 0755) == 0) {
+		// Quill: files extracted on iOS can lack permissions; fix only regular files,
+		// never the target of a symbolic link (which may lie outside the app)
+		struct stat lst = { 0 };
+		if (0 == lstat(path, &lst) && S_ISREG(lst.st_mode) && chmod(path, 0755) == 0) {
 			fd = open(path, ro ? O_RDONLY : O_RDWR);
 		}
 	}

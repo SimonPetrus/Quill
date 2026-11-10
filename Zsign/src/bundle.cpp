@@ -4,6 +4,46 @@
 #include "sys/stat.h"
 #include "sys/types.h"
 
+// Quill: app bundles come from untrusted IPAs. Paths that are written (executables, Mach-O files)
+// must not lead out of the app folder through symbolic links.
+static bool IsSymlink(const string& strPath)
+{
+#ifdef _WIN32
+	return false;
+#else
+	struct stat st = { 0 };
+	return (0 == lstat(strPath.c_str(), &st) && S_ISLNK(st.st_mode));
+#endif
+}
+
+// True when strPath exists and, with all symbolic links resolved, lies inside strRealRoot
+// (a realpath()). A symbolic link itself is only accepted with bAllowSymlink.
+static bool IsInsideFolder(const string& strPath, const string& strRealRoot, bool bAllowSymlink = false)
+{
+#ifdef _WIN32
+	return true;
+#else
+	if (!bAllowSymlink && IsSymlink(strPath)) {
+		return false;
+	}
+	char szReal[PATH_MAX] = { 0 };
+	if (NULL == realpath(strPath.c_str(), szReal)) { // missing, or a dangling symbolic link
+		return false;
+	}
+	string strReal = szReal;
+	return (strReal.size() > strRealRoot.size() &&
+			0 == strReal.compare(0, strRealRoot.size(), strRealRoot) &&
+			'/' == strReal[strRealRoot.size()]);
+#endif
+}
+
+// CFBundleExecutable comes from an untrusted Info.plist: a plain file name only
+static bool IsValidBundleExecutableName(const string& strName)
+{
+	return (!strName.empty() && "." != strName && ".." != strName &&
+			string::npos == strName.find('/') && string::npos == strName.find('\\'));
+}
+
 ZBundle::ZBundle()
 {
 	m_pSignAssets = NULL;
@@ -125,6 +165,14 @@ bool ZBundle::GetObjectsToSign(const string& strFolder, jvalue& jvInfo)
 			string::npos != strPath.find("_WatchKitStub")) {
 			return false;
 		}
+		// Mach-O files are rewritten in place: never sign through a symbolic link (the target is
+		// signed under its own path, or lies outside the app and must not be touched)
+		if (!IsInsideFolder(strPath, m_strRealAppFolder)) {
+			if (IsSymlink(strPath)) {
+				ZLog::WarnV(">>> Warning: Not signing through symbolic link: \t%s\n", strPath.c_str());
+			}
+			return false;
+		}
 		bool bMachO = false;
 		{
 			FILE* fp = NULL;
@@ -189,6 +237,10 @@ bool ZBundle::GenerateCodeResources(const string& strFolder, jvalue& jvCodeRes)
 		}
 
 		string strFile = strFolder + "/" + strKey;
+		if (IsSymlink(strFile) && !IsInsideFolder(strFile, m_strRealAppFolder, true)) {
+			ZLog::ErrorV(">>> Symbolic link points outside the app or to nothing! %s\n", strFile.c_str());
+			return false;
+		}
 		string strSHA1Base64;
 		string strSHA256Base64;
 		if (!ZSHA::SHABase64File(strFile.c_str(), strSHA1Base64, strSHA256Base64)) {
@@ -377,8 +429,19 @@ bool ZBundle::SignNode(jvalue& jvNode)
 		strBaseFolder += strFolder;
 	}
 
+	if (!IsValidBundleExecutableName(strBundleExe)) {
+		ZLog::ErrorV(">>> Invalid CFBundleExecutable (must be a file name)! %s\n", strFolder.c_str());
+		return false;
+	}
+
 	string strExePath = strBaseFolder + "/" + strBundleExe;
 	ZLog::PrintV(">>> SignFolder: %s, (%s)\n", ("/" == strFolder) ? ZUtil::GetBaseName(m_strAppFolder.c_str()) : strFolder.c_str(), strBundleExe.c_str());
+
+	// the executable is opened read-write and signed in place
+	if ((IsSymlink(strExePath) || ZFile::IsFileExists(strExePath.c_str())) && !IsInsideFolder(strExePath, m_strRealAppFolder)) {
+		ZLog::ErrorV(">>> Bundle executable is a symbolic link or outside the app! %s\n", strExePath.c_str());
+		return false;
+	}
 
 	ZMachO macho;
 	if (!macho.Init(strExePath.c_str())) {
@@ -453,6 +516,15 @@ bool ZBundle::SignNode(jvalue& jvNode)
 		}
 	}
 
+	// a symbolic link here would redirect the CodeResources write out of the app
+	string strCodeSignFolder = strBaseFolder + "/_CodeSignature";
+	if (IsSymlink(strCodeSignFolder)) {
+		remove(strCodeSignFolder.c_str());
+	}
+	string strCodeResFileLink = strCodeSignFolder + "/CodeResources";
+	if (IsSymlink(strCodeResFileLink)) {
+		remove(strCodeResFileLink.c_str());
+	}
 	ZFile::CreateFolderV("%s/_CodeSignature", strBaseFolder.c_str());
 	string strCodeResFile = strBaseFolder + "/_CodeSignature/CodeResources";
 
@@ -838,6 +910,19 @@ bool ZBundle::SignFolder(ZSignAsset* pSignAsset,
 		ZLog::ErrorV(">>> Can't find app folder! %s\n", strFolder.c_str());
 		return false;
 	}
+
+#ifndef _WIN32
+	{
+		char szRealAppFolder[PATH_MAX] = { 0 };
+		if (NULL == realpath(m_strAppFolder.c_str(), szRealAppFolder)) {
+			ZLog::ErrorV(">>> Can't resolve app folder! %s\n", m_strAppFolder.c_str());
+			return false;
+		}
+		m_strRealAppFolder = szRealAppFolder;
+	}
+#else
+	m_strRealAppFolder = m_strAppFolder;
+#endif
 
 	ApplyAppModifications();
 

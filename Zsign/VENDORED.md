@@ -62,6 +62,17 @@ Keep these when syncing with upstream again.
   before editing the header.
 - `s_uExecSegLimit` (static shared by all slices and files) is now the member `m_uExecSegLimit`.
 
+### Paths and symbolic links (Quill)
+- `src/bundle.cpp`: `CFBundleExecutable` must be a plain file name; the bundle executable must not
+  be a symbolic link or resolve outside the app (`realpath` of the app folder, `m_strRealAppFolder`);
+  Mach-O files are never signed through symbolic links; a symbolic link that resolves outside the
+  app (or to nothing) fails sealing; a symbolic link at `_CodeSignature` or
+  `_CodeSignature/CodeResources` is removed before CodeResources is written.
+  Symbolic links inside the app are still sealed by their target's content (Apple's `symlink`
+  entries are not implemented).
+- `src/common/fs.cpp`: the `chmod(0755)` retry only applies to regular files (`lstat`), never to the
+  target of a symbolic link.
+
 ### Entitlements (Quill)
 - `src/openssl.cpp` `ZSignAsset::Init`: a custom entitlements file that can't be read, is empty or
   is not a plist dictionary fails signing (it used to fall back to the profile's entitlements);

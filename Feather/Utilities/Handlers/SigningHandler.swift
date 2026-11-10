@@ -59,9 +59,15 @@ final class SigningHandler: NSObject {
 		guard
 			let infoDictionary = NSDictionary(
 				contentsOf: movedAppPath.appendingPathComponent("Info.plist")
-			)!.mutableCopy() as? NSMutableDictionary
+			)?.mutableCopy() as? NSMutableDictionary
 		else {
 			throw SigningFileHandlerError.infoPlistNotFound
+		}
+
+		// everything below edits files of the app in place (Info.plist, executables, tweaks,
+		// signatures): refuse bundles whose executables or symbolic links lead out of the app
+		if let problem = BundleSafety.firstViolation(in: movedAppPath) {
+			throw SigningFileHandlerError.unsafeBundle(problem)
 		}
 		
 		if
@@ -695,6 +701,8 @@ enum SigningFileHandlerError: Error, LocalizedError {
 	case signFailedWithReason(String?)
 	/// Adding the load command for the named dylib/framework to the app executable failed.
 	case injectFailed(String)
+	/// A bundle executable or symbolic link leads out of the app (untrusted IPA).
+	case unsafeBundle(String)
 	
 	var errorDescription: String? {
 		switch self {
@@ -705,6 +713,7 @@ enum SigningFileHandlerError: Error, LocalizedError {
 		case .signFailed: "Signing failed."
 		case .signFailedWithReason(let reason): reason.map { "Signing failed: \($0)" } ?? "Signing failed."
 		case .injectFailed(let name): "Injecting \(name) into the app executable failed."
+		case .unsafeBundle(let path): "The app contains an executable or symbolic link that points outside the app or to a missing file: \(path)"
 		}
 	}
 }
