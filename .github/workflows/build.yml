@@ -116,7 +116,16 @@ jobs:
           git -c user.name="github-actions[bot]" \
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
               commit -q -m "IPA build from $GITHUB_REF_NAME @ ${GITHUB_SHA::7}"
-          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$TARGET"
+          # Concurrent runs can race on the same target branch; retry a few times.
+          for attempt in 1 2 3; do
+            if git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$TARGET"; then
+              exit 0
+            fi
+            echo "Push attempt $attempt failed; retrying..."
+            sleep $((attempt * 5 + RANDOM % 10))
+          done
+          echo "Publishing the IPA failed after 3 attempts"
+          exit 1
 
       - name: Upload IPA
         # Artifact quota may be full; the ipa-builds branch above is the fallback.
