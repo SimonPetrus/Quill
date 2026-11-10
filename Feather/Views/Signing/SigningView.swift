@@ -393,7 +393,7 @@ extension SigningView {
 				
 				UIAlertController.showAlert(
 					title: "Error",
-					message: error.localizedDescription,
+					message: ErrorExplainer.message(for: error),
 					actions: [ok]
 				)
 			} else {

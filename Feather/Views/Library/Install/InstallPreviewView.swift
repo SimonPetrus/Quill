@@ -167,11 +167,20 @@ struct InstallPreviewView: View {
 	
 	@ViewBuilder
 	private func _status() -> some View {
-		Label(viewModel.statusLabel, systemImage: viewModel.statusImage)
-			.padding()
-			.labelStyle(.titleAndIcon)
-			.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-			.animation(.smooth, value: viewModel.statusImage)
+		VStack(alignment: .leading, spacing: 4) {
+			Label(viewModel.statusLabel, systemImage: viewModel.statusImage)
+				.labelStyle(.titleAndIcon)
+				.animation(.smooth, value: viewModel.statusImage)
+			if case .broken(let error) = viewModel.status {
+				Text(ErrorExplainer.message(for: error))
+					.font(.footnote)
+					.foregroundStyle(.secondary)
+					.lineLimit(8)
+					.textSelection(.enabled)
+			}
+		}
+		.padding()
+		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
 	}
 	
 	@ViewBuilder
@@ -265,7 +274,7 @@ struct InstallPreviewView: View {
 					do {
 						try LocalCAInstaller.shared.install()
 					} catch {
-						UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
+						UIAlertController.showAlertWithOk(title: .localized("Error"), message: ErrorExplainer.message(for: error))
 					}
 					dismiss()
 				},

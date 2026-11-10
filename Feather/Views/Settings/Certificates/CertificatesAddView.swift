@@ -133,9 +133,13 @@ extension CertificatesAddView {
 			provisionURL: provisionURL,
 			p12Password: _p12Password,
 			certificateName: _certificateName
-		) { _ in
+		) { error in
 			_isChecking = false
-			dismiss()
+			if let error {
+				UIAlertController.showAlertWithOk(title: .localized("Error"), message: ErrorExplainer.message(for: error))
+			} else {
+				dismiss()
+			}
 		}
 	}
 }

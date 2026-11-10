@@ -154,7 +154,7 @@ enum FR {
 				}
 			case .failure(let error):
 				DispatchQueue.main.async {
-					UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
+					UIAlertController.showAlertWithOk(title: .localized("Error"), message: ErrorExplainer.message(for: error))
 				}
 			}
 		}

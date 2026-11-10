@@ -154,6 +154,16 @@ extension SettingsView {
 			Button(.localized("Open Certificates"), systemImage: "folder") {
 				UIApplication.open(FileManager.default.certificates.toSharedDocumentsURL()!)
 			}
+			Button(.localized("Export Logs"), systemImage: "doc.text") {
+				Task { @MainActor in
+					do {
+						let url = try await LogExporter.export()
+						UIActivityViewController.show(activityItems: [url])
+					} catch {
+						UIAlertController.showAlertWithOk(title: .localized("Error"), message: ErrorExplainer.message(for: error))
+					}
+				}
+			}
 		} footer: {
 			Text(.localized("All of the apps files are contained in the documents directory, here are some quick links to these."))
 		}

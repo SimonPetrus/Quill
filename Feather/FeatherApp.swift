@@ -130,7 +130,7 @@ struct QuillApp: App {
 							p12Password: password
 						) { error in
 							if let error = error {
-								UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
+								UIAlertController.showAlertWithOk(title: .localized("Error"), message: ErrorExplainer.message(for: error))
 							} else {
 								generator.notificationOccurred(.success)
 							}
