@@ -1,12 +1,15 @@
 name: Build (unsigned IPA)
 
-# Fork CI: builds an unsigned (ad-hoc, no team) Feather.ipa on every push / PR
-# and uploads it as a workflow artifact. Never creates releases or tags.
+# Fork CI: builds an unsigned (ad-hoc, no team) Feather.ipa on every push / PR,
+# uploads it as a workflow artifact and (for pushes / manual runs) force-pushes
+# it as a single commit to the `ipa-builds` branch so it can be fetched even
+# when the account's artifact storage quota is full. Never creates releases or tags.
 
 on:
   push:
     branches:
       - '**'
+      - '!ipa-builds'
     tags-ignore:
       - '**'
   pull_request:
@@ -22,7 +25,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write # needed only to push the IPA to the ipa-builds branch
 
 jobs:
   build:
@@ -85,7 +88,32 @@ jobs:
           /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" _build/Payload/*.app/Info.plist
           /usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" _build/Payload/*.app/Info.plist
 
+      # Orphan branch with exactly one commit (force-pushed), so history never grows.
+      - name: Publish IPA to ipa-builds branch
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OUT="$RUNNER_TEMP/ipa-builds"
+          rm -rf "$OUT" && mkdir -p "$OUT" && cd "$OUT"
+          git init -q -b ipa-builds
+          cp "$GITHUB_WORKSPACE/packages/Feather.ipa" .
+          {
+            echo "branch: $GITHUB_REF_NAME"
+            echo "commit: $GITHUB_SHA"
+            echo "run:    $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "sha256: $(shasum -a 256 Feather.ipa | cut -d' ' -f1)"
+          } > BUILD_INFO.txt
+          cat BUILD_INFO.txt
+          git add Feather.ipa BUILD_INFO.txt
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -m "IPA build from $GITHUB_REF_NAME @ ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ipa-builds
+
       - name: Upload IPA
+        # Artifact quota may be full; the ipa-builds branch above is the fallback.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: Feather-${{ github.sha }}
