@@ -366,3 +366,9 @@ git fetch upstream main
 git log --oneline HEAD..upstream/main   # yeni upstream commit'leri
 ```
 Upstream'de önemli düzeltme gelirse kullanıcıya sor; kendiliğinden merge/rebase yapma.
+
+## Durum (2026-11-11)
+
+- **Tamamlanan:** Madde 1-23; Quill markalaması, güvenli saklama, yedekleme, indirme hızı, paylaş ile içe aktarma, Zsign gömme + senkron + sertleştirme, dağıtım kanalı.
+- **Ertelenen:** Madde 24-29 ve Faz 6.
+- **Bilinen kısıtlar:** iOS 27.2'de Tamamen Yerel mod engelli, bu yüzden Yarı Yerel varsayılan; kendi manifest sunucusu ileride.
