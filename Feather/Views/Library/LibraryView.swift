@@ -159,9 +159,9 @@ struct LibraryView: View {
 				
 				if _editMode.isEditing {
 					NBToolbarButton(
-						_selectedAppUUIDs.isEmpty ? .localized("Re-sign All") : .localized("Re-sign"),
+						_selectedAppUUIDs.isEmpty ? .localized("Sign All Imported") : .localized("Re-sign"),
 						systemImage: "signature",
-						isDisabled: _isBulkChecking || (_selectedAppUUIDs.isEmpty && _getAllApps().isEmpty)
+						isDisabled: _isBulkChecking || (_selectedAppUUIDs.isEmpty && _importedApps.isEmpty)
 					) {
 						_startBulkResign()
 					}
@@ -218,12 +218,10 @@ struct LibraryView: View {
 			.sheet(isPresented: Binding(
 				get: { _bulkSigner != nil },
 				set: { if !$0 { _bulkSigner = nil } }
-			)) {
+			), onDismiss: _finishBulkResign) {
 				if let signer = _bulkSigner {
 					BulkSigningView(signer: signer) {
 						_bulkSigner = nil
-						_selectedAppUUIDs.removeAll()
-						_editMode = .inactive
 					}
 				}
 			}
@@ -290,11 +288,23 @@ extension LibraryView {
 
 // MARK: - Extension: Bulk Re-sign
 extension LibraryView {
+	/// Single cleanup path (Close button and swipe dismiss).
+	private func _finishBulkResign() {
+		_bulkSigner = nil
+		_selectedAppUUIDs.removeAll()
+		_editMode = .inactive
+	}
+	
 	private func _startBulkResign() {
-		let all = _getAllApps()
-		let apps: [AppInfoPresentable] = _selectedAppUUIDs.isEmpty
-			? all
-			: all.filter { app in app.uuid.map { _selectedAppUUIDs.contains($0) } ?? false }
+		// Unfiltered lists: search/scope must not change what gets signed.
+		// No selection: only imported (unsigned) apps; re-signing signed apps would add copies.
+		let apps: [AppInfoPresentable]
+		if _selectedAppUUIDs.isEmpty {
+			apps = _importedApps.map { $0 as AppInfoPresentable }
+		} else {
+			let everything = _signedApps.map { $0 as AppInfoPresentable } + _importedApps.map { $0 as AppInfoPresentable }
+			apps = everything.filter { app in app.uuid.map { _selectedAppUUIDs.contains($0) } ?? false }
+		}
 		guard !apps.isEmpty else { return }
 		
 		let options = OptionsManager.shared.options
@@ -318,12 +328,18 @@ extension LibraryView {
 		}
 		
 		// Check the certificate/profile pair once before the whole batch.
-		if
-			options.signingOption == .default,
-			let cert,
-			let p12URL = Storage.shared.getFile(.certificate, from: cert),
-			let provisionURL = Storage.shared.getFile(.provision, from: cert)
-		{
+		if options.signingOption == .default, let cert {
+			guard
+				let p12URL = Storage.shared.getFile(.certificate, from: cert),
+				let provisionURL = Storage.shared.getFile(.provision, from: cert)
+			else {
+				UIAlertController.showAlertWithOk(
+					title: .localized("No Certificate"),
+					message: .localized("Please go to settings and import a valid certificate"),
+					isCancel: true
+				)
+				return
+			}
 			_isBulkChecking = true
 			CertificatePairValidator.check(
 				p12URL: p12URL,

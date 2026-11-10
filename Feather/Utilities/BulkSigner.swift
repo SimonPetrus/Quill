@@ -10,6 +10,40 @@ import UIKit
 import NimbleViews
 import OSLog
 
+// MARK: - Background time
+/// Thread-safe so the expiration handler can act synchronously.
+private final class BackgroundState: @unchecked Sendable {
+	private let _lock = NSLock()
+	private var _task: UIBackgroundTaskIdentifier = .invalid
+	private var _expired = false
+	
+	var expired: Bool { _lock.lock(); defer { _lock.unlock() }; return _expired }
+	
+	func begin() {
+		let id = UIApplication.shared.beginBackgroundTask(withName: "QuillBulkSigning") { [weak self] in
+			self?.expire()
+		}
+		_lock.lock(); _task = id; _lock.unlock()
+	}
+	
+	func expire() {
+		_lock.lock()
+		_expired = true
+		let id = _task
+		_task = .invalid
+		_lock.unlock()
+		if id != .invalid { UIApplication.shared.endBackgroundTask(id) }
+	}
+	
+	func end() {
+		_lock.lock()
+		let id = _task
+		_task = .invalid
+		_lock.unlock()
+		if id != .invalid { UIApplication.shared.endBackgroundTask(id) }
+	}
+}
+
 // MARK: - Model
 @MainActor
 final class BulkSigner: ObservableObject {
@@ -30,16 +64,20 @@ final class BulkSigner: ObservableObject {
 	@Published private(set) var unprocessed = 0
 	@Published private(set) var deletedOriginals = false
 	@Published private(set) var isCancelling = false
+	@Published private(set) var wasCancelled = false
 	
 	let total: Int
+	/// True if the batch contains already-signed apps (re-signing adds a new copy).
+	let signedIncluded: Bool
 	private let _apps: [AppInfoPresentable]
 	private let _options: Options
 	private let _certificate: CertificatePair?
-	private var _backgroundTask: UIBackgroundTaskIdentifier = .invalid
+	private let _background = BackgroundState()
 	
 	init(apps: [AppInfoPresentable], options: Options, certificate: CertificatePair?) {
 		self._apps = apps
 		self.total = apps.count
+		self.signedIncluded = apps.contains { $0.isSigned }
 		self._options = options
 		self._certificate = certificate
 	}
@@ -50,15 +88,15 @@ final class BulkSigner: ObservableObject {
 	}
 	
 	func start() {
-		_backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "QuillBulkSigning") { [weak self] in
-			// Out of background time: stop after the current app.
-			Task { @MainActor in self?.cancel() }
-		}
+		// Out of background time: handler ends the task synchronously; queue stops after the current app.
+		_background.begin()
 		
 		Task { @MainActor in
 			for (offset, app) in _apps.enumerated() {
+				if _background.expired { isCancelling = true }
 				if isCancelling {
 					unprocessed = _apps.count - offset
+					wasCancelled = true
 					break
 				}
 				
@@ -85,10 +123,7 @@ final class BulkSigner: ObservableObject {
 			}
 			
 			state = .finished
-			if _backgroundTask != .invalid {
-				UIApplication.shared.endBackgroundTask(_backgroundTask)
-				_backgroundTask = .invalid
-			}
+			_background.end()
 		}
 	}
 	
@@ -175,6 +210,11 @@ struct BulkSigningView: View {
 	
 	@ViewBuilder
 	private func _summary() -> some View {
+		if signer.wasCancelled {
+			Section {
+				Label(.localized("Cancelled"), systemImage: "xmark.circle")
+			}
+		}
 		Section {
 			LabeledContent(.localized("Signed"), value: "\(signer.succeeded)")
 			LabeledContent(.localized("Failed"), value: "\(signer.failures.count)")
@@ -198,6 +238,9 @@ struct BulkSigningView: View {
 		}
 		
 		Section {
+			if signer.signedIncluded {
+				Text(.localized("Re-signing signed apps creates new copies; the originals were kept."))
+			}
 			Text(.localized("Install After Signing is not applied when re-signing multiple apps."))
 			if signer.deletedOriginals {
 				Text(.localized("Unsigned originals were deleted (Delete After Signing)."))

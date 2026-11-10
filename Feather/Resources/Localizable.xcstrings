@@ -17620,23 +17620,6 @@
         }
       }
     },
-    "Re-sign All" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Re-sign All"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tümünü Yeniden İmzala"
-          }
-        }
-      }
-    },
     "Signing %d / %d" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -17769,6 +17752,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Yine de İmzala"
+          }
+        }
+      }
+    },
+    "Sign All Imported" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign All Imported"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İçe Aktarılanların Tümünü İmzala"
+          }
+        }
+      }
+    },
+    "Cancelled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelled"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İptal edildi"
+          }
+        }
+      }
+    },
+    "Re-signing signed apps creates new copies; the originals were kept." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Re-signing signed apps creates new copies; the originals were kept."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İmzalı uygulamaları yeniden imzalamak yeni kopyalar oluşturur; orijinaller korundu."
           }
         }
       }
