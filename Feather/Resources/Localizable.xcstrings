@@ -18631,6 +18631,40 @@
         }
       }
     },
+    "“%@” is not a valid IPA file." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@” is not a valid IPA file."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@” geçerli bir IPA dosyası değil."
+          }
+        }
+      }
+    },
+    "The shared file could not be read: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The shared file could not be read: %@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paylaşılan dosya okunamadı: %@"
+          }
+        }
+      }
+    },
     "Not enough free space: %@ required, %@ available." : {
       "extractionState" : "manual",
       "localizations" : {
