@@ -92,10 +92,11 @@ enum CertificatePairValidator {
 	
 	// MARK: Helpers
 	private static func _certificateDER(p12Data: Data, password: String) -> Data? {
-		let options: [String: Any] = [
-			kSecImportExportPassphrase as String: password,
-			kSecImportToMemoryOnly as String: true
-		]
+		var options: [String: Any] = [kSecImportExportPassphrase as String: password]
+		// Avoid leaving the identity in the keychain where the OS supports it (iOS 18+).
+		if #available(iOS 18.0, *) {
+			options[kSecImportToMemoryOnly as String] = true
+		}
 		var items: CFArray?
 		let status = SecPKCS12Import(p12Data as CFData, options as CFDictionary, &items)
 		guard status == errSecSuccess else {
