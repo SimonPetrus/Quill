@@ -22,11 +22,31 @@ struct SourcesView: View {
 		_sources.filter { _searchText.isEmpty || ($0.name?.localizedCaseInsensitiveContains(_searchText) ?? false) }
 	}
 	
+	private var _pinnedSources: [AltSource] {
+		_filteredSources.filter { $0.isPinned }
+	}
+	
+	private var _unpinnedSources: [AltSource] {
+		_filteredSources.filter { !$0.isPinned }
+	}
+	
 	@FetchRequest(
 		entity: AltSource.entity(),
 		sortDescriptors: [NSSortDescriptor(keyPath: \AltSource.name, ascending: true)],
 		animation: .snappy
 	) private var _sources: FetchedResults<AltSource>
+	
+	@ViewBuilder
+	private func _sourceRows(_ sources: [AltSource]) -> some View {
+		ForEach(sources) { source in
+			NavigationLink {
+				SourceAppsView(object: [source], viewModel: viewModel)
+			} label: {
+				SourcesCellView(source: source)
+			}
+			.buttonStyle(.plain)
+		}
+	}
 	
 	// MARK: Body
 	var body: some View {
@@ -56,17 +76,21 @@ struct SourcesView: View {
 						.buttonStyle(.plain)
 					}
 					
-					NBSection(
-						.localized("Repositories"),
-						secondary: _filteredSources.count.description
-					) {
-						ForEach(_filteredSources) { source in
-							NavigationLink {
-								SourceAppsView(object: [source], viewModel: viewModel)
-							} label: {
-								SourcesCellView(source: source)
-							}
-							.buttonStyle(.plain)
+					if !_pinnedSources.isEmpty {
+						NBSection(
+							.localized("Pinned"),
+							secondary: _pinnedSources.count.description
+						) {
+							_sourceRows(_pinnedSources)
+						}
+					}
+					
+					if !_unpinnedSources.isEmpty {
+						NBSection(
+							.localized("Repositories"),
+							secondary: _unpinnedSources.count.description
+						) {
+							_sourceRows(_unpinnedSources)
 						}
 					}
 				}

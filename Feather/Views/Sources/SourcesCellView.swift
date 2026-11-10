@@ -19,11 +19,19 @@ struct SourcesCellView: View {
 	var body: some View {
 		let isRegular = horizontalSizeClass != .compact
 		
-		FRIconCellView(
-			title: source.name ?? .localized("Unknown"),
-			subtitle: source.sourceURL?.absoluteString ?? "",
-			iconUrl: source.iconURL
-		)
+		HStack(spacing: 8) {
+			FRIconCellView(
+				title: source.name ?? .localized("Unknown"),
+				subtitle: source.sourceURL?.absoluteString ?? "",
+				iconUrl: source.iconURL
+			)
+			if source.isPinned {
+				Image(systemName: "pin.fill")
+					.font(.caption)
+					.foregroundStyle(.secondary)
+					.accessibilityHidden(true)
+			}
+		}
 		.padding(isRegular ? 12 : 0)
 		.background(
 			isRegular
@@ -54,6 +62,12 @@ extension SourcesCellView {
 	
 	@ViewBuilder
 	private func _contextActions(for source: AltSource) -> some View {
+		Button(
+			source.isPinned ? .localized("Unpin") : .localized("Pin"),
+			systemImage: source.isPinned ? "pin.slash" : "pin"
+		) {
+			Storage.shared.togglePin(for: source)
+		}
 		Button(.localized("Copy"), systemImage: "doc.on.clipboard") {
 			UIPasteboard.general.string = source.sourceURL?.absoluteString
 		}

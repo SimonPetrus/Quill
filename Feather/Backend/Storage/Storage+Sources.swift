@@ -100,6 +100,12 @@ extension Storage {
 		saveContext()
 	}
 
+	/// Pin or unpin a source so it is listed in the pinned section of the sources list.
+	func togglePin(for source: AltSource) {
+		source.isPinned.toggle()
+		saveContext()
+	}
+
 	func sourceExists(_ identifier: String) -> Bool {
 		let fetchRequest: NSFetchRequest<AltSource> = AltSource.fetchRequest()
 		fetchRequest.predicate = NSPredicate(format: "identifier == %@", identifier)
