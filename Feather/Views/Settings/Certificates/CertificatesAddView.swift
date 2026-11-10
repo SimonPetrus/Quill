@@ -8,7 +8,6 @@
 import SwiftUI
 import NimbleViews
 import UniformTypeIdentifiers
-import OSLog
 
 // MARK: - View
 struct CertificatesAddView: View {
@@ -19,11 +18,12 @@ struct CertificatesAddView: View {
 	@State private var _p12Password: String = ""
 	@State private var _certificateName: String = ""
 	
+	@State private var _isChecking = false
 	@State private var _isImportingP12Presenting = false
 	@State private var _isImportingMobileProvisionPresenting = false
 	
 	var saveButtonDisabled: Bool {
-		_p12URL == nil || _provisionURL == nil
+		_p12URL == nil || _provisionURL == nil || _isChecking
 	}
 	
 	// MARK: Body
@@ -116,29 +116,15 @@ extension CertificatesAddView {
 			return
 		}
 		
-		let password = _p12Password
-		
-		// Verify the certificate belongs to the profile off the main thread.
-		DispatchQueue.global(qos: .userInitiated).async {
-			let result = CertificatePairValidator.validate(p12URL: p12URL, password: password, provisionURL: provisionURL)
-			DispatchQueue.main.async {
-				switch result {
-				case .ok:
-					_importFiles(p12URL: p12URL, provisionURL: provisionURL)
-				case .unreadable(let reason):
-					// Could not verify: keep the old behaviour, do not block.
-					Logger.misc.warning("Certificate/profile check skipped: \(reason)")
-					_importFiles(p12URL: p12URL, provisionURL: provisionURL)
-				default:
-					CertificatePairValidator.presentAlert(
-						for: result,
-						continueTitle: .localized("Import Anyway")
-					) {
-						_importFiles(p12URL: p12URL, provisionURL: provisionURL)
-					}
-				}
-			}
-		}
+		_isChecking = true
+		CertificatePairValidator.check(
+			p12URL: p12URL,
+			password: _p12Password,
+			provisionURL: provisionURL,
+			continueTitle: .localized("Import Anyway"),
+			proceed: { _importFiles(p12URL: p12URL, provisionURL: provisionURL) },
+			cancel: { _isChecking = false }
+		)
 	}
 	
 	private func _importFiles(p12URL: URL, provisionURL: URL) {
@@ -148,6 +134,7 @@ extension CertificatesAddView {
 			p12Password: _p12Password,
 			certificateName: _certificateName
 		) { _ in
+			_isChecking = false
 			dismiss()
 		}
 	}

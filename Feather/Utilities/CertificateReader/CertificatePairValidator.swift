@@ -28,7 +28,7 @@ enum CertificatePairValidationResult: Equatable {
 	/// Results that must stop import / signing.
 	var isBlocking: Bool {
 		switch self {
-		case .notInProfile, .teamMismatch: return true
+		case .notInProfile: return true
 		default: return false
 		}
 	}
@@ -48,17 +48,20 @@ enum CertificatePairValidator {
 			return .unreadable("provisioning profile could not be decoded")
 		}
 		
-		guard let certDER = _certificateDER(p12Data: p12Data, password: password) else {
+		let now = Date()
+		let ders = _certificateDERs(p12Data: p12Data, password: password)
+		guard !ders.isEmpty else {
+			// p12 unreadable, but an expired profile can still be reported.
+			if profile.ExpirationDate < now { return .profileExpired(profile.ExpirationDate) }
 			return .unreadable("certificate could not be extracted from p12")
 		}
 		
-		// (a) the p12 certificate must be one of the profile's certificates
-		if let profileCerts = profile.DeveloperCertificates, !profileCerts.isEmpty {
-			if !profileCerts.contains(certDER) {
-				return .notInProfile
-			}
-		} else {
+		// (a) one of the p12 identities must be listed in the profile
+		guard let profileCerts = profile.DeveloperCertificates, !profileCerts.isEmpty else {
 			return .unreadable("profile has no DeveloperCertificates")
+		}
+		guard let certDER = ders.first(where: { profileCerts.contains($0) }) else {
+			return .notInProfile
 		}
 		
 		// (c) team id: certificate subject OU vs profile TeamIdentifier
@@ -79,7 +82,6 @@ enum CertificatePairValidator {
 		}
 		
 		// (b) expiration
-		let now = Date()
 		if let parsed, parsed.notValidAfter < now {
 			return .certificateExpired(parsed.notValidAfter)
 		}
@@ -91,36 +93,60 @@ enum CertificatePairValidator {
 	}
 	
 	// MARK: Helpers
-	private static func _certificateDER(p12Data: Data, password: String) -> Data? {
+	/// DER of every identity's certificate in the p12.
+	private static func _certificateDERs(p12Data: Data, password: String) -> [Data] {
 		var options: [String: Any] = [kSecImportExportPassphrase as String: password]
-		// Avoid leaving the identity in the keychain where the OS supports it (iOS 18+).
+		var inMemory = false
+		// Avoid leaving identities in the keychain where the OS supports it (iOS 18+).
 		if #available(iOS 18.0, *) {
 			options[kSecImportToMemoryOnly as String] = true
+			inMemory = true
 		}
 		var items: CFArray?
 		let status = SecPKCS12Import(p12Data as CFData, options as CFDictionary, &items)
 		guard status == errSecSuccess else {
 			Logger.misc.error("SecPKCS12Import failed: \(status)")
-			return nil
+			return []
 		}
 		
-		guard
-			let first = (items as? [[String: Any]])?.first,
-			let identityRef = first[kSecImportItemIdentity as String]
-		else { return nil }
-		
-		let identity = identityRef as! SecIdentity
+		var result: [Data] = []
+		for item in (items as? [[String: Any]]) ?? [] {
+			guard let identityRef = item[kSecImportItemIdentity as String] else { continue }
+			let identity = identityRef as! SecIdentity
+			var cert: SecCertificate?
+			if SecIdentityCopyCertificate(identity, &cert) == errSecSuccess, let cert {
+				result.append(SecCertificateCopyData(cert) as Data)
+			}
+			if !inMemory {
+				_removeFromKeychain(identity)
+			}
+		}
+		return result
+	}
+	
+	/// iOS < 18 persists imported identities; remove identity, certificate and private key again.
+	private static func _removeFromKeychain(_ identity: SecIdentity) {
+		func delete(_ query: [String: Any], _ what: String) {
+			let status = SecItemDelete(query as CFDictionary)
+			if status != errSecSuccess && status != errSecItemNotFound {
+				Logger.misc.warning("Keychain cleanup (\(what)) failed: \(status)")
+			}
+		}
+		delete([kSecValueRef as String: identity], "identity")
 		var cert: SecCertificate?
-		guard SecIdentityCopyCertificate(identity, &cert) == errSecSuccess, let cert else {
-			return nil
+		if SecIdentityCopyCertificate(identity, &cert) == errSecSuccess, let cert {
+			delete([kSecClass as String: kSecClassCertificate, kSecValueRef as String: cert], "certificate")
 		}
-		return SecCertificateCopyData(cert) as Data
+		var key: SecKey?
+		if SecIdentityCopyPrivateKey(identity, &key) == errSecSuccess, let key {
+			delete([kSecClass as String: kSecClassKey, kSecValueRef as String: key], "key")
+		}
 	}
 	
 	/// Apple development/distribution certificates carry the Team ID in subject OU.
 	private static func _teamID(from cert: X509.Certificate) -> String? {
 		let subject = String(describing: cert.subject)
-		guard let range = subject.range(of: #"OU=([A-Z0-9]{10})"#, options: .regularExpression) else {
+		guard let range = subject.range(of: #"(?<![A-Z0-9])OU=([A-Z0-9]{10})(?![A-Z0-9])"#, options: .regularExpression) else {
 			return nil
 		}
 		return String(subject[range].dropFirst(3))
@@ -129,15 +155,39 @@ enum CertificatePairValidator {
 
 // MARK: - Alerts
 extension CertificatePairValidator {
+	/// Validates off the main thread, then calls back on the main thread:
+	/// `proceed` for ok / unreadable / confirmed warnings, `cancel` when blocked or the user backs out.
+	static func check(
+		p12URL: URL,
+		password: String,
+		provisionURL: URL,
+		continueTitle: String,
+		proceed: @escaping () -> Void,
+		cancel: @escaping () -> Void
+	) {
+		DispatchQueue.global(qos: .userInitiated).async {
+			let result = validate(p12URL: p12URL, password: password, provisionURL: provisionURL)
+			DispatchQueue.main.async {
+				if case .unreadable(let reason) = result {
+					// Could not verify: never block.
+					Logger.misc.warning("Certificate/profile check skipped: \(reason)")
+				}
+				presentAlert(for: result, continueTitle: continueTitle, onContinue: proceed, onCancel: cancel)
+			}
+		}
+	}
+	
 	/// Presents the alert for a non-ok result.
 	/// - Parameters:
 	///   - continueTitle: title of the "proceed anyway" button, shown only for expiry warnings.
-	///   - onContinue: called if the user proceeds despite an expiry warning.
+	///   - onContinue: called if the user proceeds despite a warning.
+	///   - onCancel: called when the alert is dismissed without proceeding.
 	@MainActor
 	static func presentAlert(
 		for result: CertificatePairValidationResult,
 		continueTitle: String,
-		onContinue: @escaping () -> Void
+		onContinue: @escaping () -> Void,
+		onCancel: (() -> Void)? = nil
 	) {
 		let formatter = DateFormatter()
 		formatter.dateStyle = .medium
@@ -149,26 +199,31 @@ extension CertificatePairValidator {
 				title: String.localized("Certificate Mismatch"),
 				message: String.localized("This certificate does not belong to this provisioning profile.")
 					+ "\n\n" + String.localized("The profile was created with a different certificate, so iOS would reject the app during installation. Use the certificate the profile was created with, or create a new profile for this certificate.")
-			)
+			) { onCancel?() }
 		case .teamMismatch(let cert, let profile):
-			UIAlertController.showAlertWithOk(
+			_warn(
 				title: String.localized("Certificate Mismatch"),
 				message: String.localized("This certificate does not belong to this provisioning profile.")
-					+ "\n\n" + String(format: String.localized("The certificate's Team ID (%@) is different from the profile's Team ID (%@)."), cert, profile)
+					+ "\n\n" + String(format: String.localized("The certificate's Team ID (%@) is different from the profile's Team ID (%@)."), cert, profile),
+				continueTitle: continueTitle,
+				onContinue: onContinue,
+				onCancel: onCancel
 			)
 		case .certificateExpired(let date):
 			_warn(
 				title: String.localized("Certificate Expired"),
 				message: String(format: String.localized("This certificate expired on %@."), formatter.string(from: date)),
 				continueTitle: continueTitle,
-				onContinue: onContinue
+				onContinue: onContinue,
+				onCancel: onCancel
 			)
 		case .profileExpired(let date):
 			_warn(
 				title: String.localized("Provisioning Profile Expired"),
 				message: String(format: String.localized("This provisioning profile expired on %@."), formatter.string(from: date)),
 				continueTitle: continueTitle,
-				onContinue: onContinue
+				onContinue: onContinue,
+				onCancel: onCancel
 			)
 		case .ok, .unreadable:
 			onContinue()
@@ -176,13 +231,13 @@ extension CertificatePairValidator {
 	}
 	
 	@MainActor
-	private static func _warn(title: String, message: String, continueTitle: String, onContinue: @escaping () -> Void) {
+	private static func _warn(title: String, message: String, continueTitle: String, onContinue: @escaping () -> Void, onCancel: (() -> Void)?) {
 		UIAlertController.showAlert(
 			title: title,
 			message: message,
 			actions: [
 				UIAlertAction(title: continueTitle, style: .destructive) { _ in onContinue() },
-				UIAlertAction(title: String.localized("Cancel"), style: .cancel, handler: nil)
+				UIAlertAction(title: String.localized("Cancel"), style: .cancel) { _ in onCancel?() }
 			]
 		)
 	}

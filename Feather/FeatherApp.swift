@@ -109,18 +109,29 @@ struct QuillApp: App {
 					return
 				}
 				
-				FR.handleCertificateFiles(
+				CertificatePairValidator.check(
 					p12URL: p12URL,
+					password: password,
 					provisionURL: provisionURL,
-					p12Password: password
-				) { error in
-					if let error = error {
-						UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
-					} else {
-						generator.notificationOccurred(.success)
+					continueTitle: .localized("Import Anyway"),
+					proceed: {
+						FR.handleCertificateFiles(
+							p12URL: p12URL,
+							provisionURL: provisionURL,
+							p12Password: password
+						) { error in
+							if let error = error {
+								UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
+							} else {
+								generator.notificationOccurred(.success)
+							}
+						}
+					},
+					cancel: {
+						generator.notificationOccurred(.error)
 					}
-				}
-				
+				)
+
 				return
 			}
 			/// quill://export-certificate?callback_template=<template>

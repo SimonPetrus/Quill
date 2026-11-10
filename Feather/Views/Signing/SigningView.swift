@@ -8,7 +8,6 @@
 import SwiftUI
 import PhotosUI
 import NimbleViews
-import OSLog
 
 // MARK: - View
 struct SigningView: View {
@@ -21,6 +20,7 @@ struct SigningView: View {
 	@State private var _isFilePickerPresenting = false
 	@State private var _isImagePickerPresenting = false
 	@State private var _isSigning = false
+	@State private var _isChecking = false
 	@State private var _selectedPhoto: PhotosPickerItem? = nil
 	@State var appIcon: UIImage?
 	
@@ -72,6 +72,7 @@ struct SigningView: View {
 									.padding()
 							}
 							.buttonStyle(.plain)
+							.disabled(_isChecking)
 							.offset(y: UIDevice.current.userInterfaceIdiom == .pad ? -20 : -40)
 						}
 				}
@@ -283,27 +284,15 @@ extension SigningView {
 			let p12URL = Storage.shared.getFile(.certificate, from: cert),
 			let provisionURL = Storage.shared.getFile(.provision, from: cert)
 		{
-			let password = cert.password ?? ""
-			DispatchQueue.global(qos: .userInitiated).async {
-				let result = CertificatePairValidator.validate(p12URL: p12URL, password: password, provisionURL: provisionURL)
-				DispatchQueue.main.async {
-					switch result {
-					case .ok:
-						_beginSigning()
-					case .unreadable(let reason):
-						// Could not verify: do not block signing.
-						Logger.misc.warning("Certificate/profile check skipped: \(reason)")
-						_beginSigning()
-					default:
-						CertificatePairValidator.presentAlert(
-							for: result,
-							continueTitle: .localized("Sign Anyway")
-						) {
-							_beginSigning()
-						}
-					}
-				}
-			}
+			_isChecking = true
+			CertificatePairValidator.check(
+				p12URL: p12URL,
+				password: cert.password ?? "",
+				provisionURL: provisionURL,
+				continueTitle: .localized("Sign Anyway"),
+				proceed: { _isChecking = false; _beginSigning() },
+				cancel: { _isChecking = false }
+			)
 			return
 		}
 		
