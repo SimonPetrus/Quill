@@ -98,35 +98,47 @@ enum ZipEntryValidator {
 		// data may be prefixed; entries are read relative to where the archive starts
 		let bytesBefore = centralPosition - (directoryOffset + directorySize)
 
-		// unzGoToFirstFile / unzGoToNextFile: entries are read from the file one after another
-		// (not limited to the directory size); 0xFFFF entries means "until a header is invalid";
-		// Zip stops at the first invalid header without extracting it
+		// unzGoToFirstFile / unzGoToNextFile read entries from the file one after another, not
+		// limited to the directory size, and (with the 0xFFFF hack, or when the count is wrong)
+		// not reliably limited by the entry count either. Never trust the count: check every
+		// central directory header until the signature no longer matches, a superset of what
+		// minizip can extract. A header that starts but does not fit in the file is rejected.
+		_ = entryCount
 		var position = directoryOffset
 		var index: UInt64 = 0
-		while entryCount == 0xFFFF || index < entryCount {
+		while true {
 			guard
 				position <= UInt64.max - bytesBefore - 46,
+				let signature = reader.bytes(at: position + bytesBefore, count: 4),
+				_u32(signature, 0) == 0x02014b50
+			else {
+				break
+			}
+			guard
 				let header = reader.bytes(at: position + bytesBefore, count: 46),
-				_u32(header, 0) == 0x02014b50,
 				let nameLength = _u16(header, 28),
 				let extraLength = _u16(header, 30),
 				let commentLength = _u16(header, 32)
 			else {
-				break
+				throw Failure.unreadable("entry \(index) header")
 			}
-
+			
 			guard let name = reader.bytes(at: position + bytesBefore + 46, count: Int(nameLength)) else {
-				break
+				throw Failure.unreadable("entry \(index) name")
 			}
 			if _isUnsafe(name) {
 				throw Failure.unsafePath(String(decoding: name.prefix { $0 != 0 }, as: UTF8.self))
 			}
-
-			position += 46 + UInt64(nameLength) + UInt64(extraLength) + UInt64(commentLength)
+			
+			let entryLength = 46 + UInt64(nameLength) + UInt64(extraLength) + UInt64(commentLength)
+			guard position + bytesBefore + entryLength <= fileSize else {
+				throw Failure.unreadable("entry \(index) extra/comment")
+			}
+			position += entryLength
 			index += 1
 		}
 	}
-
+	
 	private static func _isUnsafe(_ name: Data) -> Bool {
 		// Zip reads the name with String(cString:), so it ends at the first NUL
 		let bytes = name.prefix { $0 != 0 }
