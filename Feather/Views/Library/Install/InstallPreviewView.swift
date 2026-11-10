@@ -91,7 +91,7 @@ struct InstallPreviewView: View {
 				}
 			}
 		}
-		.onAppear(perform: _install)
+		.onAppear(perform: _checkTrustThenInstall)
 		
 		#if !targetEnvironment(macCatalyst)
 		.onAppear {
@@ -133,6 +133,48 @@ struct InstallPreviewView: View {
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
 		.animation(.easeInOut(duration: 0.3), value: viewModel.isCompleted)
+	}
+	
+	/// Fully Local + server install: warn first if the local CA is not trusted yet.
+	private func _checkTrustThenInstall() {
+		guard !isSharing, _installationMethod == 0, _serverMethod == 0 else {
+			_install()
+			return
+		}
+		
+		Task.detached(priority: .userInitiated) {
+			let trusted = ServerInstaller.isLocalCATrusted()
+			await MainActor.run {
+				if trusted {
+					_install()
+				} else {
+					_showUntrustedAlert()
+				}
+			}
+		}
+	}
+	
+	private func _showUntrustedAlert() {
+		UIAlertController.showAlert(
+			title: .localized("Local CA Not Trusted"),
+			message: .localized("To use Fully Local, install the Local CA first and enable full trust for it in Certificate Trust Settings."),
+			actions: [
+				UIAlertAction(title: .localized("Install Local CA"), style: .default) { _ in
+					do {
+						try LocalCAInstaller.shared.install()
+					} catch {
+						UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
+					}
+					dismiss()
+				},
+				UIAlertAction(title: .localized("Continue Anyway"), style: .destructive) { _ in
+					_install()
+				},
+				UIAlertAction(title: .localized("Cancel"), style: .cancel) { _ in
+					dismiss()
+				}
+			]
+		)
 	}
 	
 	private func _install() {

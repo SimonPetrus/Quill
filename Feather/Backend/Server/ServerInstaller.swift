@@ -13,6 +13,7 @@ import NIOSSL
 import NIOTLS
 import SwiftUI
 import IDeviceSwift
+import OSLog
 
 // MARK: - Class
 class ServerInstaller: Identifiable, ObservableObject {
@@ -39,7 +40,14 @@ class ServerInstaller: Identifiable, ObservableObject {
 	}
 	
 	private func _setup() throws {
-		self._server = try? setupApp(port: port)
+		do {
+			self._server = try setupApp(port: port)
+		} catch {
+			Logger.misc.error("Server setup failed: \(error.localizedDescription)")
+			DispatchQueue.main.async {
+				self.viewModel.status = .broken(error)
+			}
+		}
 	}
 		
 	private func _configureRoutes() throws {
