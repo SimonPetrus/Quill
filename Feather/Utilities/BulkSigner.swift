@@ -132,6 +132,7 @@ final class BulkSigner: ObservableObject {
 		
 		// Same per-app adjustments SigningView applies on appear.
 		if
+			!app.isQuillItself,
 			options.ppqProtection,
 			let identifier = app.identifier,
 			let cert = _certificate,
@@ -140,10 +141,16 @@ final class BulkSigner: ObservableObject {
 			options.appIdentifier = "\(identifier).\(options.ppqString)"
 		}
 		if
+			!app.isQuillItself,
 			let currentBundleId = app.identifier,
 			let newBundleId = options.identifiers[currentBundleId]
 		{
 			options.appIdentifier = newBundleId
+		}
+		if app.isQuillItself {
+			// Keep the bundle ID so the install replaces this app.
+			options.ppqProtection = false
+			options.appIdentifier = Bundle.main.bundleIdentifier
 		}
 		if
 			let currentName = app.name,

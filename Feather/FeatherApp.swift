@@ -52,6 +52,7 @@ struct QuillApp: App {
 				}
 				
 				_showStartupNoticeIfPossible()
+				SelfUpdateManager.shared.autoCheckIfNeeded()
 				
 				UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "Quill.userTintColor") ?? "#848ef9"))
 			}

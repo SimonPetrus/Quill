@@ -122,8 +122,15 @@ struct SigningView: View {
 			.animation(.smooth, value: _isSigning)
 		}
 		.onAppear {
+			// Quill itself: keep the bundle ID (no PPQ suffix, no rename) so the install replaces this app.
+			if app.isQuillItself {
+				_temporaryOptions.ppqProtection = false
+				_temporaryOptions.appIdentifier = Bundle.main.bundleIdentifier
+			}
+			
 			// ppq protection
 			if
+				!app.isQuillItself,
 				_optionsManager.options.ppqProtection,
 				let identifier = app.identifier,
 				let cert = _selectedCert(),
@@ -133,6 +140,7 @@ struct SigningView: View {
 			}
 			
 			if
+				!app.isQuillItself,
 				let currentBundleId = app.identifier,
 				let newBundleId = _temporaryOptions.identifiers[currentBundleId]
 			{
@@ -174,12 +182,21 @@ extension SigningView {
 					bindingValue: $_temporaryOptions.appName
 				)
 			}
-			_infoCell(.localized("Identifier"), desc: _temporaryOptions.appIdentifier ?? app.identifier) {
-				SigningPropertiesView(
-					title: .localized("Identifier"),
-					initialValue: _temporaryOptions.appIdentifier ?? (app.identifier ?? ""),
-					bindingValue: $_temporaryOptions.appIdentifier
-				)
+			if app.isQuillItself {
+				LabeledContent(.localized("Identifier")) {
+					Text(Bundle.main.bundleIdentifier ?? app.identifier ?? .localized("Unknown"))
+				}
+				Text(.localized("This is Quill itself. Bundle ID is kept so your data stays."))
+					.font(.footnote)
+					.foregroundStyle(.secondary)
+			} else {
+				_infoCell(.localized("Identifier"), desc: _temporaryOptions.appIdentifier ?? app.identifier) {
+					SigningPropertiesView(
+						title: .localized("Identifier"),
+						initialValue: _temporaryOptions.appIdentifier ?? (app.identifier ?? ""),
+						bindingValue: $_temporaryOptions.appIdentifier
+					)
+				}
 			}
 			_infoCell(.localized("Version"), desc: _temporaryOptions.appVersion ?? app.version) {
 				SigningPropertiesView(
@@ -303,6 +320,12 @@ extension SigningView {
 		let generator = UIImpactFeedbackGenerator(style: .light)
 		generator.impactOccurred()
 		_isSigning = true
+		
+		// Only for this signing: Quill itself must keep its bundle ID.
+		if app.isQuillItself {
+			_temporaryOptions.ppqProtection = false
+			_temporaryOptions.appIdentifier = Bundle.main.bundleIdentifier
+		}
 		
 		FR.signPackageFile(
 			app,
