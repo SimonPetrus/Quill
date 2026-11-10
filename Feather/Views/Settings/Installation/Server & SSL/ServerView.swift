@@ -13,8 +13,8 @@ struct ServerView: View {
 	@Environment(\.scenePhase) private var _scenePhase
 	@State private var _isTrusted: Bool?
 	
-	@AppStorage("Feather.ipFix") private var _ipFix: Bool = false
-	@AppStorage("Feather.serverMethod") private var _serverMethod: Int = 0
+	@AppStorage("Quill.ipFix") private var _ipFix: Bool = false
+	@AppStorage("Quill.serverMethod") private var _serverMethod: Int = 0
 	private let _serverMethods: [String] = [.localized("Fully Local"), .localized("Semi Local")]
 	
 	// MARK: Body
@@ -61,7 +61,7 @@ struct ServerView: View {
 						}
 					}
 				} footer: {
-					Text(.localized("1) Install the profile: Settings → General → VPN & Device Management.\n2) Settings → General → About → Certificate Trust Settings → enable full trust for \"Feather Local Root CA\".\nThe profile must open in Safari. If another browser is your default, copy the address to Safari."))
+					Text(.localized("1) Install the profile: Settings → General → VPN & Device Management.\n2) Settings → General → About → Certificate Trust Settings → enable full trust for \"Quill Local Root CA\".\nThe profile must open in Safari. If another browser is your default, copy the address to Safari."))
 				}
 			}
 		}

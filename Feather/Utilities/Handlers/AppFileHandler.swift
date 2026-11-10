@@ -31,7 +31,7 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 		self._download = download
 		self._sourceProvenance = sourceProvenance ?? download?.sourceProvenance
 		self._uniqueWorkDir = _fileManager.temporaryDirectory
-			.appendingPathComponent("FeatherImport_\(_uuid)", isDirectory: true)
+			.appendingPathComponent("QuillImport_\(_uuid)", isDirectory: true)
 		
 		super.init()
 	}

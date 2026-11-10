@@ -19,7 +19,7 @@ extension ServerInstaller {
 	/// Host used by Fully Local mode (SAN + endpoints).
 	static let localHostname = "localhost"
 	/// Extra SAN kept from the original PR.
-	static let serverHostname = "feather.localhost"
+	static let serverHostname = "Quill.localhost"
 
 	private static let _caLock = NSLock()
 	private static let _renewWindow: TimeInterval = 60 * 60 * 24 * 30
@@ -28,7 +28,7 @@ extension ServerInstaller {
 	/// Not shared with the Files app and excluded from backups (private keys live here).
 	static var localCADirectory: URL {
 		URL.applicationSupportDirectory
-			.appendingPathComponent("Feather", isDirectory: true)
+			.appendingPathComponent("Quill", isDirectory: true)
 			.appendingPathComponent("LocalCA", isDirectory: true)
 	}
 
@@ -109,8 +109,8 @@ extension ServerInstaller {
 		values.isExcludedFromBackup = true
 		try? dir.setResourceValues(values)
 
-		// Leftovers: expired backloop.dev files and the first PR #726 layout (they were visible in Files).
-		for name in ["server.crt", "server.pem", "commonName.txt", "root.key", "FeatherLocalCA.cer"] {
+		// Leftovers: expired backloop.dev files (they were visible in Files).
+		for name in ["server.crt", "server.pem", "commonName.txt", "root.key", "QuillLocalCA.cer"] {
 			let url = URL.documentsDirectory.appendingPathComponent(name)
 			if fm.fileExists(atPath: url.path) {
 				try? fm.removeItem(at: url)
@@ -173,7 +173,7 @@ extension ServerInstaller {
 	private static var _rootName: DistinguishedName {
 		get throws {
 			try DistinguishedName {
-				CommonName("Feather Local Root CA")
+				CommonName("Quill Local Root CA")
 			}
 		}
 	}

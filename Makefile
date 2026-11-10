@@ -32,14 +32,14 @@ $(PLATFORMS):
 		ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO
 
 	mkdir -p _build/Payload
-	cp -R _build/Applications/*.app _build/Payload/Feather.app
-	chmod -R 0755 _build/Payload/Feather.app
-	codesign --force --sign - --timestamp=none _build/Payload/Feather.app
+	cp -R _build/Applications/*.app _build/Payload/Quill.app
+	chmod -R 0755 _build/Payload/Quill.app
+	codesign --force --sign - --timestamp=none _build/Payload/Quill.app
 
 	mkdir -p packages
 
 	@if [ "$@" = "iphoneos" ]; then \
 		ditto -c -k --sequesterRsrc --keepParent _build/Payload "packages/Quill.ipa"; \
 	else \
-		ditto -c -k --sequesterRsrc --keepParent _build/Payload/Feather.app "packages/Feather_Catalyst.zip"; \
+		ditto -c -k --sequesterRsrc --keepParent _build/Payload/Quill.app "packages/Quill_Catalyst.zip"; \
 	fi

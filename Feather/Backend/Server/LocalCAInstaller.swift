@@ -15,7 +15,7 @@ import Crypto
 final class LocalCAInstaller {
 	static let shared = LocalCAInstaller()
 
-	private let _profilePath = "FeatherLocalCA.mobileconfig"
+	private let _profilePath = "QuillLocalCA.mobileconfig"
 	private let _timeout: TimeInterval = 60
 	private let _graceAfterServe: TimeInterval = 5
 
@@ -42,7 +42,7 @@ final class LocalCAInstaller {
 		let (app, port) = try _startServer(profile: profile, generation: generation)
 		_app = app
 
-		_backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "FeatherLocalCA") { [weak self] in
+		_backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "QuillLocalCA") { [weak self] in
 			self?.stop()
 		}
 
@@ -80,7 +80,7 @@ final class LocalCAInstaller {
 
 			let grace = _graceAfterServe
 
-			app.get("FeatherLocalCA.mobileconfig") { [weak self] _ -> Response in
+			app.get("QuillLocalCA.mobileconfig") { [weak self] _ -> Response in
 				DispatchQueue.main.asyncAfter(deadline: .now() + grace) {
 					// Ignore if a newer install session replaced this one.
 					guard let self, self._generation == generation else { return }
@@ -142,14 +142,14 @@ final class LocalCAInstaller {
 	}
 	
 	static func makeProfile(rootDER: Data) throws -> Data {
-		let bundleID = Bundle.main.bundleIdentifier ?? "feather"
+		let bundleID = Bundle.main.bundleIdentifier ?? "quill"
 		
 		let rootPayload: [String: Any] = [
 			"PayloadType": "com.apple.security.root",
 			"PayloadVersion": 1,
 			"PayloadIdentifier": "\(bundleID).localca.root",
 			"PayloadUUID": _uuid(salt: "root", rootDER: rootDER),
-			"PayloadDisplayName": "Feather Local Root CA",
+			"PayloadDisplayName": "Quill Local Root CA",
 			"PayloadContent": rootDER
 		]
 		
@@ -158,8 +158,8 @@ final class LocalCAInstaller {
 			"PayloadVersion": 1,
 			"PayloadIdentifier": "\(bundleID).localca",
 			"PayloadUUID": _uuid(salt: "profile", rootDER: rootDER),
-			"PayloadDisplayName": "Feather Local CA",
-			"PayloadDescription": "Root certificate used by Feather to install apps from this device (localhost only).",
+			"PayloadDisplayName": "Quill Local CA",
+			"PayloadDescription": "Root certificate used by Quill to install apps from this device (localhost only).",
 			"PayloadContent": [rootPayload]
 		]
 

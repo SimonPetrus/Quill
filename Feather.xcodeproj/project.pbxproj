@@ -19,14 +19,13 @@
 		33693A082DC8BF5B00730215 /* AltSourceKit in Frameworks */ = {isa = PBXBuildFile; productRef = 33693A072DC8BF5B00730215 /* AltSourceKit */; };
 		3371F7322DA9ECDD00281AC6 /* Zip in Frameworks */ = {isa = PBXBuildFile; productRef = 3371F7312DA9ECDD00281AC6 /* Zip */; };
 		33CF13392DB5ACFB0021D4C5 /* SWCompression in Frameworks */ = {isa = PBXBuildFile; productRef = 33CF13382DB5ACFB0021D4C5 /* SWCompression */; };
-		570920BE2F98A4F0008C4A83 /* Feather.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 570920BD2F98A4F0008C4A83 /* Feather.xcconfig */; };
 		C498C93D305B4B3A00806F32 /* X509 in Frameworks */ = {isa = PBXBuildFile; productRef = C498C93C305B4B3A00806F32 /* X509 */; };
 		F61C0CA130AA100000000003 /* Crypto in Frameworks */ = {isa = PBXBuildFile; productRef = F61C0CA130AA100000000002 /* Crypto */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		3379C1B92DA869A1004372DA /* Feather.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Feather.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		570920BD2F98A4F0008C4A83 /* Feather.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Feather.xcconfig; sourceTree = "<group>"; };
+		3379C1B92DA869A1004372DA /* Quill.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Quill.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		570920BD2F98A4F0008C4A83 /* Quill.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Quill.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -100,14 +99,14 @@
 				3379C1BB2DA869A1004372DA /* Feather */,
 				3371F7302DA9ECDD00281AC6 /* Frameworks */,
 				3379C1BA2DA869A1004372DA /* Products */,
-				570920BD2F98A4F0008C4A83 /* Feather.xcconfig */,
+				570920BD2F98A4F0008C4A83 /* Quill.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
 		3379C1BA2DA869A1004372DA /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				3379C1B92DA869A1004372DA /* Feather.app */,
+				3379C1B92DA869A1004372DA /* Quill.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -148,7 +147,7 @@
 				F61C0CA130AA100000000002 /* Crypto */,
 			);
 			productName = Feather;
-			productReference = 3379C1B92DA869A1004372DA /* Feather.app */;
+			productReference = 3379C1B92DA869A1004372DA /* Quill.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -214,7 +213,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				570920BE2F98A4F0008C4A83 /* Feather.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -233,7 +231,7 @@
 /* Begin XCBuildConfiguration section */
 		3379C1CB2DA869A3004372DA /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 570920BD2F98A4F0008C4A83 /* Feather.xcconfig */;
+			baseConfigurationReference = 570920BD2F98A4F0008C4A83 /* Quill.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -297,7 +295,7 @@
 		};
 		3379C1CC2DA869A3004372DA /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 570920BD2F98A4F0008C4A83 /* Feather.xcconfig */;
+			baseConfigurationReference = 570920BD2F98A4F0008C4A83 /* Quill.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -353,7 +351,7 @@
 		};
 		3379C1CE2DA869A3004372DA /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 570920BD2F98A4F0008C4A83 /* Feather.xcconfig */;
+			baseConfigurationReference = 570920BD2F98A4F0008C4A83 /* Quill.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
@@ -395,9 +393,9 @@
 					"$(PROJECT_DIR)/Feather/Resources/idevice",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
-				MARKETING_VERSION = "$(FEATHER_PROJECT_VERSION)-debug";
-				PRODUCT_BUNDLE_IDENTIFIER = "$(FEATHER_PRODUCT_BUNDLE_IDENTIFIER)$(FEATHER_DISAMBIGUATOR)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				MARKETING_VERSION = "$(QUILL_PROJECT_VERSION)-debug";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(QUILL_PRODUCT_BUNDLE_IDENTIFIER)$(QUILL_DISAMBIGUATOR)";
+				PRODUCT_NAME = Quill;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = auto;
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -418,7 +416,7 @@
 		};
 		3379C1CF2DA869A3004372DA /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 570920BD2F98A4F0008C4A83 /* Feather.xcconfig */;
+			baseConfigurationReference = 570920BD2F98A4F0008C4A83 /* Quill.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
@@ -459,9 +457,9 @@
 					"$(PROJECT_DIR)/Feather/Resources/idevice",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
-				MARKETING_VERSION = "$(FEATHER_PROJECT_VERSION)";
-				PRODUCT_BUNDLE_IDENTIFIER = "$(FEATHER_PRODUCT_BUNDLE_IDENTIFIER)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				MARKETING_VERSION = "$(QUILL_PROJECT_VERSION)";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(QUILL_PRODUCT_BUNDLE_IDENTIFIER)";
+				PRODUCT_NAME = Quill;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = auto;
 				STRIPFLAGS = "-rSTx";

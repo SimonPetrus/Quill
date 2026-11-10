@@ -14,9 +14,9 @@ import OSLog
 struct InstallPreviewView: View {
 	@Environment(\.dismiss) var dismiss
 
-	@AppStorage("Feather.useShareSheetForArchiving") private var _useShareSheet: Bool = false
-	@AppStorage("Feather.installationMethod") private var _installationMethod: Int = 0
-	@AppStorage("Feather.serverMethod") private var _serverMethod: Int = 0
+	@AppStorage("Quill.useShareSheetForArchiving") private var _useShareSheet: Bool = false
+	@AppStorage("Quill.installationMethod") private var _installationMethod: Int = 0
+	@AppStorage("Quill.serverMethod") private var _serverMethod: Int = 0
 	@State private var _isWebviewPresenting = false
 	@State private var progressTask: Task<Void, Never>?
 	
@@ -29,7 +29,7 @@ struct InstallPreviewView: View {
 	init(app: AppInfoPresentable, isSharing: Bool = false) {
 		self.app = app
 		self.isSharing = isSharing
-		let viewModel = InstallerStatusViewModel(isIdevice: UserDefaults.standard.integer(forKey: "Feather.installationMethod") == 1)
+		let viewModel = InstallerStatusViewModel(isIdevice: UserDefaults.standard.integer(forKey: "Quill.installationMethod") == 1)
 		self._viewModel = StateObject(wrappedValue: viewModel)
 		self._installer = StateObject(wrappedValue: try! ServerInstaller(app: app, viewModel: viewModel))
 	}

@@ -33,7 +33,7 @@ final class SigningHandler: NSObject {
 		self._app = app
 		self._options = options
 		self._uniqueWorkDir = _fileManager.temporaryDirectory
-			.appendingPathComponent("FeatherSigning_\(_uuid)", isDirectory: true)
+			.appendingPathComponent("QuillSigning_\(_uuid)", isDirectory: true)
 		super.init()
 	}
 	

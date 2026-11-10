@@ -71,7 +71,7 @@ class TweakHandler {
 
 		try await _checkEllekit()
 
-		let baseTmpDir = _fileManager.temporaryDirectory.appendingPathComponent("FeatherTweak_\(UUID().uuidString)")
+		let baseTmpDir = _fileManager.temporaryDirectory.appendingPathComponent("QuillTweak_\(UUID().uuidString)")
 		try _fileManager.createDirectoryIfNeeded(at: baseTmpDir)
 		
 		// check for appropriate files, if theres debs

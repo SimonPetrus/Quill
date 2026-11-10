@@ -10,7 +10,7 @@ import NimbleViews
 
 // MARK: - View
 struct CertificatesView: View {
-	@AppStorage("feather.selectedCert") private var _storedSelectedCert: Int = 0
+	@AppStorage("Quill.selectedCert") private var _storedSelectedCert: Int = 0
 	
 	@State private var _isAddingPresenting = false
 	@State private var _isRenamingPresenting = false
