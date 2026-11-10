@@ -36,8 +36,12 @@ func extractFile(at fileURL: inout URL) throws {
 		try fileManager.createDirectory(at: extractionDirectory, withIntermediateDirectories: true)
 		
 		for entry in tarContainer {
-			let entryPath = extractionDirectory.appendingPathComponent(entry.info.name)
-			
+			// untrusted names: no "..", no path through a symbolic link out of the folder
+			// (symbolic and hard link entries themselves are not extracted)
+			guard let entryPath = try ArchivePathValidator.destination(for: entry.info.name, in: extractionDirectory) else {
+				continue
+			}
+
 			if entry.info.type == .directory {
 				try fileManager.createDirectory(at: entryPath, withIntermediateDirectories: true)
 			} else if entry.info.type == .regular, let entryData = entry.data {

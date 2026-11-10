@@ -10,12 +10,16 @@ import Foundation
 class AR: NSObject {
 	private var _data: Data
 	
-	init(with url: URL) {
-		self._data = try! Data(contentsOf: url)
+	init(with url: URL) throws {
+		self._data = try Data(contentsOf: url)
 		super.init()
 	}
 	
 	func extract() async throws -> [ARFileModel] {
+		// untrusted input: never index past the data (it used to crash on short or bad archives)
+		guard _data.count >= 8 else {
+			throw ARError.badArchive("Too small")
+		}
 		if [UInt8](_data.subdata(in: Range(0...7))) != [0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a] {
 			throw ARError.badArchive("Invalid magic")
 		}
@@ -34,8 +38,14 @@ class AR: NSObject {
 	}
 	
 	private func _getFileInfo(_ data: Data, _ offset: Int) throws -> ARFileModel {
-		let size = Int(_removePadding(String(data: data.subdata(in: offset+48..<offset+48+10), encoding: .ascii) ?? "0"))!
-		if size < 1 {
+		guard offset >= 0, offset <= data.count - 60 else {
+			throw ARError.badArchive("Truncated header")
+		}
+		guard
+			let size = Int(_removePadding(String(data: data.subdata(in: offset+48..<offset+48+10), encoding: .ascii) ?? "")),
+			size >= 1,
+			size <= data.count - offset - 60
+		else {
 			throw ARError.badArchive("Invalid size")
 		}
 		
@@ -46,24 +56,18 @@ class AR: NSObject {
 		
 		return ARFileModel(
 			name: name,
-			modificationDate: NSDate(timeIntervalSince1970: Double(_removePadding(String(data: data.subdata(in: offset+16..<offset+16+12), encoding: .ascii) ?? "0"))!) as Date,
-			ownerId: Int(_removePadding(String(data: data.subdata(in: offset+28..<offset+28+6), encoding: .ascii) ?? "0"))!,
-			groupId: Int(_removePadding(String(data: data.subdata(in: offset+34..<offset+34+6), encoding: .ascii) ?? "0"))!,
-			mode: Int(_removePadding(String(data: data.subdata(in: offset+40..<offset+40+8), encoding: .ascii) ?? "0"))!,
+			modificationDate: NSDate(timeIntervalSince1970: Double(_removePadding(String(data: data.subdata(in: offset+16..<offset+16+12), encoding: .ascii) ?? "0")) ?? 0) as Date,
+			ownerId: Int(_removePadding(String(data: data.subdata(in: offset+28..<offset+28+6), encoding: .ascii) ?? "0")) ?? 0,
+			groupId: Int(_removePadding(String(data: data.subdata(in: offset+34..<offset+34+6), encoding: .ascii) ?? "0")) ?? 0,
+			mode: Int(_removePadding(String(data: data.subdata(in: offset+40..<offset+40+8), encoding: .ascii) ?? "0")) ?? 0,
 			size: size,
 			content: data.subdata(in: offset+60..<offset+60+size)
 		)
 	}
 	
 	private func _removePadding(_ paddedString: String) -> String {
-		let data = paddedString.data(using: .utf8)!
-		
-		guard let firstNonSpaceIndex = data.firstIndex(of: UInt8(ascii: " ")) else {
-			return paddedString
-		}
-		
-		let actualData = data[..<firstNonSpaceIndex]
-		return String(data: actualData, encoding: .utf8)!
+		// fields are padded with spaces; keep everything before the first one
+		String(paddedString.prefix { $0 != " " })
 	}
 }
 

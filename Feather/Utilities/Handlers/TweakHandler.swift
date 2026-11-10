@@ -212,14 +212,20 @@ class TweakHandler {
 		// but it somehow works well enough,
 		// do note large lzma's are slow as hell
 		
-		let handler = AR(with: url)
+		let handler = try AR(with: url)
 		let arFiles = try await handler.extract()
 		
 		for arFile in arFiles {
-			let outputPath = uniqueSubDir.appendingPathComponent(arFile.name)
+			// GNU ar symbol / long-name tables are not files
+			if arFile.name == "/" || arFile.name == "//" {
+				continue
+			}
+			// member names come from the untrusted .deb: a plain file name only
+			let fileName = try ArchivePathValidator.fileName(arFile.name)
+			let outputPath = uniqueSubDir.appendingPathComponent(fileName)
 			try arFile.content.write(to: outputPath)
 			
-			if ["data.tar.lzma", "data.tar.gz", "data.tar.xz", "data.tar.bz2"].contains(arFile.name) {
+			if ["data.tar.lzma", "data.tar.gz", "data.tar.xz", "data.tar.bz2"].contains(fileName) {
 				var fileToProcess = outputPath
 				try extractFile(at: &fileToProcess)
 				try extractFile(at: &fileToProcess)
