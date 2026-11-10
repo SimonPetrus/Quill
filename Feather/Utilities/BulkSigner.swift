@@ -153,7 +153,7 @@ struct BulkSigningView: View {
 	private func _running() -> some View {
 		Section {
 			VStack(alignment: .leading, spacing: 12) {
-				Text(.localized("Signing %d / %d", arguments: signer.index, signer.total))
+				Text(verbatim: String.localized("Signing %d / %d", arguments: signer.index, signer.total))
 					.font(.headline)
 				Text(signer.currentName)
 					.font(.subheadline)
