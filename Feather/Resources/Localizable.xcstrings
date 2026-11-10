@@ -8969,59 +8969,6 @@
         }
       }
     },
-    "Join Us on Discord" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "انضم إلينا على Discord"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trete unserem Discord bei"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Join Us on Discord"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Discord에 참여하세요!"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dołącz do nas na Discordzie"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Discord’da Bize Katılın"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hãy tham gia cùng chúng tôi trên Discord!"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "加入我们的Discord"
-          }
-        }
-      }
-    },
     "Learn more about how to setup a repository…" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -11195,77 +11142,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打包"
-          }
-        }
-      }
-    },
-    "Pairing File Guide" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "دليل ملف الاقتران"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Průvodce párovacího souboru"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pairing-Datei Anleitung"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pairing File Guide"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Panduan Berkas Pairing"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Guida file di abbinamento"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "페어링 파일 가이드"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Przewodnik po pliku parowania"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eşleştirme Dosyası Kılavuzu"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hướng dẫn về tệp ghép nối"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配对文件指南"
           }
         }
       }
@@ -19971,6 +19847,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Arşivde güvenli olmayan yol: %@"
+          }
+        }
+      }
+    },
+    "The backup file is corrupt or not safe." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The backup file is corrupt or not safe."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yedek dosyası bozuk veya güvenli değil."
           }
         }
       }
