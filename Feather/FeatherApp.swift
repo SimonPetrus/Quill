@@ -203,6 +203,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		_createPipeline()
 		_createDocumentsDirectories()
 		ResetView.clearWorkCache()
+		// Certificates: files to Application Support + passwords to the Keychain (once; retried until complete).
+		SecureCertificateMigration.runIfNeeded()
 		_addDefaultCertificates()
 		return true
 	}
@@ -235,7 +237,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
 		let directories: [URL] = [
 			fileManager.archives,
-			fileManager.certificates,
 			fileManager.signed,
 			fileManager.unsigned
 		]

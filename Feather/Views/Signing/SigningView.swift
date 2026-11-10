@@ -357,7 +357,7 @@ extension SigningView {
 			_isChecking = true
 			CertificatePairValidator.check(
 				p12URL: p12URL,
-				password: cert.password ?? "",
+				password: cert.resolvedPassword,
 				provisionURL: provisionURL,
 				continueTitle: .localized("Sign Anyway"),
 				proceed: { _isChecking = false; _beginSigning() },

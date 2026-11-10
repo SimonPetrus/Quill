@@ -181,7 +181,7 @@ enum FR {
 			
 			let urlStr = template
 				.replacingOccurrences(of: "$(BASE64_CERT)", with: encodedCert)
-				.replacingOccurrences(of: "$(PASSWORD)", with: certificate.password ?? "")
+				.replacingOccurrences(of: "$(PASSWORD)", with: certificate.resolvedPassword)
 			
 			guard let callbackUrl = URL(string: urlStr) else {
 				return

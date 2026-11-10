@@ -343,7 +343,7 @@ extension LibraryView {
 			_isBulkChecking = true
 			CertificatePairValidator.check(
 				p12URL: p12URL,
-				password: cert.password ?? "",
+				password: cert.resolvedPassword,
 				provisionURL: provisionURL,
 				continueTitle: .localized("Sign Anyway"),
 				proceed: { _isBulkChecking = false; begin() },
