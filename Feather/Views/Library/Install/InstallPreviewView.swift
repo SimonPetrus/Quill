@@ -9,6 +9,7 @@ import SwiftUI
 import NimbleViews
 import IDeviceSwift
 import OSLog
+import CoreData
 
 // MARK: - View
 struct InstallPreviewView: View {
@@ -28,6 +29,7 @@ struct InstallPreviewView: View {
 	private let _deleteSignedAfterInstall: Bool
 	/// Set once the IPA is fully handed to iOS (server) or the install finished (idevice).
 	@State private var _installReached = false
+	@State private var _deleteScheduled = false
 	
 	init(app: AppInfoPresentable, isSharing: Bool = false, deleteSignedAfterInstall: Bool? = nil) {
 		self.app = app
@@ -92,6 +94,10 @@ struct InstallPreviewView: View {
 					_installReached = false
 				}
 				
+				if case .completed(.failure(_)) = newStatus {
+					_installReached = false
+				}
+				
 				switch newStatus {
 				case .completed, .broken(_):
 					progressTask?.cancel()
@@ -131,12 +137,18 @@ struct InstallPreviewView: View {
 			_deleteSignedAfterInstall,
 			_installReached,
 			!isSharing,
-			app.isSigned
+			app.isSigned,
+			!_deleteScheduled
 		else { return }
+		_deleteScheduled = true
 		
 		let app = app
 		// Let the sheet finish dismissing before the managed object goes away.
 		DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+			if let object = app as? NSManagedObject,
+			   object.isDeleted || object.managedObjectContext == nil {
+				return
+			}
 			Storage.shared.deleteApp(for: app)
 		}
 	}
