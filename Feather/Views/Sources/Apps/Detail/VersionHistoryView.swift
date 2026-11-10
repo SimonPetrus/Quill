@@ -16,6 +16,24 @@ struct VersionHistoryView: View {
 	let source: ASRepository
 	let app: ASRepository.App
 	let versions: [ASRepository.App.Version]
+	/// Set when opened from the library: rows become tappable and the installed version is marked.
+	var installedVersion: String? = nil
+	var isPicking: Bool { installedVersion != nil }
+	
+	private func _download(_ version: ASRepository.App.Version) {
+		guard let downloadURL = version.downloadURL else { return }
+		_ = DownloadManager.shared.startDownload(
+			from: downloadURL,
+			id: app.currentUniqueId,
+			sourceProvenance: SourceAppProvenance(
+				sourceURL: sourceURL,
+				repository: source,
+				app: app,
+				version: version
+			)
+		)
+		dismiss()
+	}
     
 	var body: some View {
 		ScrollView {
@@ -24,24 +42,20 @@ struct VersionHistoryView: View {
 					AppVersionInfo(
 						version: version.version,
 						date: version.date?.date,
-						description: version.localizedDescription ?? .localized("No release notes available")
+						description: version.localizedDescription ?? .localized("No release notes available"),
+						size: version.size,
+						isInstalled: isPicking && version.version == installedVersion
 					)
 					.padding(.horizontal)
 					.background(Color(.systemBackground))
+					.contentShape(Rectangle())
+					.onTapGesture {
+						if isPicking { _download(version) }
+					}
 					.contextMenu {
 						if let downloadURL = version.downloadURL {
 							Button {
-								_ = DownloadManager.shared.startDownload(
-									from: downloadURL,
-									id: app.currentUniqueId,
-									sourceProvenance: SourceAppProvenance(
-										sourceURL: sourceURL,
-										repository: source,
-										app: app,
-										version: version
-									)
-								)
-								dismiss()
+								_download(version)
 							} label: {
 								Label(version.version, systemImage: "arrow.down")
 							}
