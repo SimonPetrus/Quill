@@ -17466,6 +17466,176 @@
           }
         }
       }
+    },
+    "Certificate Mismatch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certificate Mismatch"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sertifika Uyuşmazlığı"
+          }
+        }
+      }
+    },
+    "This certificate does not belong to this provisioning profile." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This certificate does not belong to this provisioning profile."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu sertifika bu profile ait değil."
+          }
+        }
+      }
+    },
+    "The profile was created with a different certificate, so iOS would reject the app during installation. Use the certificate the profile was created with, or create a new profile for this certificate." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The profile was created with a different certificate, so iOS would reject the app during installation. Use the certificate the profile was created with, or create a new profile for this certificate."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profil başka bir sertifikayla oluşturulmuş; bu yüzden iOS uygulamayı kurulum sırasında reddeder. Profilin oluşturulduğu sertifikayı kullanın veya bu sertifika için yeni bir profil oluşturun."
+          }
+        }
+      }
+    },
+    "The certificate's Team ID (%@) is different from the profile's Team ID (%@)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The certificate's Team ID (%@) is different from the profile's Team ID (%@)."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sertifikanın Team ID'si (%@) profilin Team ID'sinden (%@) farklı."
+          }
+        }
+      }
+    },
+    "Certificate Expired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certificate Expired"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sertifikanın Süresi Dolmuş"
+          }
+        }
+      }
+    },
+    "This certificate expired on %@." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This certificate expired on %@."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu sertifikanın süresi %@ tarihinde doldu."
+          }
+        }
+      }
+    },
+    "Provisioning Profile Expired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Provisioning Profile Expired"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profilin Süresi Dolmuş"
+          }
+        }
+      }
+    },
+    "This provisioning profile expired on %@." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This provisioning profile expired on %@."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu profilin süresi %@ tarihinde doldu."
+          }
+        }
+      }
+    },
+    "Import Anyway" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import Anyway"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yine de İçe Aktar"
+          }
+        }
+      }
+    },
+    "Sign Anyway" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign Anyway"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yine de İmzala"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

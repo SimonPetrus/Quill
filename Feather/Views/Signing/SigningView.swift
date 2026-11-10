@@ -8,6 +8,7 @@
 import SwiftUI
 import PhotosUI
 import NimbleViews
+import OSLog
 
 // MARK: - View
 struct SigningView: View {
@@ -275,6 +276,41 @@ extension SigningView {
 			return
 		}
 
+		// Make sure the certificate belongs to its provisioning profile before signing.
+		if
+			_temporaryOptions.signingOption == .default,
+			let cert = _selectedCert(),
+			let p12URL = Storage.shared.getFile(.certificate, from: cert),
+			let provisionURL = Storage.shared.getFile(.provision, from: cert)
+		{
+			let password = cert.password ?? ""
+			DispatchQueue.global(qos: .userInitiated).async {
+				let result = CertificatePairValidator.validate(p12URL: p12URL, password: password, provisionURL: provisionURL)
+				DispatchQueue.main.async {
+					switch result {
+					case .ok:
+						_beginSigning()
+					case .unreadable(let reason):
+						// Could not verify: do not block signing.
+						Logger.misc.warning("Certificate/profile check skipped: \(reason)")
+						_beginSigning()
+					default:
+						CertificatePairValidator.presentAlert(
+							for: result,
+							continueTitle: .localized("Sign Anyway")
+						) {
+							_beginSigning()
+						}
+					}
+				}
+			}
+			return
+		}
+		
+		_beginSigning()
+	}
+	
+	private func _beginSigning() {
 		let generator = UIImpactFeedbackGenerator(style: .light)
 		generator.impactOccurred()
 		_isSigning = true

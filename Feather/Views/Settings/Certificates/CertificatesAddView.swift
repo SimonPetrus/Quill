@@ -8,6 +8,7 @@
 import SwiftUI
 import NimbleViews
 import UniformTypeIdentifiers
+import OSLog
 
 // MARK: - View
 struct CertificatesAddView: View {
@@ -115,6 +116,32 @@ extension CertificatesAddView {
 			return
 		}
 		
+		let password = _p12Password
+		
+		// Verify the certificate belongs to the profile off the main thread.
+		DispatchQueue.global(qos: .userInitiated).async {
+			let result = CertificatePairValidator.validate(p12URL: p12URL, password: password, provisionURL: provisionURL)
+			DispatchQueue.main.async {
+				switch result {
+				case .ok:
+					_importFiles(p12URL: p12URL, provisionURL: provisionURL)
+				case .unreadable(let reason):
+					// Could not verify: keep the old behaviour, do not block.
+					Logger.misc.warning("Certificate/profile check skipped: \(reason)")
+					_importFiles(p12URL: p12URL, provisionURL: provisionURL)
+				default:
+					CertificatePairValidator.presentAlert(
+						for: result,
+						continueTitle: .localized("Import Anyway")
+					) {
+						_importFiles(p12URL: p12URL, provisionURL: provisionURL)
+					}
+				}
+			}
+		}
+	}
+	
+	private func _importFiles(p12URL: URL, provisionURL: URL) {
 		FR.handleCertificateFiles(
 			p12URL: p12URL,
 			provisionURL: provisionURL,
