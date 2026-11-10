@@ -20,6 +20,7 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>app.quill.sign.ipa</string>
+				<string>com.apple.itunes.ipa</string>
 			</array>
 		</dict>
 		<dict>
@@ -137,6 +138,27 @@
 				<key>public.mime-type</key>
 				<array>
 					<string>application/trollstore-ipa</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.zip-archive</string>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>iOS App</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.apple.itunes.ipa</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>ipa</string>
 				</array>
 			</dict>
 		</dict>
