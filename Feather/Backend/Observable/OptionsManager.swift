@@ -113,6 +113,8 @@ struct Options: Codable, Equatable {
 	var removeURLScheme: Bool
 	/// If app should not include a `embedded.mobileprovision` (useful for JB detection)
 	var removeProvisioning: Bool
+	/// If the whole `Watch/` folder should be removed from the app
+	var removeWatchApp: Bool
 	/// Forcefully rename string files for App name
 	var changeLanguageFilesForCustomDisplayName: Bool
 	/// If tweaks should be injected into all app extensions (PlugIns and Extensions)
@@ -165,6 +167,7 @@ struct Options: Codable, Equatable {
 		ipadFullscreen: false,
 		removeURLScheme: false,
 		removeProvisioning: false,
+		removeWatchApp: false,
 		changeLanguageFilesForCustomDisplayName: false,
 		injectIntoExtensions: false,
 		mergeEntitlements: false,
