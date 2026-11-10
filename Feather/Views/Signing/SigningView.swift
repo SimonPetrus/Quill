@@ -20,6 +20,7 @@ struct SigningView: View {
 	@State private var _isFilePickerPresenting = false
 	@State private var _isImagePickerPresenting = false
 	@State private var _isSigning = false
+	@State private var _isChecking = false
 	@State private var _selectedPhoto: PhotosPickerItem? = nil
 	@State var appIcon: UIImage?
 	
@@ -71,6 +72,7 @@ struct SigningView: View {
 									.padding()
 							}
 							.buttonStyle(.plain)
+							.disabled(_isChecking)
 							.offset(y: UIDevice.current.userInterfaceIdiom == .pad ? -20 : -40)
 						}
 				}
@@ -275,6 +277,29 @@ extension SigningView {
 			return
 		}
 
+		// Make sure the certificate belongs to its provisioning profile before signing.
+		if
+			_temporaryOptions.signingOption == .default,
+			let cert = _selectedCert(),
+			let p12URL = Storage.shared.getFile(.certificate, from: cert),
+			let provisionURL = Storage.shared.getFile(.provision, from: cert)
+		{
+			_isChecking = true
+			CertificatePairValidator.check(
+				p12URL: p12URL,
+				password: cert.password ?? "",
+				provisionURL: provisionURL,
+				continueTitle: .localized("Sign Anyway"),
+				proceed: { _isChecking = false; _beginSigning() },
+				cancel: { _isChecking = false }
+			)
+			return
+		}
+		
+		_beginSigning()
+	}
+	
+	private func _beginSigning() {
 		let generator = UIImpactFeedbackGenerator(style: .light)
 		generator.impactOccurred()
 		_isSigning = true

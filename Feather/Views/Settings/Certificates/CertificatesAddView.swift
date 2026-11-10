@@ -18,11 +18,12 @@ struct CertificatesAddView: View {
 	@State private var _p12Password: String = ""
 	@State private var _certificateName: String = ""
 	
+	@State private var _isChecking = false
 	@State private var _isImportingP12Presenting = false
 	@State private var _isImportingMobileProvisionPresenting = false
 	
 	var saveButtonDisabled: Bool {
-		_p12URL == nil || _provisionURL == nil
+		_p12URL == nil || _provisionURL == nil || _isChecking
 	}
 	
 	// MARK: Body
@@ -115,12 +116,25 @@ extension CertificatesAddView {
 			return
 		}
 		
+		_isChecking = true
+		CertificatePairValidator.check(
+			p12URL: p12URL,
+			password: _p12Password,
+			provisionURL: provisionURL,
+			continueTitle: .localized("Import Anyway"),
+			proceed: { _importFiles(p12URL: p12URL, provisionURL: provisionURL) },
+			cancel: { _isChecking = false }
+		)
+	}
+	
+	private func _importFiles(p12URL: URL, provisionURL: URL) {
 		FR.handleCertificateFiles(
 			p12URL: p12URL,
 			provisionURL: provisionURL,
 			p12Password: _p12Password,
 			certificateName: _certificateName
 		) { _ in
+			_isChecking = false
 			dismiss()
 		}
 	}
