@@ -27,7 +27,7 @@ extension ServerInstaller {
 		app.threadPool = .init(numberOfThreads: 1)
 		
 		if getServerMethod() != 1 {
-			if let tls = try tls() {
+			if let tls = try Self.tls() {
 				app.http.server.configuration.tlsConfiguration = tls
 			}
 		}
@@ -51,11 +51,14 @@ extension ServerInstaller {
 				? (Self.getLocalAddress() ?? localhost)
 				: localhost
 		} else {
-			return Self.localHostname
+			// Fully Local: IPv4 loopback literal (IP SAN of the server certificate).
+			// The server only listens on IPv4 (0.0.0.0) and the installer daemons may
+			// resolve "localhost" to ::1 first, which fails with "Cannot connect".
+			return Self.localAddress
 		}
 	}
 	
-	func tls() throws -> TLSConfiguration? {
+	static func tls() throws -> TLSConfiguration? {
 		let (crt, pem) = try Self.createServerCert()
 		
 		return try TLSConfiguration.makeServerConfiguration(
