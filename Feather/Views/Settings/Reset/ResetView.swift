@@ -196,6 +196,9 @@ extension ResetView {
 		if !resetAll { UserDefaults.standard.set(0, forKey: "Quill.selectedCert") }
 		Storage.shared.clearContext(request: CertificatePair.fetchRequest())
 		try? FileManager.default.removeFileIfNeeded(at: FileManager.default.certificates)
+		try? FileManager.default.removeFileIfNeeded(at: FileManager.default.secureCertificates)
+		KeychainHelper.deleteAll()
+		CertificatePasswordCache.shared.invalidate()
 		NotificationManager.shared.reschedule()
 	}
 	

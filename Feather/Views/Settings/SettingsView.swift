@@ -83,6 +83,14 @@ struct SettingsView: View {
 				_directories()
                 
 				Section {
+					NavigationLink(destination: BackupView()) {
+						Label(.localized("Backup & Restore"), systemImage: "externaldrive")
+					}
+				} footer: {
+					Text(.localized("Back up your settings, sources and, optionally, certificates, or restore them from a backup file."))
+				}
+				
+				Section {
 					NavigationLink(destination: ResetView()) {
 						Label(.localized("Reset"), systemImage: "trash")
 					}
@@ -150,9 +158,6 @@ extension SettingsView {
 			}
 			Button(.localized("Open Archives"), systemImage: "folder") {
 				UIApplication.open(FileManager.default.archives.toSharedDocumentsURL()!)
-			}
-			Button(.localized("Open Certificates"), systemImage: "folder") {
-				UIApplication.open(FileManager.default.certificates.toSharedDocumentsURL()!)
 			}
 			Button(.localized("Export Logs"), systemImage: "doc.text") {
 				Task { @MainActor in

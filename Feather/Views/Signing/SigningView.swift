@@ -359,6 +359,19 @@ extension SigningView {
 			return
 		}
 
+		if
+			_temporaryOptions.signingOption == .default,
+			let cert = _selectedCert(),
+			cert.isPasswordMissing
+		{
+			UIAlertController.showAlertWithOk(
+				title: .localized("Password Missing"),
+				message: Storage.missingPasswordMessage,
+				isCancel: true
+			)
+			return
+		}
+
 		// Make sure the certificate belongs to its provisioning profile before signing.
 		if
 			_temporaryOptions.signingOption == .default,
@@ -369,7 +382,7 @@ extension SigningView {
 			_isChecking = true
 			CertificatePairValidator.check(
 				p12URL: p12URL,
-				password: cert.password ?? "",
+				password: cert.resolvedPassword,
 				provisionURL: provisionURL,
 				continueTitle: .localized("Sign Anyway"),
 				proceed: { _isChecking = false; _beginSigning() },
