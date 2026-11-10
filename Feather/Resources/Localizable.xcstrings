@@ -18634,6 +18634,397 @@
           }
         }
       }
+    },
+    "Backup & Restore" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Backup & Restore"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yedekleme ve Geri Yükleme"
+          }
+        }
+      }
+    },
+    "Back up your settings, sources and, optionally, certificates, or restore them from a backup file." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back up your settings, sources and, optionally, certificates, or restore them from a backup file."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayarlarınızı, kaynaklarınızı ve isteğe bağlı olarak sertifikalarınızı yedekleyin ya da bir yedek dosyasından geri yükleyin."
+          }
+        }
+      }
+    },
+    "Include Certificates" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Include Certificates"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sertifikaları Dahil Et"
+          }
+        }
+      }
+    },
+    "Backup Password" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Backup Password"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yedek Parolası"
+          }
+        }
+      }
+    },
+    "Repeat Password" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat Password"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parolayı Tekrarla"
+          }
+        }
+      }
+    },
+    "Backup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Backup"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yedek"
+          }
+        }
+      }
+    },
+    "The backup is encrypted with this password (at least 8 characters). If you forget the password, the certificates in the backup cannot be opened. The password is not stored anywhere." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The backup is encrypted with this password (at least 8 characters). If you forget the password, the certificates in the backup cannot be opened. The password is not stored anywhere."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yedek bu parolayla şifrelenir (en az 8 karakter). Parolayı unutursanız yedekteki sertifikalar açılamaz. Parola hiçbir yerde saklanmaz."
+          }
+        }
+      }
+    },
+    "Settings and sources are saved. Turn on certificates to include them; certificate backups are always encrypted." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings and sources are saved. Turn on certificates to include them; certificate backups are always encrypted."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayarlar ve kaynaklar kaydedilir. Sertifikaları eklemek için seçeneği açın; sertifika yedekleri her zaman şifrelenir."
+          }
+        }
+      }
+    },
+    "Back Up" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back Up"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yedekle"
+          }
+        }
+      }
+    },
+    "Restore from Backup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore from Backup"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yedekten Geri Yükle"
+          }
+        }
+      }
+    },
+    "Restoring adds what is missing. Existing certificates and sources are skipped and never overwritten." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restoring adds what is missing. Existing certificates and sources are skipped and never overwritten."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geri yükleme eksik olanları ekler. Var olan sertifikalar ve kaynaklar atlanır, asla üzerine yazılmaz."
+          }
+        }
+      }
+    },
+    "Restore" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geri Yükle"
+          }
+        }
+      }
+    },
+    "This backup is encrypted. Enter its password." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This backup is encrypted. Enter its password."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu yedek şifreli. Parolasını girin."
+          }
+        }
+      }
+    },
+    "Restore Complete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore Complete"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geri Yükleme Tamamlandı"
+          }
+        }
+      }
+    },
+    "Settings restored." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings restored."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayarlar geri yüklendi."
+          }
+        }
+      }
+    },
+    "Sources: %d added, %d skipped." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sources: %d added, %d skipped."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kaynaklar: %d eklendi, %d atlandı."
+          }
+        }
+      }
+    },
+    "Certificates: %d added, %d skipped, %d failed." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certificates: %d added, %d skipped, %d failed."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sertifikalar: %d eklendi, %d atlandı, %d başarısız."
+          }
+        }
+      }
+    },
+    "The password must be at least 8 characters." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The password must be at least 8 characters."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parola en az 8 karakter olmalı."
+          }
+        }
+      }
+    },
+    "Wrong password, or the backup file is damaged." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wrong password, or the backup file is damaged."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parola yanlış ya da yedek dosyası bozuk."
+          }
+        }
+      }
+    },
+    "This file is not a valid Quill backup." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This file is not a valid Quill backup."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu dosya geçerli bir Quill yedeği değil."
+          }
+        }
+      }
+    },
+    "This backup was made by a newer version of Quill." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This backup was made by a newer version of Quill."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu yedek Quill'in daha yeni bir sürümüyle alınmış."
+          }
+        }
+      }
+    },
+    "Encryption failed." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encryption failed."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Şifreleme başarısız oldu."
+          }
+        }
+      }
+    },
+    "A certificate file is missing; the backup was not created." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A certificate file is missing; the backup was not created."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir sertifika dosyası eksik; yedek oluşturulmadı."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

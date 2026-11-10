@@ -79,6 +79,14 @@ struct SettingsView: View {
 				_directories()
                 
 				Section {
+					NavigationLink(destination: BackupView()) {
+						Label(.localized("Backup & Restore"), systemImage: "externaldrive")
+					}
+				} footer: {
+					Text(.localized("Back up your settings, sources and, optionally, certificates, or restore them from a backup file."))
+				}
+				
+				Section {
 					NavigationLink(destination: ResetView()) {
 						Label(.localized("Reset"), systemImage: "trash")
 					}
