@@ -40,7 +40,13 @@ Screenshots coming soon.
 
 ## Getting the IPA
 
-The repository is private, so there are no public releases. CI places `Quill.ipa` on the `ipa-builds` branch on every push to `quill`:
+Released builds are on [GitHub Releases](https://github.com/SimonPetrus/Quill/releases). You can also add the Quill source to AltStore, SideStore or Quill itself (it is added in Quill by default):
+
+```
+https://raw.githubusercontent.com/SimonPetrus/Quill/source/source.json
+```
+
+Development builds: CI places `Quill.ipa` on the `ipa-builds` branch on every push to `quill`, and on `ipa-builds-dev` for every other branch:
 
 ```sh
 git fetch origin ipa-builds && git show FETCH_HEAD:Quill.ipa > Quill.ipa
@@ -62,6 +68,8 @@ See [How it works](HOW_IT_WORKS.md) for details.
 ## Updating Quill itself
 
 Updating Quill from within Quill requires the idevice install method; the server method cannot install over the running app. The bundle ID must stay the same, and PPQ must be off.
+
+In Quill: open Sources, pick the Quill source, tap Get, sign the IPA, then install it with the idevice method.
 
 ## Building
 
@@ -113,7 +121,13 @@ Ekran görüntüleri yakında.
 
 ## IPA'yı edinme
 
-Depo gizli olduğu için herkese açık sürüm yok. CI, `quill` dalına her push'ta `Quill.ipa` dosyasını `ipa-builds` dalına koyar:
+Yayınlanan sürümler [GitHub Releases](https://github.com/SimonPetrus/Quill/releases) sayfasında. Quill kaynağını AltStore, SideStore veya Quill'e ekleyebilirsin (Quill'de varsayılan olarak ekli):
+
+```
+https://raw.githubusercontent.com/SimonPetrus/Quill/source/source.json
+```
+
+Geliştirme derlemeleri: CI, `quill` dalına her push'ta `Quill.ipa` dosyasını `ipa-builds` dalına, diğer dallar için `ipa-builds-dev` dalına koyar:
 
 ```sh
 git fetch origin ipa-builds && git show FETCH_HEAD:Quill.ipa > Quill.ipa
@@ -135,6 +149,8 @@ Ayrıntılar için [Nasıl çalışır](HOW_IT_WORKS.md) sayfasına bak.
 ## Quill'i güncelleme
 
 Quill'i Quill içinden güncellemek için idevice kurulum yöntemi gerekir; sunucu yöntemi çalışan uygulamanın üzerine kurulum yapamaz. Bundle ID aynı kalmalı ve PPQ kapalı olmalı.
+
+Quill içinde: Kaynaklar'dan Quill kaynağını seç, Al'a dokun, IPA'yı imzala, sonra idevice yöntemiyle kur.
 
 ## Derleme
 

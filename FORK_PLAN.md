@@ -32,6 +32,8 @@
   + yalnızca CI commit'leri. **Uygulama koduna henüz dokunulmadı.**
 - Yeni maddeler için branch'leri bu branch'ten aç (CI workflow'u burada).
 
+- Yayın akışı: `.github/workflows/release.yml` (workflow_dispatch). Sürüm: `gh workflow run release.yml -R SimonPetrus/Quill -f version=X -f dry_run=false` — YALNIZCA kullanıcı onayıyla. `dry_run=true` (varsayılan) tag/Release/`source` dalı oluşturmaz. Kaynak: `https://raw.githubusercontent.com/SimonPetrus/Quill/source/source.json`.
+
 ### Proje yapısı
 - `Feather.xcodeproj` (tek app hedefi `Feather`, SwiftUI, iOS 16+, iPhone+iPad,
   `SUPPORTED_PLATFORMS = iphoneos iphonesimulator` — Catalyst hedeflenmiyor).

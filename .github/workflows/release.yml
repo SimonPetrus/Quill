@@ -1,45 +1,162 @@
 name: Release
 
+# Manual release of Quill. Run with dry_run=true (default) to build and preview the source JSON
+# without creating a commit, tag, Release or `source` branch. Releases are only made on explicit
+# approval:  gh workflow run release.yml -R SimonPetrus/Quill -f version=X -f dry_run=false
+# Pushes made with GITHUB_TOKEN do not trigger other workflows (build.yml), on purpose.
+
 on:
-  push:
-    tags:
-      - v*
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version, e.g. 1.0.1'
+        required: true
+        type: string
+      notes:
+        description: 'Release notes (optional)'
+        required: false
+        type: string
+      dry_run:
+        description: 'Dry run: build and preview only, publish nothing'
+        required: true
+        type: boolean
+        default: true
+      xcode:
+        description: 'Xcode version'
+        required: false
+        default: '26.3.0'
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  release:
     runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      VERSION: ${{ inputs.version }}
+      NOTES: ${{ inputs.notes }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate version
+        run: |
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "Invalid version '$VERSION' (expected e.g. 1.0.1)"; exit 1
+          fi
+
+      - name: Checkout quill
+        uses: actions/checkout@v4
         with:
+          ref: quill
           submodules: 'true'
 
-      - name: Prepare dependencies (Xcode)
+      # The release tooling comes from the ref the workflow was started on (may be a feature branch in a dry run).
+      - name: Checkout release tooling
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: tools
+          sparse-checkout: .github/scripts
+
+      - name: Set version
         run: |
-          sudo xcode-select -s /Applications/Xcode_26.3.0.app
+          sed -i '' "s/^QUILL_PROJECT_VERSION=.*/QUILL_PROJECT_VERSION=${VERSION}/" Quill.xcconfig
+          grep QUILL_PROJECT_VERSION Quill.xcconfig
+
+      - name: Select Xcode
+        run: |
+          WANT="${{ inputs.xcode || '26.3.0' }}"
+          if [ -d "/Applications/Xcode_${WANT}.app" ]; then
+            XCODE="/Applications/Xcode_${WANT}.app"
+          else
+            XCODE=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -n 1)
+          fi
+          echo "Using $XCODE"
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/Quill/iphoneos/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('Feather.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Resolve Swift packages
+        run: |
+          for i in 1 2 3; do
+            echo "Resolve attempt $i"
+            if xcodebuild -resolvePackageDependencies \
+                 -project Feather.xcodeproj -scheme Feather \
+                 -derivedDataPath "$RUNNER_TEMP/Quill/iphoneos" \
+                 -skipPackagePluginValidation; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
 
       - name: Build
-        run: | 
-          agvtool new-version -all $(git rev-parse HEAD)
-          make
-
-      - name: Get Version
-        id: get_version
-        run: |
-          VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" _build/Payload/*.app/Info.plist)
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
-
-      - name: Create Release
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v3.0.2
-        with:
-          name: Quill v${{ env.VERSION }}
-          tag_name: v${{ env.VERSION }}
-          files: |
-            packages/*
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-          draft: true
         env:
-          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+          TMPDIR: ${{ runner.temp }}/
+        run: |
+          agvtool new-version -all "$VERSION"
+          make iphoneos
+
+      - name: Show result
+        run: |
+          ls -la packages
+          /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" _build/Payload/*.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" _build/Payload/*.app/Info.plist
+
+      # Only the xcconfig change is committed (agvtool touches project files, which are reverted first).
+      - name: Commit version bump to quill
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git checkout -- Feather.xcodeproj Feather
+          git add Quill.xcconfig
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "Release v${VERSION}"
+          git push origin HEAD:quill
+
+      - name: Create tag and GitHub Release
+        if: ${{ !inputs.dry_run }}
+        run: |
+          gh release create "v${VERSION}" packages/Quill.ipa \
+            --target "$(git rev-parse HEAD)" \
+            --title "Quill ${VERSION}" \
+            --notes "${NOTES:-Quill ${VERSION}}"
+
+      - name: Generate source.json
+        run: |
+          python3 tools/.github/scripts/make_source.py \
+            --repo "$GITHUB_REPOSITORY" --out source.json \
+            --icon-url "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/quill/.github/quill-icon.png"
+
+      - name: Publish source branch
+        if: ${{ !inputs.dry_run }}
+        run: |
+          OUT="$RUNNER_TEMP/source"
+          rm -rf "$OUT" && mkdir -p "$OUT"
+          cp source.json "$OUT/"
+          cd "$OUT"
+          git init -q -b source
+          git add source.json
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -m "Update source for v${VERSION}"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" source
+
+      - name: Upload source.json (dry run preview)
+        if: ${{ inputs.dry_run }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-preview
+          path: source.json
+          retention-days: 7

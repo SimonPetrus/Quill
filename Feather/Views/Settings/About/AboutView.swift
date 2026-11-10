@@ -11,7 +11,7 @@ import NimbleViews
 // MARK: - View
 struct AboutView: View {
 	@StateObject private var _updates = SelfUpdateManager.shared
-	@AppStorage(SelfUpdateManager.sourceURLKey) private var _sourceURL: String = ""
+	@AppStorage(SelfUpdateManager.sourceURLKey) private var _sourceURL: String = SelfUpdateManager.defaultSourceURL
 	@AppStorage(SelfUpdateManager.autoCheckKey) private var _autoCheck: Bool = false
 	
 	// MARK: Body

@@ -15,8 +15,13 @@ extension AppInfoPresentable {
 	var isQuillItself: Bool {
 		guard let identifier, !identifier.isEmpty, let own = Bundle.main.bundleIdentifier else { return false }
 		// Tools like SideStore/AltStore can rewrite the installed bundle ID (e.g. "app.quill.sign.TEAMID"),
-		// so a library item whose ID is a prefix of the running one is Quill too.
-		return identifier == own || own.hasPrefix(identifier + ".")
+		// so a library item whose ID is a prefix of the running one is Quill too. Require a dotted
+		// identifier and exactly one extra suffix component so short IDs ("app") never match broadly.
+		guard identifier.contains(".") else { return false }
+		if identifier == own { return true }
+		guard own.hasPrefix(identifier + ".") else { return false }
+		let suffix = own.dropFirst(identifier.count + 1)
+		return !suffix.isEmpty && !suffix.contains(".")
 	}
 }
 
@@ -26,6 +31,10 @@ final class SelfUpdateManager: ObservableObject {
 	
 	static let sourceURLKey = "Quill.selfUpdate.sourceURL"
 	static let autoCheckKey = "Quill.selfUpdate.autoCheck"
+	/// Official Quill AltStore-style source, published by the release workflow.
+	static let defaultSourceURL = "https://raw.githubusercontent.com/SimonPetrus/Quill/source/source.json"
+	static let ownSourceIdentifier = "app.quill.source"
+	static let didAddOwnSourceKey = "Quill.didAddOwnSource"
 	private static let _lastAutoCheckKey = "Quill.selfUpdate.lastAutoCheck"
 	
 	enum Status: Equatable {
@@ -39,6 +48,13 @@ final class SelfUpdateManager: ObservableObject {
 	@Published private(set) var status: Status = .idle
 	
 	private init() {}
+	
+	/// Configured source URL; the official one when never set (an explicitly emptied value stays empty).
+	private static func _configuredSourceURL() -> String {
+		let defaults = UserDefaults.standard
+		guard let stored = defaults.string(forKey: sourceURLKey) else { return defaultSourceURL }
+		return stored.trimmingCharacters(in: .whitespacesAndNewlines)
+	}
 	
 	private var _currentVersion: String {
 		Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
@@ -88,8 +104,7 @@ final class SelfUpdateManager: ObservableObject {
 	func check() async {
 		guard status != .checking else { return }
 		
-		let raw = (UserDefaults.standard.string(forKey: Self.sourceURLKey) ?? "")
-			.trimmingCharacters(in: .whitespacesAndNewlines)
+		let raw = Self._configuredSourceURL()
 		guard
 			!raw.isEmpty,
 			let url = URL(string: raw),
@@ -171,7 +186,7 @@ final class SelfUpdateManager: ObservableObject {
 		let defaults = UserDefaults.standard
 		guard
 			defaults.bool(forKey: Self.autoCheckKey),
-			!(defaults.string(forKey: Self.sourceURLKey) ?? "").trimmingCharacters(in: .whitespaces).isEmpty
+			!Self._configuredSourceURL().isEmpty
 		else { return }
 		
 		let last = defaults.object(forKey: Self._lastAutoCheckKey) as? Date
