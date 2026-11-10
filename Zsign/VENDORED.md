@@ -61,6 +61,15 @@ Keep these when syncing with upstream again.
   free space was 0); `ReallocCodeSignSpace` checks for room for a whole `LC_CODE_SIGNATURE`
   before editing the header.
 - `s_uExecSegLimit` (static shared by all slices and files) is now the member `m_uExecSegLimit`.
+
+### Entitlements (Quill)
+- `src/openssl.cpp` `ZSignAsset::Init`: a custom entitlements file that can't be read, is empty or
+  is not a plist dictionary fails signing (it used to fall back to the profile's entitlements);
+  a binary plist is converted to XML for the entitlements slot.
+- `src/signing.cpp` `ZSign::_DER` returns `bool`: INTEGER uses minimal two's complement (it wrote
+  the value as the length, and 0 looped about 512 MB of output); real/date/data/null are refused
+  instead of `assert`; `SlotBuildDerEntitlements` fails on unparsable entitlements and
+  `ZArchO::BuildCodeSignature` fails when the main executable's entitlements have no DER form.
 - `src/common/mach-o.h`: `#ifndef _H_CSCOMMON` guard around `eSecRequirementType`
   (Xcode 27 SDK clash).
 - `src/openssl.h`: `m_evpPKey`, `m_x509Cert`, `m_caCerts` are `public` (`swift/zsign.mm`

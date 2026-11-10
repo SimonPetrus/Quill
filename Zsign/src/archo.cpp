@@ -444,7 +444,11 @@ bool ZArchO::BuildCodeSignature(ZSignAsset* pSignAsset,
 
 	ZSign::SlotBuildRequirements(strBundleId, pSignAsset->m_strSubjectCN, strRequirementsSlot);
 	ZSign::SlotBuildEntitlements(IsExecute() ? pSignAsset->m_strEntitleData : "", strEntitlementsSlot);
-	ZSign::SlotBuildDerEntitlements(IsExecute() ? pSignAsset->m_strEntitleData : "", strDerEntitlementsSlot);
+	if (!ZSign::SlotBuildDerEntitlements(IsExecute() ? pSignAsset->m_strEntitleData : "", strDerEntitlementsSlot) &&
+		IsExecute() && !pSignAsset->m_strEntitleData.empty()) {
+		// entitlements exist but have no valid DER form: iOS 15+ would reject the binary
+		return false;
+	}
 
 	string strRequirementsSlotSHA1;
 	string strRequirementsSlotSHA256;

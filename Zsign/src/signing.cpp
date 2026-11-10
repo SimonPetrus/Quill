@@ -20,23 +20,33 @@ void ZSign::_DERLength(string& strBlob, uint64_t uLength)
 	}
 }
 
-string ZSign::_DER(const jvalue& data)
+bool ZSign::_DER(const jvalue& data, string& strOutput)
 {
-	string strOutput;
+	strOutput.clear();
 	if (data.is_bool()) {
 		strOutput.append(1, 0x01);
 		strOutput.append(1, 1);
 		strOutput.append(1, data.as_bool() ? (char)0xff : (char)0x00);
 	} else if (data.is_int()) {
-		uint64_t uVal = data.as_int64();
+		// INTEGER: minimal big-endian two's complement (0 -> 02 01 00, 128 -> 02 02 00 80, -1 -> 02 01 ff)
+		uint64_t uVal = (uint64_t)data.as_int64();
+		string strInt;
+		for (int i = 7; i >= 0; i--) {
+			strInt.append(1, (char)(uint8_t)(uVal >> (i * 8)));
+		}
+		size_t sStart = 0;
+		while (sStart < strInt.size() - 1) {
+			uint8_t b0 = (uint8_t)strInt[sStart];
+			uint8_t b1 = (uint8_t)strInt[sStart + 1];
+			if ((0x00 == b0 && 0 == (b1 & 0x80)) || (0xff == b0 && 0 != (b1 & 0x80))) {
+				sStart++;
+			} else {
+				break;
+			}
+		}
 		strOutput.append(1, 0x02);
-		_DERLength(strOutput, uVal);
-
-		uint32_t sLength = (64 - ZUtil::builtin_clzll(uVal) + 7) / 8;
-		sLength *= 8;
-		do {
-			strOutput.append(1, (char)(uVal >> (sLength -= 8)));
-		} while (sLength != 0);
+		_DERLength(strOutput, strInt.size() - sStart);
+		strOutput.append(strInt, sStart, string::npos);
 	} else if (data.is_string()) {
 		string strVal = data.as_cstr();
 		strOutput.append(1, 0x0c);
@@ -46,7 +56,11 @@ string ZSign::_DER(const jvalue& data)
 		string strArray;
 		size_t size = data.size();
 		for (size_t i = 0; i < size; i++) {
-			strArray += _DER(data[i]);
+			string strItem;
+			if (!_DER(data[i], strItem)) {
+				return false;
+			}
+			strArray += strItem;
 		}
 		strOutput.append(1, 0x30);
 		_DERLength(strOutput, strArray.size());
@@ -59,7 +73,11 @@ string ZSign::_DER(const jvalue& data)
 		string strDict;
 		for (size_t i = 0; i < arrKeys.size(); i++) {
 			string& strKey = arrKeys[i];
-			string strVal = _DER(data[strKey]);
+			string strVal;
+			if (!_DER(data[strKey], strVal)) {
+				ZLog::ErrorV(">>> Unsupported value type in entitlements for key: %s\n", strKey.c_str());
+				return false;
+			}
 
 			string strEntry;
 			strEntry.append(1, 0x0c);
@@ -75,17 +93,14 @@ string ZSign::_DER(const jvalue& data)
 		strOutput.append(1, (char)0xb0);
 		_DERLength(strOutput, strDict.size());
 		strOutput += strDict;
-	} else if (data.is_double()) {
-		assert(false);
-	} else if (data.is_date()) {
-		assert(false);
-	} else if (data.is_data()) {
-		assert(false);
 	} else {
-		assert(false && "Unsupported Entitlements DER Type");
+		// real, date, data and null have no DER entitlements encoding here; refuse instead of
+		// writing a broken blob (assert() is compiled out in release builds)
+		strOutput.clear();
+		return false;
 	}
 
-	return strOutput;
+	return true;
 }
 
 uint32_t ZSign::SlotParseGeneralHeader(const char* szSlotName, uint8_t* pSlotBase, CS_BlobIndex* pbi)
@@ -319,9 +334,16 @@ bool ZSign::SlotBuildDerEntitlements(const string& strEntitlements, string& strO
 	}
 
 	jvalue jvInfo;
-	jvInfo.read_plist(strEntitlements);
+	if (!jvInfo.read_plist(strEntitlements) || !jvInfo.is_object()) {
+		ZLog::Error(">>> Can't parse entitlements for the DER entitlements slot!\n");
+		return false;
+	}
 
-	string strInnerDict = _DER(jvInfo);
+	string strInnerDict;
+	if (!_DER(jvInfo, strInnerDict)) {
+		ZLog::Error(">>> Can't encode DER entitlements!\n");
+		return false;
+	}
 
 	string strVersion;
 	strVersion.append(1, 0x02);

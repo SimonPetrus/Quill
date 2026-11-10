@@ -44,7 +44,7 @@ public:
 													uint32_t& uCodeSlots256DataLength);
 	static uint32_t GetCodeSignatureLength(uint8_t* pCSBase);
 
-	static string _DER(const jvalue& data);
+	static bool _DER(const jvalue& data, string& strOutput);
 	static void _DERLength(string& strBlob, uint64_t uLength);
 
 	static bool ParseCodeSignature(uint8_t* pCSBase);

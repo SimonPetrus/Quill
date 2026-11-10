@@ -850,7 +850,23 @@ bool ZSignAsset::Init(
 	}
 
 	ZFile::ReadFile(strProvFile.c_str(), m_strProvData);
-	ZFile::ReadFile(strEntitleFile.c_str(), m_strEntitleData);
+	if (!strEntitleFile.empty()) {
+		// a custom entitlements file that can't be used must not silently fall back to the
+		// profile's entitlements below: the app would be signed with different rights
+		if (!ZFile::ReadFile(strEntitleFile.c_str(), m_strEntitleData) || m_strEntitleData.empty()) {
+			ZLog::ErrorV(">>> Can't read entitlements file! %s\n", strEntitleFile.c_str());
+			return false;
+		}
+		jvalue jvEntitle;
+		bool bBinary = false;
+		if (!jvEntitle.read_plist(m_strEntitleData, NULL, &bBinary) || !jvEntitle.is_object()) {
+			ZLog::ErrorV(">>> Entitlements file is not a valid plist dictionary! %s\n", strEntitleFile.c_str());
+			return false;
+		}
+		if (bBinary) { // the entitlements slot holds an XML plist
+			jvEntitle.style_write_plist(m_strEntitleData);
+		}
+	}
 	if (m_strProvData.empty()) {
 		ZLog::Error(">>> Can't find provision file!\n");
 		return false;
