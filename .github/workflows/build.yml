@@ -2,14 +2,16 @@ name: Build (unsigned IPA)
 
 # Fork CI: builds an unsigned (ad-hoc, no team) Quill.ipa on every push / PR,
 # uploads it as a workflow artifact and (for pushes / manual runs) force-pushes
-# it as a single commit to the `ipa-builds` branch so it can be fetched even
-# when the account's artifact storage quota is full. Never creates releases or tags.
+# it as a single commit so it can be fetched even when the account's artifact
+# storage quota is full: `ipa-builds` for the quill branch (user IPA), `ipa-builds-dev`
+# for every other branch (intermediate builds). Never creates releases or tags.
 
 on:
   push:
     branches:
       - '**'
       - '!ipa-builds'
+      - '!ipa-builds-dev'
     tags-ignore:
       - '**'
   pull_request:
@@ -89,14 +91,19 @@ jobs:
           /usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" _build/Payload/*.app/Info.plist
 
       # Orphan branch with exactly one commit (force-pushed), so history never grows.
-      - name: Publish IPA to ipa-builds branch
+      - name: Publish IPA to ipa-builds (quill) or ipa-builds-dev (other branches)
         if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          OUT="$RUNNER_TEMP/ipa-builds"
+          if [ "$GITHUB_REF" = "refs/heads/quill" ]; then
+            TARGET=ipa-builds
+          else
+            TARGET=ipa-builds-dev
+          fi
+          OUT="$RUNNER_TEMP/$TARGET"
           rm -rf "$OUT" && mkdir -p "$OUT" && cd "$OUT"
-          git init -q -b ipa-builds
+          git init -q -b "$TARGET"
           cp "$GITHUB_WORKSPACE/packages/Quill.ipa" .
           {
             echo "branch: $GITHUB_REF_NAME"
@@ -109,7 +116,7 @@ jobs:
           git -c user.name="github-actions[bot]" \
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
               commit -q -m "IPA build from $GITHUB_REF_NAME @ ${GITHUB_SHA::7}"
-          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ipa-builds
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$TARGET"
 
       - name: Upload IPA
         # Artifact quota may be full; the ipa-builds branch above is the fallback.

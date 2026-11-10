@@ -58,6 +58,7 @@
     `ipa-builds` branch'ine tek commit olarak force-push ediliyor (`Quill.ipa` + `BUILD_INFO.txt`
     içinde commit ve sha256). Almak için:
     `git fetch origin ipa-builds && git show FETCH_HEAD:Quill.ipa > Quill.ipa`
+    Kullanıcı IPA'sı `ipa-builds` (= quill dalı), ara derlemeler (diğer dallar) `ipa-builds-dev`.
   - Artifact yükleme `continue-on-error` — kota açılınca artifact olarak da gelir.
 - Upstream'den gelen `release.yml` (tag'de draft release) ve `update_repo.yml` (release yayınlanınca
   `main`'e push) dokunulmadı; tag/release oluşturulmadıkça çalışmazlar.
