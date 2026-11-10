@@ -83,7 +83,7 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 		
 		let download = self._download
 		
-		try await withCheckedThrowingContinuation { continuation in
+		try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
 			DispatchQueue.global(qos: .utility).async {
 				do {
 					// Zip does not reject "../" entry names: check them before anything is written
