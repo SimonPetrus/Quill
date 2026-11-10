@@ -130,7 +130,11 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 		
 		let destinationURL = try await _directory()
 		
-		guard _fileManager.fileExists(atPath: payloadURL.path) else {
+		guard
+			_fileManager.fileExists(atPath: payloadURL.path),
+			// A ZIP without "Payload/<name>.app" is not an IPA; fail instead of adding an empty entry.
+			_fileManager.getPath(in: payloadURL, for: "app") != nil
+		else {
 			throw ImportedFileHandlerError.payloadNotFound
 		}
 		

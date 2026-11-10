@@ -20,6 +20,7 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>app.quill.sign.ipa</string>
+				<string>com.apple.itunes.ipa</string>
 			</array>
 		</dict>
 		<dict>
@@ -34,6 +35,18 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>app.quill.sign.tipa</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Quill Backup</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>app.quill.sign.backup</string>
 			</array>
 		</dict>
 	</array>
@@ -137,6 +150,44 @@
 				<key>public.mime-type</key>
 				<array>
 					<string>application/trollstore-ipa</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Quill Backup</string>
+			<key>UTTypeIdentifier</key>
+			<string>app.quill.sign.backup</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>quillbackup</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.zip-archive</string>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>iOS App</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.apple.itunes.ipa</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>ipa</string>
 				</array>
 			</dict>
 		</dict>

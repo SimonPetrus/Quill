@@ -155,6 +155,9 @@ extension ResetView {
 		
 		if let files = try? fileManager.contentsOfDirectory(atPath: tmpDirectory.path()) {
 			for file in files {
+				// Keep "<bundle id>-Inbox": on a cold launch via "Open in" / share sheet the system has
+				// already placed the incoming IPA there, and the URL is handled only after launch.
+				if file.hasSuffix("-Inbox") { continue }
 				try? fileManager.removeItem(atPath: tmpDirectory.appendingPathComponent(file).path())
 			}
 		}
@@ -193,6 +196,9 @@ extension ResetView {
 		if !resetAll { UserDefaults.standard.set(0, forKey: "Quill.selectedCert") }
 		Storage.shared.clearContext(request: CertificatePair.fetchRequest())
 		try? FileManager.default.removeFileIfNeeded(at: FileManager.default.certificates)
+		try? FileManager.default.removeFileIfNeeded(at: FileManager.default.secureCertificates)
+		KeychainHelper.deleteAll()
+		CertificatePasswordCache.shared.invalidate()
 		NotificationManager.shared.reschedule()
 	}
 	

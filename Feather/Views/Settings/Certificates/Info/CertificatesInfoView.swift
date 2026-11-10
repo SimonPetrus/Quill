@@ -13,6 +13,9 @@ import Zsign
 struct CertificatesInfoView: View {
 	@Environment(\.dismiss) var dismiss
 	@State var data: Certificate?
+	@State private var _isEnteringPassword = false
+	@State private var _newPassword = ""
+	@State private var _passwordMissing = false
 	
 	var cert: CertificatePair
 	
@@ -28,24 +31,52 @@ struct CertificatesInfoView: View {
 						.frame(maxWidth: .infinity, alignment: .center)
 				}
 				
+				Section {
+					Button(.localized("Enter / Update Password"), systemImage: "key") {
+						_newPassword = ""
+						_isEnteringPassword = true
+					}
+				} footer: {
+					if _passwordMissing {
+						Text(Storage.missingPasswordMessage)
+							.foregroundStyle(.orange)
+					}
+				}
+				
 				if let data {
 					_infoSection(data: data)
 					_entitlementsSection(data: data)
 					_miscSection(data: data)
-				}
-				
-				Section {
-					Button(.localized("Open in Files"), systemImage: "folder") {
-						UIApplication.open(Storage.shared.getUuidDirectory(for: cert)!.toSharedDocumentsURL()!)
-					}
 				}
 			}
 			.toolbar {
 				NBToolbarButton(role: .close)
 			}
 		}
+		.alert(.localized("Certificate Password"), isPresented: $_isEnteringPassword) {
+			SecureField(.localized("Password"), text: $_newPassword)
+			Button(.localized("Cancel"), role: .cancel) { _newPassword = "" }
+			Button(.localized("OK")) {
+				let entered = _newPassword
+				_newPassword = ""
+				let message: String?
+				switch cert.updatePassword(entered) {
+				case .ok: message = nil
+				case .wrong: message = .localized("The password is wrong.")
+				case .unverifiable: message = .localized("The password could not be verified: the certificate files are not accessible.")
+				case .keychainFailed: message = .localized("The password could not be saved securely.")
+				}
+				if let message {
+					UIAlertController.showAlertWithOk(title: .localized("Error"), message: message)
+				}
+			}
+		}
 		.onAppear {
 			data = Storage.shared.getProvisionFileDecoded(for: cert)
+			cert.loadPasswordMissing { _passwordMissing = $0 }
+		}
+		.onReceive(NotificationCenter.default.publisher(for: .certificatePasswordStateChanged)) { _ in
+			cert.loadPasswordMissing { _passwordMissing = $0 }
 		}
 	}
 }

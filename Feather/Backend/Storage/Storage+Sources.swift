@@ -105,6 +105,25 @@ extension Storage {
 		addSource(url, name: "Quill", identifier: SelfUpdateManager.ownSourceIdentifier) { _ in }
 	}
 
+	/// One-time removal of the legacy upstream repository source that older installs may still have in the
+	/// list. Only entries whose URL exactly matches the upstream app-repo.json are removed.
+	func removeLegacyUpstreamSourceIfNeeded() {
+		let defaults = UserDefaults.standard
+		let key = "Quill.didRemoveLegacyFeatherSource"
+		guard !defaults.bool(forKey: key) else { return }
+		defaults.set(true, forKey: key)
+		let legacyURLs: Set<String> = [
+			"https://raw.githubusercontent.com/claration/feather/refs/heads/main/app-repo.json",
+			"https://raw.githubusercontent.com/claration/feather/main/app-repo.json",
+			"https://raw.githubusercontent.com/khcrysalis/feather/refs/heads/main/app-repo.json",
+			"https://raw.githubusercontent.com/khcrysalis/feather/main/app-repo.json"
+		]
+		for source in getSources() {
+			guard let url = source.sourceURL?.absoluteString.lowercased(), legacyURLs.contains(url) else { continue }
+			deleteSource(for: source)
+		}
+	}
+
 	func deleteSource(for source: AltSource) {
 		context.delete(source)
 		saveContext()

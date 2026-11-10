@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Nuke
+import NimbleViews
 import IDeviceSwift
 import OSLog
 
@@ -24,6 +25,7 @@ struct QuillApp: App {
 	
 	@StateObject var downloadManager = DownloadManager.shared
 	let storage = Storage.shared
+	@State private var _pendingBackup: PendingBackup?
 	
 	var body: some Scene {
 		WindowGroup {
@@ -34,6 +36,12 @@ struct QuillApp: App {
 					.environment(\.managedObjectContext, storage.context)
 					.onOpenURL(perform: _handleURL)
 					.transition(.move(edge: .top).combined(with: .opacity))
+			}
+			.sheet(item: $_pendingBackup) { pending in
+				NBNavigationView(.localized("Backup & Restore"), displayMode: .inline) {
+					BackupView(initialURL: pending.url)
+						.toolbar { NBToolbarButton(role: .close) }
+				}
 			}
 			.animation(.smooth, value: downloadManager.manualDownloads.description)
 			.onReceive(NotificationCenter.default.publisher(for: .heartbeatInvalidHost)) { _ in
@@ -60,6 +68,7 @@ struct QuillApp: App {
 				}
 				
 				_showStartupNoticeIfPossible()
+				Storage.shared.removeLegacyUpstreamSourceIfNeeded()
 				Storage.shared.addOwnSourceIfNeeded()
 				SelfUpdateManager.shared.autoCheckIfNeeded()
 				
@@ -181,18 +190,21 @@ struct QuillApp: App {
 				)
 			}
 		} else {
-			if url.pathExtension == "ipa" || url.pathExtension == "tipa" {
-				if FileManager.default.isFileFromFileProvider(at: url) {
-					guard url.startAccessingSecurityScopedResource() else { return }
-					FR.handlePackageFile(url) { _ in }
-				} else {
-					FR.handlePackageFile(url) { _ in }
-				}
-				
+			if url.pathExtension.lowercased() == "quillbackup" {
+				_pendingBackup = PendingBackup(url: url)
+				return
+			}
+			if IncomingPackageImporter.canHandle(url) {
+				IncomingPackageImporter.handle(url)
 				return
 			}
 		}
 	}
+}
+
+private struct PendingBackup: Identifiable {
+	let id = UUID()
+	let url: URL
 }
 
 class AppDelegate: NSObject, UIApplicationDelegate {
@@ -206,6 +218,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		_createPipeline()
 		_createDocumentsDirectories()
 		ResetView.clearWorkCache()
+		// Certificates: files to Application Support + passwords to the Keychain (once; retried until complete).
+		SecureCertificateMigration.runIfNeeded()
 		_addDefaultCertificates()
 		return true
 	}
@@ -238,7 +252,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
 		let directories: [URL] = [
 			fileManager.archives,
-			fileManager.certificates,
 			fileManager.signed,
 			fileManager.unsigned
 		]

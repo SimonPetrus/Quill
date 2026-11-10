@@ -47,9 +47,19 @@ final class CertificateFileHandler: NSObject {
 		
 		let destinationURL = try await _directory()
 
-		try _fileManager.createDirectory(at: destinationURL, withIntermediateDirectories: true)
-		try _fileManager.copyItem(at: _key, to: destinationURL.appendingPathComponent(_key.lastPathComponent))
-		try _fileManager.copyItem(at: _provision, to: destinationURL.appendingPathComponent(_provision.lastPathComponent))
+		do {
+			try _fileManager.createSecureCertificateDirectory(destinationURL)
+			let keyTarget = destinationURL.appendingPathComponent(_key.lastPathComponent)
+			let provisionTarget = destinationURL.appendingPathComponent(_provision.lastPathComponent)
+			try _fileManager.copyItem(at: _key, to: keyTarget)
+			try _fileManager.copyItem(at: _provision, to: provisionTarget)
+			_fileManager.protectCertificateItem(at: keyTarget)
+			_fileManager.protectCertificateItem(at: provisionTarget)
+		} catch {
+			// No half-imported directory is left behind.
+			try? _fileManager.removeItem(at: destinationURL)
+			throw error
+		}
 	}
 	
 	func addToDatabase() async throws {
@@ -67,8 +77,8 @@ final class CertificateFileHandler: NSObject {
 	}
 	
 	private func _directory() async throws -> URL {
-		// Documents/Feather/Certificates/\(UUID)
-		_fileManager.certificates(_uuid)
+		// Application Support/Quill/Certificates/\(UUID)
+		_fileManager.secureCertificates(_uuid)
 	}
 }
 

@@ -48,7 +48,7 @@ final class ZsignHandler {
 			appPath: _appUrl.relativePath,
 			provisionPath: Storage.shared.getFile(.provision, from: cert)?.path ?? "",
 			p12Path: Storage.shared.getFile(.certificate, from: cert)?.path ?? "",
-			p12Password: cert.password ?? "",
+			p12Password: cert.resolvedPassword,
 			entitlementsPath: _options.appEntitlementsFile?.path ?? "",
 			removeProvision: _options.removeProvisioning
 		)
