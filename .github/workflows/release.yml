@@ -52,9 +52,9 @@ jobs:
     steps:
       - name: Validate version
         run: |
-          RE='^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'
+          RE='^[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z.]+)?$'
           if ! [[ "$VERSION" =~ $RE ]]; then
-            echo "Invalid version (expected e.g. 1.0.1)"; exit 1
+            echo "Invalid version (expected e.g. 1.1 or 1.0.1)"; exit 1
           fi
           if [ "$SOURCE_ONLY" != "true" ]; then
             EXISTS=0
