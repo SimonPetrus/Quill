@@ -98,12 +98,12 @@ bool UninstallDylibs(NSString *filePath, NSArray<NSString *> *dylibPathsArray) {
 			return false;
 		}
 		
-		machO.RemoveDylibs(dylibsToRemove);
+		bool success = machO.RemoveDylibs(dylibsToRemove);
 		
 		machO.Free();
 		
-		gtimer.Print(">>> Dylibs uninstalled successfully!");
-		return true;
+		gtimer.Print(success ? ">>> Dylibs uninstalled successfully!" : ">>> Failed to uninstall dylibs.");
+		return success;
 	}
 }
 

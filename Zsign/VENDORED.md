@@ -43,6 +43,24 @@ Keep these when syncing with upstream again.
     signed fails the whole signing (other Mach-O types only warn); an app or app extension whose
     executable can't be parsed fails; a framework without a valid executable is still skipped.
   - `ZMachO::IsLoadableCode` (`src/macho.cpp`, `src/macho.h`) supports the above.
+
+### Mach-O hardening (Quill, untrusted IPAs)
+- `src/archo.cpp` `ZArchO::Init`: bounds checks for sizeofcmds, every load command (size >= 8,
+  multiple of 4, inside sizeofcmds), segment section tables, `__info_plist`, encryption info and
+  `LC_CODE_SIGNATURE` (dataoff inside the file, SuperBlob length clamped); 16-byte segment/section
+  names compared with `strncmp`. Free space after the load commands is measured up to the first
+  section's data (was: `__text` only, 0 when not found).
+- `src/macho.cpp` `ZMachO::OpenFile`: fat header, arch table and every slice must lie inside the file.
+- Dylib names (`ListDylibs`, `InjectDylib`, `RemoveDylibs`, `ChangeDylibPath`, `PrintInfo`) are read
+  bounded by `cmdsize` (`ReadLoadCommandString`).
+- `RemoveDylibs` rebuilds the command list without writing past sizeofcmds and returns `bool`
+  (was a heap overflow with inconsistent cmdsize values).
+- `ChangeDylibPath` writes at the real `name.offset`, clears the old name and requires room for the
+  NUL terminator.
+- `InjectDylib` refuses when there is no free space (it used to overwrite section data when the
+  free space was 0); `ReallocCodeSignSpace` checks for room for a whole `LC_CODE_SIGNATURE`
+  before editing the header.
+- `s_uExecSegLimit` (static shared by all slices and files) is now the member `m_uExecSegLimit`.
 - `src/common/mach-o.h`: `#ifndef _H_CSCOMMON` guard around `eSecRequirementType`
   (Xcode 27 SDK clash).
 - `src/openssl.h`: `m_evpPKey`, `m_x509Cert`, `m_caCerts` are `public` (`swift/zsign.mm`

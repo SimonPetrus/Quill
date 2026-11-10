@@ -3,7 +3,29 @@
 #include "archo.h"
 #include "signing.h"
 
-uint64_t ZArchO::s_uExecSegLimit = 0;
+// Reads the NUL-terminated string (e.g. a dylib path) that starts uStrOffset bytes into a
+// load command of uCmdSize bytes. Fails when it does not end inside the command.
+static bool ReadLoadCommandString(const uint8_t* pLoadCommand, uint32_t uCmdSize, uint32_t uStrOffset, string& strOutput)
+{
+	strOutput.clear();
+	if (uStrOffset >= uCmdSize) {
+		return false;
+	}
+	const char* szString = (const char*)(pLoadCommand + uStrOffset);
+	size_t sMaxLength = uCmdSize - uStrOffset;
+	size_t sLength = strnlen(szString, sMaxLength);
+	if (sLength >= sMaxLength) {
+		return false;
+	}
+	strOutput.assign(szString, sLength);
+	return true;
+}
+
+// segment/section names are 16 bytes and not always NUL terminated
+static bool MachONameIs(const char szName[16], const char* szExpected)
+{
+	return 0 == strncmp(szName, szExpected, 16);
+}
 
 ZArchO::ZArchO()
 {
@@ -22,11 +44,12 @@ ZArchO::ZArchO()
 	m_pCodeSignSegment = NULL;
 	m_pLinkEditSegment = NULL;
 	m_uLoadCommandsFreeSpace = 0;
+	m_uExecSegLimit = 0;
 }
 
 bool ZArchO::Init(uint8_t* pBase, uint32_t uLength)
 {
-	if (NULL == pBase || uLength <= 0) {
+	if (NULL == pBase || uLength < sizeof(mach_header)) {
 		return false;
 	}
 
@@ -43,46 +66,100 @@ bool ZArchO::Init(uint8_t* pBase, uint32_t uLength)
 	m_bBigEndian = (MH_CIGAM == m_pHeader->magic || MH_CIGAM_64 == m_pHeader->magic) ? true : false;
 	m_uHeaderSize = m_b64Bit ? sizeof(mach_header_64) : sizeof(mach_header);
 
-	uint8_t* pLoadCommand = m_pBase + m_uHeaderSize;
-	for (uint32_t i = 0; i < BO(m_pHeader->ncmds); i++) {
+	// The file is untrusted: every load command must lie inside sizeofcmds, sizeofcmds inside
+	// the file, and every offset that is dereferenced later inside the file. Later walks over
+	// the load commands (ListDylibs, InjectDylib, RemoveDylibs, ...) rely on this.
+	uint64_t uCmdsEnd = (uint64_t)m_uHeaderSize + BO(m_pHeader->sizeofcmds);
+	if (uCmdsEnd > uLength) {
+		ZLog::Error(">>> Invalid mach-o file: load commands exceed the file size!\n");
+		return false;
+	}
+
+	uint64_t uFirstSectionOffset = 0; // lowest file offset of section data, bounds the free space after the load commands
+	uint64_t uOffset = m_uHeaderSize;
+	uint32_t uNCmds = BO(m_pHeader->ncmds);
+	for (uint32_t i = 0; i < uNCmds; i++) {
+		if (uOffset + sizeof(load_command) > uCmdsEnd) {
+			ZLog::Error(">>> Invalid mach-o file: truncated load commands!\n");
+			return false;
+		}
+		uint8_t* pLoadCommand = m_pBase + uOffset;
 		load_command* plc = (load_command*)pLoadCommand;
+		uint32_t uCmdSize = BO(plc->cmdsize);
+		if (uCmdSize < sizeof(load_command) || 0 != (uCmdSize % 4) || uOffset + uCmdSize > uCmdsEnd) {
+			ZLog::Error(">>> Invalid mach-o file: bad load command size!\n");
+			return false;
+		}
+
 		switch (BO(plc->cmd)) {
 		case LC_SEGMENT:
 		{
+			if (uCmdSize < sizeof(segment_command)) {
+				ZLog::Error(">>> Invalid mach-o file: bad LC_SEGMENT!\n");
+				return false;
+			}
 			segment_command* seglc = (segment_command*)pLoadCommand;
-			if (0 == strcmp("__TEXT", seglc->segname)) {
-				s_uExecSegLimit = seglc->vmsize;
-				for (uint32_t j = 0; j < BO(seglc->nsects); j++) {
-					section* sect = (section*)((pLoadCommand + sizeof(segment_command)) + sizeof(section) * j);
-					if (0 == strcmp("__text", sect->sectname)) {
-						if (BO(sect->offset) > (BO(m_pHeader->sizeofcmds) + m_uHeaderSize)) {
-							m_uLoadCommandsFreeSpace = BO(sect->offset) - BO(m_pHeader->sizeofcmds) - m_uHeaderSize;
-						}
-					} else if (0 == strcmp("__info_plist", sect->sectname)) {
-						m_strInfoPlist.append((const char*)m_pBase + BO(sect->offset), BO(sect->size));
+			uint32_t uNSects = BO(seglc->nsects);
+			if ((uint64_t)sizeof(segment_command) + (uint64_t)uNSects * sizeof(section) > uCmdSize) {
+				ZLog::Error(">>> Invalid mach-o file: LC_SEGMENT sections exceed the command!\n");
+				return false;
+			}
+			bool bText = MachONameIs(seglc->segname, "__TEXT");
+			if (bText) {
+				m_uExecSegLimit = seglc->vmsize;
+			}
+			for (uint32_t j = 0; j < uNSects; j++) {
+				section* sect = (section*)((pLoadCommand + sizeof(segment_command)) + sizeof(section) * j);
+				uint32_t uSectOffset = BO(sect->offset);
+				uint32_t uSectSize = BO(sect->size);
+				if (0 != uSectOffset && (0 == uFirstSectionOffset || uSectOffset < uFirstSectionOffset)) {
+					uFirstSectionOffset = uSectOffset;
+				}
+				if (bText && MachONameIs(sect->sectname, "__info_plist")) {
+					if ((uint64_t)uSectOffset + uSectSize <= uLength) {
+						m_strInfoPlist.append((const char*)m_pBase + uSectOffset, uSectSize);
+					} else {
+						ZLog::Warn(">>> Warning: __info_plist section is outside the file, ignored.\n");
 					}
 				}
-			} else if (0 == strcmp("__LINKEDIT", seglc->segname)) {
+			}
+			if (MachONameIs(seglc->segname, "__LINKEDIT")) {
 				m_pLinkEditSegment = pLoadCommand;
 			}
 		}
 		break;
 		case LC_SEGMENT_64:
 		{
+			if (uCmdSize < sizeof(segment_command_64)) {
+				ZLog::Error(">>> Invalid mach-o file: bad LC_SEGMENT_64!\n");
+				return false;
+			}
 			segment_command_64* seglc = (segment_command_64*)pLoadCommand;
-			if (0 == strcmp("__TEXT", seglc->segname)) {
-				s_uExecSegLimit = seglc->vmsize;
-				for (uint32_t j = 0; j < BO(seglc->nsects); j++) {
-					section_64* sect = (section_64*)((pLoadCommand + sizeof(segment_command_64)) + sizeof(section_64) * j);
-					if (0 == strcmp("__text", sect->sectname)) {
-						if (BO(sect->offset) > (BO(m_pHeader->sizeofcmds) + m_uHeaderSize)) {
-							m_uLoadCommandsFreeSpace = BO(sect->offset) - BO(m_pHeader->sizeofcmds) - m_uHeaderSize;
-						}
-					} else if (0 == strcmp("__info_plist", sect->sectname)) {
-						m_strInfoPlist.append((const char*)m_pBase + BO(sect->offset), BO((uint32_t)sect->size));
+			uint32_t uNSects = BO(seglc->nsects);
+			if ((uint64_t)sizeof(segment_command_64) + (uint64_t)uNSects * sizeof(section_64) > uCmdSize) {
+				ZLog::Error(">>> Invalid mach-o file: LC_SEGMENT_64 sections exceed the command!\n");
+				return false;
+			}
+			bool bText = MachONameIs(seglc->segname, "__TEXT");
+			if (bText) {
+				m_uExecSegLimit = seglc->vmsize;
+			}
+			for (uint32_t j = 0; j < uNSects; j++) {
+				section_64* sect = (section_64*)((pLoadCommand + sizeof(segment_command_64)) + sizeof(section_64) * j);
+				uint32_t uSectOffset = BO(sect->offset);
+				uint32_t uSectSize = BO((uint32_t)sect->size);
+				if (0 != uSectOffset && (0 == uFirstSectionOffset || uSectOffset < uFirstSectionOffset)) {
+					uFirstSectionOffset = uSectOffset;
+				}
+				if (bText && MachONameIs(sect->sectname, "__info_plist")) {
+					if ((uint64_t)uSectOffset + uSectSize <= uLength) {
+						m_strInfoPlist.append((const char*)m_pBase + uSectOffset, uSectSize);
+					} else {
+						ZLog::Warn(">>> Warning: __info_plist section is outside the file, ignored.\n");
 					}
 				}
-			} else if (0 == strcmp("__LINKEDIT", seglc->segname)) {
+			}
+			if (MachONameIs(seglc->segname, "__LINKEDIT")) {
 				m_pLinkEditSegment = pLoadCommand;
 			}
 		}
@@ -90,6 +167,10 @@ bool ZArchO::Init(uint8_t* pBase, uint32_t uLength)
 		case LC_ENCRYPTION_INFO:
 		case LC_ENCRYPTION_INFO_64:
 		{
+			if (uCmdSize < sizeof(encryption_info_command)) {
+				ZLog::Error(">>> Invalid mach-o file: bad LC_ENCRYPTION_INFO!\n");
+				return false;
+			}
 			encryption_info_command* crypt_cmd = (encryption_info_command*)pLoadCommand;
 			if (BO(crypt_cmd->cryptid) >= 1) {
 				m_bEncrypted = true;
@@ -98,16 +179,35 @@ bool ZArchO::Init(uint8_t* pBase, uint32_t uLength)
 		break;
 		case LC_CODE_SIGNATURE:
 		{
+			if (uCmdSize < sizeof(codesignature_command)) {
+				ZLog::Error(">>> Invalid mach-o file: bad LC_CODE_SIGNATURE!\n");
+				return false;
+			}
 			codesignature_command* pcslc = (codesignature_command*)pLoadCommand;
+			uint32_t uDataOff = BO(pcslc->dataoff);
+			if (uDataOff > uLength) {
+				ZLog::Error(">>> Invalid mach-o file: code signature is outside the file!\n");
+				return false;
+			}
 			m_pCodeSignSegment = pLoadCommand;
-			m_uCodeLength = BO(pcslc->dataoff);
+			m_uCodeLength = uDataOff;
 			m_pSignBase = m_pBase + m_uCodeLength;
-			m_uSignLength = ZSign::GetCodeSignatureLength(m_pSignBase);
+			m_uSignLength = 0;
+			if ((uint64_t)uDataOff + 8 <= uLength) { // SuperBlob magic + length
+				m_uSignLength = ZSign::GetCodeSignatureLength(m_pSignBase);
+				if (m_uSignLength > uLength - uDataOff) {
+					m_uSignLength = uLength - uDataOff;
+				}
+			}
 		}
 		break;
 		}
 
-		pLoadCommand += BO(plc->cmdsize);
+		uOffset += uCmdSize;
+	}
+
+	if (uFirstSectionOffset > uCmdsEnd) {
+		m_uLoadCommandsFreeSpace = (uint32_t)(uFirstSectionOffset - uCmdsEnd);
 	}
 
 	return true;
@@ -266,10 +366,11 @@ void ZArchO::PrintInfo()
 	uint8_t* pLoadCommand = m_pBase + m_uHeaderSize;
 	for (uint32_t i = 0; i < BO(m_pHeader->ncmds); i++) {
 		load_command* plc = (load_command*)pLoadCommand;
-		if (LC_VERSION_MIN_IPHONEOS == BO(plc->cmd)) {
+		string strPath;
+		if (LC_VERSION_MIN_IPHONEOS == BO(plc->cmd) && BO(plc->cmdsize) >= sizeof(load_command) + 4) {
 			ZLog::PrintV("\tMIN_IPHONEOS: \t0x%x\n", *((uint32_t*)(pLoadCommand + sizeof(load_command))));
-		} else if (LC_RPATH == BO(plc->cmd)) {
-			ZLog::PrintV("\tLC_RPATH: \t%s\n", (char*)(pLoadCommand + sizeof(load_command) + 4));
+		} else if (LC_RPATH == BO(plc->cmd) && ReadLoadCommandString(pLoadCommand, BO(plc->cmdsize), sizeof(load_command) + 4, strPath)) {
+			ZLog::PrintV("\tLC_RPATH: \t%s\n", strPath.c_str());
 		}
 		pLoadCommand += BO(plc->cmdsize);
 	}
@@ -281,8 +382,10 @@ void ZArchO::PrintInfo()
 		load_command* plc = (load_command*)pLoadCommand;
 		if (LC_LOAD_DYLIB == BO(plc->cmd)) {
 			dylib_command* dlc = (dylib_command*)pLoadCommand;
-			const char* szDylib = (const char*)(pLoadCommand + BO(dlc->dylib.name.offset));
-			ZLog::PrintV("\t\t\t%s\n", szDylib);
+			string strDylib;
+			if (BO(plc->cmdsize) >= sizeof(dylib_command) && ReadLoadCommandString(pLoadCommand, BO(plc->cmdsize), BO(dlc->dylib.name.offset), strDylib)) {
+				ZLog::PrintV("\t\t\t%s\n", strDylib.c_str());
+			}
 		} else if (LC_LOAD_WEAK_DYLIB == BO(plc->cmd)) {
 			bHasWeakDylib = true;
 		}
@@ -296,8 +399,10 @@ void ZArchO::PrintInfo()
 			load_command* plc = (load_command*)pLoadCommand;
 			if (LC_LOAD_WEAK_DYLIB == BO(plc->cmd)) {
 				dylib_command* dlc = (dylib_command*)pLoadCommand;
-				const char* szDylib = (const char*)(pLoadCommand + BO(dlc->dylib.name.offset));
-				ZLog::PrintV("\t\t\t%s (weak)\n", szDylib);
+				string strDylib;
+				if (BO(plc->cmdsize) >= sizeof(dylib_command) && ReadLoadCommandString(pLoadCommand, BO(plc->cmdsize), BO(dlc->dylib.name.offset), strDylib)) {
+					ZLog::PrintV("\t\t\t%s (weak)\n", strDylib.c_str());
+				}
 			}
 			pLoadCommand += BO(plc->cmdsize);
 		}
@@ -409,7 +514,7 @@ bool ZArchO::BuildCodeSignature(ZSignAsset* pSignAsset,
 			m_uCodeLength,
 			pCodeSlots1Data,
 			uCodeSlots1DataLength,
-			s_uExecSegLimit,
+			m_uExecSegLimit,
 			uExecSegFlags,
 			strBundleId,
 			pSignAsset->m_strTeamId,
@@ -431,7 +536,7 @@ bool ZArchO::BuildCodeSignature(ZSignAsset* pSignAsset,
 		m_uCodeLength,
 		pCodeSlots256Data,
 		uCodeSlots256DataLength,
-		s_uExecSegLimit,
+		m_uExecSegLimit,
 		uExecSegFlags,
 		strBundleId,
 		pSignAsset->m_strTeamId,
@@ -614,6 +719,12 @@ uint32_t ZArchO::ReallocCodeSignSpace(const string& strNewFile)
 		return 0;
 	}
 
+	// check before anything is modified: the header is edited in place in the mapped file
+	if (NULL == m_pCodeSignSegment && m_uLoadCommandsFreeSpace < sizeof(codesignature_command)) {
+		ZLog::Error(">>> Can't find free space of LoadCommands for CodeSignature!\n");
+		return 0;
+	}
+
 	load_command* pseglc = (load_command*)m_pLinkEditSegment;
 	switch (BO(pseglc->cmd)) {
 	case LC_SEGMENT:
@@ -638,7 +749,7 @@ uint32_t ZArchO::ReallocCodeSignSpace(const string& strNewFile)
 
 	codesignature_command* pcslc = (codesignature_command*)m_pCodeSignSegment;
 	if (NULL == pcslc) {
-		if (m_uLoadCommandsFreeSpace < 4) {
+		if (m_uLoadCommandsFreeSpace < sizeof(codesignature_command)) {
 			ZLog::Error(">>> Can't find free space of LoadCommands for CodeSignature!\n");
 			return 0;
 		}
@@ -668,18 +779,20 @@ uint32_t ZArchO::ReallocCodeSignSpace(const string& strNewFile)
 
 bool ZArchO::InjectDylib(bool bWeakInject, const char* szDylibFile)
 {
-	if (NULL == m_pHeader) {
+	if (NULL == m_pHeader || NULL == szDylibFile) {
 		return false;
 	}
 
+	// load commands were validated by Init
 	uint8_t* pLoadCommand = m_pBase + m_uHeaderSize;
 	for (uint32_t i = 0; i < BO(m_pHeader->ncmds); i++) {
 		load_command* plc = (load_command*)pLoadCommand;
 		uint32_t uLoadType = BO(plc->cmd);
-		if (LC_LOAD_DYLIB == uLoadType || LC_LOAD_WEAK_DYLIB == uLoadType) {
+		uint32_t uCmdSize = BO(plc->cmdsize);
+		if ((LC_LOAD_DYLIB == uLoadType || LC_LOAD_WEAK_DYLIB == uLoadType) && uCmdSize >= sizeof(dylib_command)) {
 			dylib_command* dlc = (dylib_command*)pLoadCommand;
-			const char* szDylib = (const char*)(pLoadCommand + BO(dlc->dylib.name.offset));
-			if (0 == strcmp(szDylib, szDylibFile)) {
+			string strDylib;
+			if (ReadLoadCommandString(pLoadCommand, uCmdSize, BO(dlc->dylib.name.offset), strDylib) && strDylib == szDylibFile) {
 				if ((bWeakInject && (LC_LOAD_WEAK_DYLIB != uLoadType)) || (!bWeakInject && (LC_LOAD_DYLIB != uLoadType))) {
 					dlc->cmd = BO((uint32_t)(bWeakInject ? LC_LOAD_WEAK_DYLIB : LC_LOAD_DYLIB));
 					const char* oldLoadType = bWeakInject ? "LC_LOAD_DYLIB" : "LC_LOAD_WEAK_DYLIB";
@@ -689,13 +802,15 @@ bool ZArchO::InjectDylib(bool bWeakInject, const char* szDylibFile)
 				return true;
 			}
 		}
-		pLoadCommand += BO(plc->cmdsize);
+		pLoadCommand += uCmdSize;
 	}
 
 	uint32_t uDylibFileLength = (uint32_t)strlen(szDylibFile);
-	uint32_t uDylibFilePadding = (8 - uDylibFileLength % 8);
+	uint32_t uDylibFilePadding = (8 - uDylibFileLength % 8); // 1-8 bytes, always NUL terminated
 	uint32_t uDylibCommandSize = sizeof(dylib_command) + uDylibFileLength + uDylibFilePadding;
-	if (m_uLoadCommandsFreeSpace > 0 && m_uLoadCommandsFreeSpace < uDylibCommandSize) { // some bin doesn't have '__text'
+	// the free space ends where the first section's data starts; without it (no free space, or no
+	// section found) the new command would overwrite code, so refuse instead of guessing
+	if (m_uLoadCommandsFreeSpace < uDylibCommandSize) {
 		ZLog::Error(">>> Can't find free space of LoadCommands for LC_LOAD_DYLIB or LC_LOAD_WEAK_DYLIB!\n");
 		return false;
 	}
@@ -717,115 +832,147 @@ bool ZArchO::InjectDylib(bool bWeakInject, const char* szDylibFile)
 
 	m_pHeader->ncmds = BO(BO(m_pHeader->ncmds) + 1);
 	m_pHeader->sizeofcmds = BO(BO(m_pHeader->sizeofcmds) + uDylibCommandSize);
+	m_uLoadCommandsFreeSpace -= uDylibCommandSize;
 
 	return true;
 }
 
-void ZArchO::RemoveDylibs(const set<string>& setDylibs)
+bool ZArchO::RemoveDylibs(const set<string>& setDylibs)
 {
-	uint8_t* pLoadCommand = m_pBase + m_uHeaderSize;
-	uint32_t old_load_command_size = m_pHeader->sizeofcmds;
-	uint8_t* new_load_command_data = (uint8_t*)malloc(old_load_command_size);
-	if (NULL == new_load_command_data) {
-		return;
+	if (NULL == m_pHeader) {
+		return false;
 	}
 
-	memset(new_load_command_data, 0, old_load_command_size);
-	uint32_t new_load_command_size = 0;
-	uint32_t clear_num = 0;
-	uint32_t clear_data_size = 0;
-	for (uint32_t i = 0; i < BO(m_pHeader->ncmds); i++) {
-		load_command* plc = (load_command*)pLoadCommand;
-		uint32_t load_command_size = BO(plc->cmdsize);
-		if (LC_LOAD_DYLIB == BO(plc->cmd) || LC_LOAD_WEAK_DYLIB == BO(plc->cmd)) {
-			dylib_command* dlc = (dylib_command*)pLoadCommand;
-			const char* szDylib = (const char*)(pLoadCommand + BO(dlc->dylib.name.offset));
-			string dylibName = szDylib;
-			if (setDylibs.count(dylibName) > 0) {
-				ZLog::PrintV("\t\t\t%s\tclear\n", szDylib);
-				clear_num++;
-				clear_data_size += load_command_size;
-				pLoadCommand += BO(plc->cmdsize);
-				continue;
-			}
-			ZLog::PrintV("\t\t\t%s\n", szDylib);
+	uint8_t* pCommands = m_pBase + m_uHeaderSize;
+	uint32_t uSizeOfCmds = BO(m_pHeader->sizeofcmds);
+	uint32_t uNCmds = BO(m_pHeader->ncmds);
+	uint8_t* pNewCommands = (uint8_t*)calloc(1, (uSizeOfCmds > 0) ? uSizeOfCmds : 1);
+	if (NULL == pNewCommands) {
+		return false;
+	}
+
+	// build the new command list in a separate buffer, never writing more than sizeofcmds,
+	// and only touch the mapped file once the whole list was read successfully
+	uint32_t uOffset = 0;
+	uint32_t uNewSize = 0;
+	uint32_t uClearNum = 0;
+	for (uint32_t i = 0; i < uNCmds; i++) {
+		if ((uint64_t)uOffset + sizeof(load_command) > uSizeOfCmds) {
+			free(pNewCommands);
+			ZLog::Error(">>> Invalid load commands!\n");
+			return false;
 		}
-		new_load_command_size += load_command_size;
-		memcpy(new_load_command_data, pLoadCommand, load_command_size);
-		new_load_command_data += load_command_size;
-		pLoadCommand += BO(plc->cmdsize);
+		uint8_t* pLoadCommand = pCommands + uOffset;
+		load_command* plc = (load_command*)pLoadCommand;
+		uint32_t uCmdSize = BO(plc->cmdsize);
+		if (uCmdSize < sizeof(load_command) || (uint64_t)uOffset + uCmdSize > uSizeOfCmds) {
+			free(pNewCommands);
+			ZLog::Error(">>> Invalid load commands!\n");
+			return false;
+		}
+		if ((LC_LOAD_DYLIB == BO(plc->cmd) || LC_LOAD_WEAK_DYLIB == BO(plc->cmd)) && uCmdSize >= sizeof(dylib_command)) {
+			dylib_command* dlc = (dylib_command*)pLoadCommand;
+			string strDylib;
+			if (ReadLoadCommandString(pLoadCommand, uCmdSize, BO(dlc->dylib.name.offset), strDylib)) {
+				if (setDylibs.count(strDylib) > 0) {
+					ZLog::PrintV("\t\t\t%s\tclear\n", strDylib.c_str());
+					uClearNum++;
+					uOffset += uCmdSize;
+					continue;
+				}
+				ZLog::PrintV("\t\t\t%s\n", strDylib.c_str());
+			}
+		}
+		memcpy(pNewCommands + uNewSize, pLoadCommand, uCmdSize);
+		uNewSize += uCmdSize;
+		uOffset += uCmdSize;
 	}
-	pLoadCommand -= m_pHeader->sizeofcmds;
 
-	m_pHeader->ncmds = BO(BO(m_pHeader->ncmds) - clear_num);
-	m_pHeader->sizeofcmds = BO(BO(m_pHeader->sizeofcmds) - clear_data_size);
-	new_load_command_data -= new_load_command_size;
-	memset(pLoadCommand, 0, old_load_command_size);
-	memcpy(pLoadCommand, new_load_command_data, new_load_command_size);
-	free(new_load_command_data);
+	// keep anything after the last command that still belongs to sizeofcmds
+	uint32_t uTail = uSizeOfCmds - uOffset;
+	if (uTail > 0) {
+		memcpy(pNewCommands + uNewSize, pCommands + uOffset, uTail);
+	}
+	uint32_t uRemoved = uOffset - uNewSize; // bytes of the removed commands
+	uNewSize += uTail;
+
+	memset(pCommands, 0, uSizeOfCmds);
+	memcpy(pCommands, pNewCommands, uNewSize);
+	free(pNewCommands);
+
+	m_pHeader->ncmds = BO(uNCmds - uClearNum);
+	m_pHeader->sizeofcmds = BO(uSizeOfCmds - uRemoved);
+	m_uLoadCommandsFreeSpace += uRemoved;
+	return true;
 }
 
 std::vector<std::string> ZArchO::ListDylibs() {
 	std::vector<std::string> dylibList;
+	if (NULL == m_pHeader) {
+		return dylibList;
+	}
+
+	// load commands were validated by Init
 	uint8_t *pLoadCommand = m_pBase + m_uHeaderSize;
-	
 	for (uint32_t i = 0; i < BO(m_pHeader->ncmds); i++) {
 		load_command *plc = (load_command *)pLoadCommand;
-		if (LC_LOAD_DYLIB == BO(plc->cmd) || LC_LOAD_WEAK_DYLIB == BO(plc->cmd)) {
+		uint32_t uCmdSize = BO(plc->cmdsize);
+		if ((LC_LOAD_DYLIB == BO(plc->cmd) || LC_LOAD_WEAK_DYLIB == BO(plc->cmd)) && uCmdSize >= sizeof(dylib_command)) {
 			dylib_command *dlc = (dylib_command *)pLoadCommand;
-			const char *szDyLib = (const char *)(pLoadCommand + BO(dlc->dylib.name.offset));
-			dylibList.push_back(std::string(szDyLib));
+			string strDylib;
+			if (ReadLoadCommandString(pLoadCommand, uCmdSize, BO(dlc->dylib.name.offset), strDylib)) {
+				dylibList.push_back(strDylib);
+			}
 		}
-		pLoadCommand += BO(plc->cmdsize);
+		pLoadCommand += uCmdSize;
 	}
-	
+
 	return dylibList;
 }
 
 bool ZArchO::ChangeDylibPath(const char *oldPath, const char *newPath) {
-	if (NULL == m_pHeader) {
+	if (NULL == m_pHeader || NULL == oldPath || NULL == newPath) {
 		return false;
 	}
-	
+
 	uint8_t *pLoadCommand = m_pBase + m_uHeaderSize;
 	bool pathChanged = false;
-	uint32_t oldPathLength = (uint32_t)strlen(oldPath);
 	uint32_t newPathLength = (uint32_t)strlen(newPath);
-	uint32_t oldPathPadding = (8 - oldPathLength % 8) % 8;
-	uint32_t newPathPadding = (8 - newPathLength % 8) % 8;
-	uint32_t newLoadCommandSize = 0;
-	
+
+	// load commands were validated by Init
 	for (uint32_t i = 0; i < BO(m_pHeader->ncmds); i++) {
 		load_command *plc = (load_command *)pLoadCommand;
 		uint32_t uLoadType = BO(plc->cmd);
-		
-		if (LC_LOAD_DYLIB == uLoadType || LC_LOAD_WEAK_DYLIB == uLoadType) {
+		uint32_t uCmdSize = BO(plc->cmdsize);
+
+		if ((LC_LOAD_DYLIB == uLoadType || LC_LOAD_WEAK_DYLIB == uLoadType) && uCmdSize >= sizeof(dylib_command)) {
 			dylib_command *dlc = (dylib_command *)pLoadCommand;
-			const char *szDyLib = (const char *)(pLoadCommand + BO(dlc->dylib.name.offset));
-			
-			if (strcmp(szDyLib, oldPath) == 0) {
-				uint32_t dylibPathOffset = sizeof(dylib_command);
-				uint32_t dylibPathSize = newPathLength + newPathPadding;
-				if (dylibPathOffset + dylibPathSize > BO(plc->cmdsize)) {
+			uint32_t uNameOffset = BO(dlc->dylib.name.offset);
+			string strDylib;
+
+			if (ReadLoadCommandString(pLoadCommand, uCmdSize, uNameOffset, strDylib) && strDylib == oldPath) {
+				// the new path and its NUL must fit in the existing command (it is not resized)
+				if ((uint64_t)newPathLength + 1 > uCmdSize - uNameOffset) {
 					ZLog::Error(">>> Insufficient space to update dylib path!\n");
 					return false;
 				}
-				
-				memcpy(pLoadCommand + dylibPathOffset, newPath, newPathLength);
-				memset(pLoadCommand + dylibPathOffset + newPathLength, 0, newPathPadding);
-				
+
+				// clear the whole old name so no tail of a longer old path remains
+				memset(pLoadCommand + uNameOffset, 0, uCmdSize - uNameOffset);
+				memcpy(pLoadCommand + uNameOffset, newPath, newPathLength);
+
 				ZLog::PrintV(">>> Dylib Path Changed: %s -> %s\n", oldPath, newPath);
-				
+
 				pathChanged = true;
 			}
 		}
-		
-		pLoadCommand += BO(plc->cmdsize);
+
+		pLoadCommand += uCmdSize;
 	}
-	
+
 	if (!pathChanged) {
 		ZLog::PrintV(">>> Old Dylib Path Not Found: %s\n", oldPath);
 	}
-	
+
 	return pathChanged;
 }

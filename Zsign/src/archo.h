@@ -24,7 +24,7 @@ public:
 	bool InjectDylib(bool bWeakInject, const char* szDylibFile);
 	bool ChangeDylibPath(const char *oldPath, const char *newPath);
 	std::vector<std::string> ListDylibs();
-	void RemoveDylibs(const set<string>& setDylibs);
+	bool RemoveDylibs(const set<string>& setDylibs);
 	uint32_t ReallocCodeSignSpace(const string& strNewFile);
 
 private:
@@ -59,5 +59,5 @@ public:
 	uint32_t		m_uHeaderSize;
 
 private:
-	static uint64_t s_uExecSegLimit;
+	uint64_t		m_uExecSegLimit; // __TEXT vmsize of this slice (was a static shared by all slices/files)
 };

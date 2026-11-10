@@ -64,14 +64,32 @@ bool ZMachO::OpenFile(const char* szPath)
 	m_sSize = 0;
 	m_pBase = (uint8_t*)ZFile::MapFile(szPath, 0, 0, &m_sSize, false);
 	if (NULL != m_pBase) {
+		if (m_sSize < sizeof(uint32_t)) {
+			ZLog::Error(">>> Invalid mach-o file (too small)!\n");
+			return false;
+		}
 		uint32_t magic = *((uint32_t*)m_pBase);
 		if (FAT_CIGAM == magic || FAT_MAGIC == magic) {
+			// untrusted input (Java .class files share this magic): keep every slice inside the file
+			if (m_sSize < sizeof(fat_header)) {
+				ZLog::Error(">>> Invalid fat mach-o file (too small)!\n");
+				return false;
+			}
 			fat_header* pFatHeader = (fat_header*)m_pBase;
-			int nFatArch = (FAT_MAGIC == magic) ? pFatHeader->nfat_arch : LE(pFatHeader->nfat_arch);
-			for (int i = 0; i < nFatArch; i++) {
+			uint32_t uFatArch = (FAT_MAGIC == magic) ? pFatHeader->nfat_arch : LE(pFatHeader->nfat_arch);
+			if ((uint64_t)sizeof(fat_header) + (uint64_t)uFatArch * sizeof(fat_arch) > m_sSize) {
+				ZLog::Error(">>> Invalid fat mach-o file (arch table exceeds the file)!\n");
+				return false;
+			}
+			for (uint32_t i = 0; i < uFatArch; i++) {
 				fat_arch* pFatArch = (fat_arch*)(m_pBase + sizeof(fat_header) + sizeof(fat_arch) * i);
-				uint8_t* pArchBase = m_pBase + ((FAT_MAGIC == magic) ? pFatArch->offset : LE(pFatArch->offset));
+				uint32_t uArchOffset = (FAT_MAGIC == magic) ? pFatArch->offset : LE(pFatArch->offset);
 				uint32_t uArchLength = (FAT_MAGIC == magic) ? pFatArch->size : LE(pFatArch->size);
+				if (0 == uArchLength || (uint64_t)uArchOffset + uArchLength > m_sSize) {
+					ZLog::ErrorV(">>> Invalid arch file in fat mach-o file (outside the file)!\n");
+					return false;
+				}
+				uint8_t* pArchBase = m_pBase + uArchOffset;
 				if (!NewArchO(pArchBase, uArchLength)) {
 					ZLog::ErrorV(">>> Invalid arch file in fat mach-o file!\n");
 					return false;
@@ -312,9 +330,13 @@ std::vector<std::string> ZMachO::ListDylibs() {
 	return dylibList;
 }
 
-void ZMachO::RemoveDylibs(const set<string>& setDylibs)
+bool ZMachO::RemoveDylibs(const set<string>& setDylibs)
 {
+	bool bSuccess = !m_arrArchOes.empty();
 	for (size_t i = 0; i < m_arrArchOes.size(); i++) {
-		m_arrArchOes[i]->RemoveDylibs(setDylibs);
+		if (!m_arrArchOes[i]->RemoveDylibs(setDylibs)) {
+			bSuccess = false;
+		}
 	}
+	return bSuccess;
 }

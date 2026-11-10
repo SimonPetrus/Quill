@@ -328,10 +328,12 @@ bool ZBundle::SignNode(jvalue& jvNode)
 						arrFailedFiles.push_back(strFile);
 					} else {
 						ZLog::WarnV(">>> Warning: Can't sign non-loadable Mach-O file: \t%s\n", strFile.c_str());
+						ZLog::ClearFirstError(); // tolerated: errors logged while trying are not the reason of a later failure
 					}
 				}
 			} else {
 				ZLog::WarnV(">>> Warning: Skipping non-Mach-O file: \t%s\n", strFile.c_str());
+				ZLog::ClearFirstError();
 			}
 		}
 		if (!arrFailedFiles.empty()) {
@@ -388,6 +390,7 @@ bool ZBundle::SignNode(jvalue& jvNode)
 			return false;
 		}
 		ZLog::WarnV(">>> Warning: Skipping bundle without a valid executable: %s\n", strExePath.c_str());
+		ZLog::ClearFirstError();
 		return true;
 	}
 
@@ -399,7 +402,10 @@ bool ZBundle::SignNode(jvalue& jvNode)
 			}
 		}
 		if (!m_setRemoveDylibs.empty()) {
-			macho.RemoveDylibs(m_setRemoveDylibs);
+			if (!macho.RemoveDylibs(m_setRemoveDylibs)) {
+				ZLog::ErrorV(">>> Can't remove dylibs from %s!\n", strExePath.c_str());
+				return false;
+			}
 			for (const string& name : m_setRemoveDylibs) {
 				string baseName = name;
 				if (baseName.find("@executable_path/") == 0) {
