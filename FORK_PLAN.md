@@ -273,6 +273,7 @@ Upstream issue linki: `https://github.com/claration/Feather/issues/<no>`.
 - **Yaklaşım:** Zsign çağrısında yalnızca ana executable ve appex executable'larına entitlement ver; dylib/framework'leri entitlement'sız imzala.
 - **Dosyalar:** `Utilities/Handlers/ZsignHandler.swift`, `Zsign/swift/*`, gerekirse Zsign C++ (`bundle.cpp`).
 - **Zorluk:** Orta. **Cihaz:** gerekli (Frida Gadget ile issue'daki senaryo).
+- **Durum: uyguland� (build/vendor-zsign).** Zsign vendor edildi (`Zsign/VENDORED.md`); `Zsign/src/archo.cpp` art�k dylib/framework'lere entitlement slotu yazm�yor (yaln�z MH_EXECUTE). Cihazda do�rulama bekliyor.
 
 #### 23. Büyük IPA içe aktarma / kurulum sonrası hata — #661, #659
 - **Bulgu:** 2.7 GB IPA'da içe aktarma başarısız, ilerleme çubuğu yok (#661); #659 yalnızca ekran görüntüsü (iOS 26.5).

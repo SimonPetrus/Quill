@@ -337,9 +337,8 @@ bool ZArchO::BuildCodeSignature(ZSignAsset* pSignAsset,
 	string strEntitlementsSlot;
 	string strDerEntitlementsSlot;
 
-	string strEmptyEntitlements = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict/>\n</plist>\n";
 	ZSign::SlotBuildRequirements(strBundleId, pSignAsset->m_strSubjectCN, strRequirementsSlot);
-	ZSign::SlotBuildEntitlements(IsExecute() ? pSignAsset->m_strEntitleData : strEmptyEntitlements, strEntitlementsSlot);
+	ZSign::SlotBuildEntitlements(IsExecute() ? pSignAsset->m_strEntitleData : "", strEntitlementsSlot);
 	ZSign::SlotBuildDerEntitlements(IsExecute() ? pSignAsset->m_strEntitleData : "", strDerEntitlementsSlot);
 
 	string strRequirementsSlotSHA1;
@@ -384,7 +383,7 @@ bool ZArchO::BuildCodeSignature(ZSignAsset* pSignAsset,
 		}
 	}
 
-	if (NULL != strstr(strEntitlementsSlot.data() + 8, "<key>get-task-allow</key>")) {
+	if (strEntitlementsSlot.size() > 8 && NULL != strstr(strEntitlementsSlot.data() + 8, "<key>get-task-allow</key>")) {
 		// TODO: Check if get-task-allow is actually set to true
 		uExecSegFlags |= CS_EXECSEG_MAIN_BINARY | CS_EXECSEG_ALLOW_UNSIGNED;
 	}
@@ -529,7 +528,9 @@ bool ZArchO::BuildCodeSignature(ZSignAsset* pSignAsset,
 		ZFile::WriteFile("./.zsign_debug/Requirements.slot.new", strRequirementsSlot);
 		ZFile::WriteFile("./.zsign_debug/Entitlements.slot.new", strEntitlementsSlot);
 		ZFile::WriteFile("./.zsign_debug/Entitlements.der.slot.new", strDerEntitlementsSlot);
-		ZFile::WriteFile("./.zsign_debug/Entitlements.plist.new", strEntitlementsSlot.data() + 8, strEntitlementsSlot.size() - 8);
+		if (strEntitlementsSlot.size() > 8) {
+			ZFile::WriteFile("./.zsign_debug/Entitlements.plist.new", strEntitlementsSlot.data() + 8, strEntitlementsSlot.size() - 8);
+		}
 		ZFile::WriteFile("./.zsign_debug/CodeDirectory_SHA1.slot.new", strCodeDirectorySlot);
 		ZFile::WriteFile("./.zsign_debug/CodeDirectory_SHA256.slot.new", strAltnateCodeDirectorySlot);
 		ZFile::WriteFile("./.zsign_debug/CMSSignature.slot.new", strCMSSignatureSlot);

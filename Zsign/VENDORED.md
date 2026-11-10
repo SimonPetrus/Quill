@@ -12,4 +12,13 @@ Previously a git submodule; now a normal directory so Quill can carry local patc
 - `build/` (prebuilt Windows VS2022 OpenSSL .lib files, ~69 MB). Not referenced by `Package.swift`.
 
 ## Local changes
-(none in the vendoring commit itself; later changes are listed below)
+The vendoring commit is an unmodified copy. Patches applied afterwards:
+
+### Strip empty entitlements slot from non-main binaries (upstream #616)
+- `src/archo.cpp` (`ZArchO::BuildCodeSignature`): the entitlements slot now gets the real
+  entitlements only for MH_EXECUTE; dylibs/frameworks get no entitlements slot (previously an
+  empty `<dict/>` plist), matching Apple `codesign`. Removed the unused `strEmptyEntitlements`.
+  The special-slot hash for an absent entitlements slot is the zero hash (already handled in
+  `SlotBuildCodeDirectory`, `src/signing.cpp`).
+- `src/archo.cpp`: added `size() > 8` guards before `strEntitlementsSlot.data() + 8` (get-task-allow
+  search and the debug dump) so an empty slot is safe.
