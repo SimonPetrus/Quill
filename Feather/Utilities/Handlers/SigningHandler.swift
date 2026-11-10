@@ -351,9 +351,61 @@ extension SigningHandler {
 				infoDict["NSExtension"] = extensionDict
 			}
 			
+			// ExtensionKit: EXAppExtensionAttributes → EXExtensionPointIdentifier (prefix replacement only)
+			if
+				let attributes = (infoDict["EXAppExtensionAttributes"] as? NSDictionary)?.mutableCopy() as? NSMutableDictionary,
+				let oldValue = attributes["EXExtensionPointIdentifier"] as? String,
+				let newValue = Self._replacingPrefix(of: oldValue, old: oldIdentifier, new: newIdentifier),
+				oldValue != newValue
+			{
+				attributes["EXExtensionPointIdentifier"] = newValue
+				infoDict["EXAppExtensionAttributes"] = attributes
+				didChange = true
+			}
+			
 			if didChange {
 				infoDict.write(to: infoPlistURL, atomically: true)
 			}
+		}
+		
+		// ExtensionKit extension point definitions (Extensions/*.appexpt) are plain plists
+		let extensionPointFiles = _enumerateFiles(at: app) { $0.hasSuffix(".appexpt") }
+		
+		for fileURL in extensionPointFiles {
+			guard
+				let plist = NSDictionary(contentsOf: fileURL),
+				let rewritten = Self._replacingPrefixes(in: plist, old: oldIdentifier, new: newIdentifier) as? NSDictionary,
+				!rewritten.isEqual(plist)
+			else {
+				continue
+			}
+			
+			rewritten.write(to: fileURL, atomically: true)
+		}
+	}
+	
+	/// Replaces `old` with `new` only when `value` starts with `old`.
+	private static func _replacingPrefix(of value: String, old: String, new: String) -> String? {
+		guard value.hasPrefix(old) else { return nil }
+		return new + String(value.dropFirst(old.count))
+	}
+	
+	/// Recursively rewrites dictionary keys and string values that start with `old`.
+	private static func _replacingPrefixes(in object: Any, old: String, new: String) -> Any {
+		switch object {
+		case let string as String:
+			return _replacingPrefix(of: string, old: old, new: new) ?? string
+		case let array as [Any]:
+			return array.map { _replacingPrefixes(in: $0, old: old, new: new) }
+		case let dict as [String: Any]:
+			var result: [String: Any] = [:]
+			for (key, value) in dict {
+				let newKey = _replacingPrefix(of: key, old: old, new: new) ?? key
+				result[newKey] = _replacingPrefixes(in: value, old: old, new: new)
+			}
+			return result as NSDictionary
+		default:
+			return object
 		}
 	}
 	
