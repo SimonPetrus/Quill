@@ -111,6 +111,10 @@ final class SigningHandler: NSObject {
 			try await _mergeEntitlements(for: movedAppPath, with: _options)
 		}
 		
+		if _options.isolateKeychain {
+			try await _isolateKeychain(for: movedAppPath, with: _options)
+		}
+		
 		let handler = ZsignHandler(appUrl: movedAppPath, options: _options, cert: appCertificate)
 		try await handler.disinject()
 		
@@ -602,6 +606,62 @@ extension SigningHandler {
 		try plistData.write(to: tempEntitlementsURL, options: .atomic)
 		
 		_options.appEntitlementsFile = tempEntitlementsURL
+	}
+	
+	/// Gives the app its own keychain access group (`TEAMID.<bundle id>`) so it cannot see
+	/// keychain items of other apps signed with the same wildcard profile.
+	/// Only possible with wildcard profiles; otherwise this is skipped.
+	private func _isolateKeychain(for app: URL, with options: Options) async throws {
+		guard
+			let cert = self.appCertificate,
+			let profile = CertificateReader(Storage.shared.getFile(.provision, from: cert)).decoded,
+			let teamIdentifier = profile.TeamIdentifier.first
+		else {
+			return
+		}
+		
+		let profileAppID = profile.Entitlements?["application-identifier"]?.value as? String ?? ""
+		guard profileAppID.contains("*") else {
+			Logger.misc.info("Isolate keychain skipped: the provisioning profile is not a wildcard profile")
+			return
+		}
+		
+		guard let bundleIdentifier = options.appIdentifier ?? _app.identifier else {
+			return
+		}
+		
+		// start from the entitlements zsign would use anyway: a custom/merged file, or the profile's
+		var dictionary: [String: Any]
+		if
+			let file = options.appEntitlementsFile,
+			let data = try? Data(contentsOf: file),
+			let existing = (try? PropertyListSerialization.propertyList(from: data, options: [], format: nil)) as? [String: Any]
+		{
+			dictionary = existing
+		} else {
+			dictionary = (profile.Entitlements ?? [:]).mapValues { $0.value }
+			for (key, value) in dictionary where key != "com.apple.developer.associated-domains" && key != "application.identifier" {
+				if let string = value as? String {
+					dictionary[key] = string.replacingOccurrences(of: "*", with: bundleIdentifier)
+				}
+			}
+		}
+		
+		dictionary["keychain-access-groups"] = ["\(teamIdentifier).\(bundleIdentifier)"]
+		
+		let plistData = try PropertyListSerialization.data(
+			fromPropertyList: dictionary,
+			format: .xml,
+			options: 0
+		)
+		
+		let url = _uniqueWorkDir
+			.appendingPathComponent(UUID().uuidString)
+			.appendingPathExtension("plist")
+		
+		try plistData.write(to: url, options: .atomic)
+		
+		_options.appEntitlementsFile = url
 	}
 	
 	private func _enumerateFiles(at base: URL, where predicate: (String) -> Bool) -> [URL] {

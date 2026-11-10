@@ -15,6 +15,7 @@ class TweakHandler {
 	private var _urlsToInject: [URL] = []
 	private var _directoriesToCheck: [URL] = []
 	private var _injectedDylibNames: [String] = []
+	private var _injectedDylibURLs: [URL] = []
 
 	private let _app: URL
 	private var _options: Options
@@ -100,6 +101,11 @@ class TweakHandler {
 		if _options.injectIntoExtensions && !_injectedDylibNames.isEmpty {
 			_injectIntoAllExtensions(dylibNames: _injectedDylibNames)
 		}
+
+		// inject into the embedded Watch app(s) and their extensions if enabled
+		if _options.injectIntoWatchApp && !_injectedDylibURLs.isEmpty {
+			_injectIntoWatchApps(dylibs: _injectedDylibURLs)
+		}
 	}
 	
 	// finally, handle extracted contents
@@ -165,6 +171,7 @@ class TweakHandler {
 		)
 
 		_injectedDylibNames.append(destinationURL.lastPathComponent)
+		_injectedDylibURLs.append(destinationURL)
 	}
 	
 	// Inject imported framework dir
@@ -323,6 +330,78 @@ class TweakHandler {
 			Logger.misc.info("Injected \(dylibName) into extension: \(extensionURL.lastPathComponent)")
 		} else {
 			Logger.misc.warning("Failed to inject into extension: \(extensionURL.lastPathComponent)")
+		}
+	}
+
+	// Discovers every Watch app bundle, plus the appex bundles nested in each of them
+	private func _discoverWatchTargets() -> [URL] {
+		let watchPath = _app.appendingPathComponent("Watch")
+		guard let watchApps = try? _fileManager.contentsOfDirectory(
+			at: watchPath,
+			includingPropertiesForKeys: nil,
+			options: [.skipsHiddenFiles]
+		) else { return [] }
+
+		var targets: [URL] = []
+		for watchApp in watchApps where watchApp.pathExtension.lowercased() == "app" && watchApp.hasDirectoryPath {
+			targets.append(watchApp)
+			for sub in ["PlugIns", "Extensions"] {
+				let dir = watchApp.appendingPathComponent(sub)
+				guard let contents = try? _fileManager.contentsOfDirectory(
+					at: dir,
+					includingPropertiesForKeys: nil,
+					options: [.skipsHiddenFiles]
+				) else { continue }
+				targets.append(contentsOf: contents.filter {
+					$0.pathExtension.lowercased() == "appex" && $0.hasDirectoryPath
+				})
+			}
+		}
+		return targets
+	}
+
+	// Watch binaries cannot see the main app's Frameworks folder (the bundles are flat and
+	// separately installed), so each target gets its own copy of the dylib and a load
+	// command relative to its own executable.
+	private func _injectIntoWatchApps(dylibs: [URL]) {
+		let targets = _discoverWatchTargets()
+
+		guard !targets.isEmpty else {
+			Logger.misc.info("No Watch app found for injection")
+			return
+		}
+
+		for target in targets {
+			guard let exe = Bundle(url: target)?.executableURL else {
+				Logger.misc.warning("Skipping \(target.lastPathComponent): couldn't read bundle")
+				continue
+			}
+
+			let useRoot = _options.injectPath == .executable_path && _options.injectFolder == .root
+			let copyDir = useRoot ? target : target.appendingPathComponent("Frameworks")
+
+			for dylib in dylibs {
+				let name = dylib.lastPathComponent
+				let copy = copyDir.appendingPathComponent(name)
+				let path = _options.injectPath == .rpath
+					? "@rpath/\(name)"
+					: (useRoot ? "@executable_path/\(name)" : "@executable_path/Frameworks/\(name)")
+
+				do {
+					try _fileManager.createDirectoryIfNeeded(at: copyDir)
+					try _fileManager.copyItem(at: dylib, to: copy)
+				} catch {
+					Logger.misc.warning("Failed to copy \(name) into \(target.lastPathComponent): \(error.localizedDescription)")
+					continue
+				}
+
+				if Zsign.injectDyLib(appExecutable: exe.path, with: path) {
+					Logger.misc.info("Injected \(name) into Watch target: \(target.lastPathComponent)")
+				} else {
+					Logger.misc.warning("Failed to inject into Watch target: \(target.lastPathComponent)")
+					try? _fileManager.removeItem(at: copy)
+				}
+			}
 		}
 	}
 

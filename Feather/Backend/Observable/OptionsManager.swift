@@ -119,8 +119,12 @@ struct Options: Codable, Equatable {
 	var changeLanguageFilesForCustomDisplayName: Bool
 	/// If tweaks should be injected into all app extensions (PlugIns and Extensions)
 	var injectIntoExtensions: Bool
+	/// If tweaks should also be injected into the Watch app(s) and their extensions
+	var injectIntoWatchApp: Bool
 	/// If app should merge entitlements with the binary.
 	var mergeEntitlements: Bool
+	/// If the keychain access group should be unique to this app (`TEAMID.<bundle id>`), wildcard profiles only
+	var isolateKeychain: Bool
 
 	// MARK: Experiments
 	
@@ -170,7 +174,9 @@ struct Options: Codable, Equatable {
 		removeWatchApp: false,
 		changeLanguageFilesForCustomDisplayName: false,
 		injectIntoExtensions: false,
+		injectIntoWatchApp: false,
 		mergeEntitlements: false,
+		isolateKeychain: false,
 		
 		// MARK: Experiments
 		

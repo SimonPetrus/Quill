@@ -34,6 +34,10 @@ struct SigningTweaksView: View {
 				Toggle(isOn: $options.injectIntoExtensions) {
 					Label(.localized("Inject into Extensions"), systemImage: "syringe")
 				}
+				
+				Toggle(isOn: $options.injectIntoWatchApp) {
+					Label(.localized("Inject into Watch App"), systemImage: "applewatch")
+				}
 			}
 			
 			NBSection(.localized("Tweaks")) {
