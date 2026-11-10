@@ -3967,6 +3967,40 @@
         }
       }
     },
+    "Delete Signed After Install" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete Signed After Install"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kurulumdan Sonra İmzalıyı Sil"
+          }
+        }
+      }
+    },
+    "Deletes the signed copy from your library once it has been installed. Does not apply when sharing or if the install fails." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deletes the signed copy from your library once it has been installed. Does not apply when sharing or if the install fails."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İmzalı kopyayı kurulumdan sonra kitaplığınızdan siler. Paylaşırken veya kurulum başarısız olursa uygulanmaz."
+          }
+        }
+      }
+    },
     "Delete After Signing" : {
       "extractionState" : "manual",
       "localizations" : {

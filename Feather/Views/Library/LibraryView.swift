@@ -188,7 +188,7 @@ struct LibraryView: View {
 				LibraryInfoView(app: app.base)
 			}
 			.sheet(item: $_selectedInstallAppPresenting) { app in
-				InstallPreviewView(app: app.base, isSharing: app.archive)
+				InstallPreviewView(app: app.base, isSharing: app.archive, deleteSignedAfterInstall: app.deleteSignedAfterInstall)
 					.presentationDetents([.height(200)])
 					.presentationDragIndicator(.visible)
 			}
@@ -224,9 +224,12 @@ struct LibraryView: View {
 					}
 				}
 			}
-			.onReceive(NotificationCenter.default.publisher(for: Notification.Name("Quill.installApp"))) { _ in
+			.onReceive(NotificationCenter.default.publisher(for: Notification.Name("Quill.installApp"))) { note in
 				if let latest = _signedApps.first {
-					_selectedInstallAppPresenting = AnyApp(base: latest)
+					_selectedInstallAppPresenting = AnyApp(
+						base: latest,
+						deleteSignedAfterInstall: note.userInfo?["deleteSignedAfterInstall"] as? Bool
+					)
 				}
 			}
 			.onChange(of: _editMode) { mode in

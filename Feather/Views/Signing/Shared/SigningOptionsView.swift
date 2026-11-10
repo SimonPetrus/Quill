@@ -157,8 +157,17 @@ struct SigningOptionsView: View {
 				isOn: $options.post_deleteAppAfterSigned,
 				temporaryValue: temporaryOptions?.post_deleteAppAfterSigned
 			)
+			_toggle(
+				.localized("Delete Signed After Install"),
+				systemImage: "trash.slash",
+				isOn: $options.post_deleteSignedAfterInstall,
+				temporaryValue: temporaryOptions?.post_deleteSignedAfterInstall
+			)
 		} footer: {
-			Text(.localized("This will delete your imported application after signing, to save on using unneeded space."))
+			VStack(alignment: .leading, spacing: 6) {
+				Text(.localized("This will delete your imported application after signing, to save on using unneeded space."))
+				Text(.localized("Deletes the signed copy from your library once it has been installed. Does not apply when sharing or if the install fails."))
+			}
 		}
 		
 		Section {

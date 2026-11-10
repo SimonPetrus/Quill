@@ -25,10 +25,14 @@ struct InstallPreviewView: View {
 	@StateObject var installer: ServerInstaller
 	
 	@State var isSharing: Bool
+	private let _deleteSignedAfterInstall: Bool
+	/// Set once the IPA is fully handed to iOS (server) or the install finished (idevice).
+	@State private var _installReached = false
 	
-	init(app: AppInfoPresentable, isSharing: Bool = false) {
+	init(app: AppInfoPresentable, isSharing: Bool = false, deleteSignedAfterInstall: Bool? = nil) {
 		self.app = app
 		self.isSharing = isSharing
+		self._deleteSignedAfterInstall = deleteSignedAfterInstall ?? OptionsManager.shared.options.post_deleteSignedAfterInstall
 		let viewModel = InstallerStatusViewModel(isIdevice: UserDefaults.standard.integer(forKey: "Quill.installationMethod") == 1)
 		self._viewModel = StateObject(wrappedValue: viewModel)
 		self._installer = StateObject(wrappedValue: try! ServerInstaller(app: app, viewModel: viewModel))
@@ -71,12 +75,21 @@ struct InstallPreviewView: View {
 				}
 				
 				if case .installing = newStatus {
+					_installReached = true
 					if progressTask == nil {
 						progressTask = startInstallProgressPolling(
 							bundleID: app.identifier!,
 							viewModel: viewModel
 						)
 					}
+				}
+				
+				if case .completed(.success) = newStatus {
+					_installReached = true
+				}
+				
+				if case .broken(_) = newStatus {
+					_installReached = false
 				}
 				
 				switch newStatus {
@@ -89,6 +102,8 @@ struct InstallPreviewView: View {
 				default:
 					break
 				}
+			} else if case .completed(.success) = newStatus {
+				_installReached = true
 			}
 		}
 		.onAppear(perform: _checkTrustThenInstall)
@@ -102,10 +117,27 @@ struct InstallPreviewView: View {
 		.onDisappear {
 			progressTask?.cancel()
 			progressTask = nil
+			_deleteSignedIfNeeded()
 			
 			#if !targetEnvironment(macCatalyst)
 			BackgroundAudioManager.shared.stop()
 			#endif
+		}
+	}
+	
+	/// Removes the signed copy (record + files) after a real install; never when sharing or on failure.
+	private func _deleteSignedIfNeeded() {
+		guard
+			_deleteSignedAfterInstall,
+			_installReached,
+			!isSharing,
+			app.isSigned
+		else { return }
+		
+		let app = app
+		// Let the sheet finish dismissing before the managed object goes away.
+		DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+			Storage.shared.deleteApp(for: app)
 		}
 	}
 	

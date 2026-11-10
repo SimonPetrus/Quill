@@ -46,6 +46,8 @@ extension Storage {
 struct AnyApp: Identifiable {
 	let base: AppInfoPresentable
 	var archive: Bool = false
+	/// Per-install override for "Delete Signed After Install"; nil uses the global option.
+	var deleteSignedAfterInstall: Bool? = nil
 	
 	var id: String {
 		base.uuid ?? UUID().uuidString
