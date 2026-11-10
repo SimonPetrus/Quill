@@ -380,6 +380,10 @@ extension DownloadManager: URLSessionDownloadDelegate {
 
 		DispatchQueue.main.async {
 			download.progress = progress
+			if totalBytesWritten > download.bytesDownloaded {
+				// New bytes arrived: the connection works again, so allow fresh resume attempts.
+				download._retryCount = 0
+			}
 			download.bytesDownloaded = totalBytesWritten
 			if download.totalBytes != totalBytesExpectedToWrite {
 				download.totalBytes = totalBytesExpectedToWrite

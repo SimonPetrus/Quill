@@ -64,6 +64,7 @@ enum IncomingPackageImporter {
 		let destination = stagingDirectory.appendingPathComponent(fileName)
 
 		do {
+			try _checkFreeSpace(for: source, inPlaceMove: _isOwnInboxCopy(source))
 			if _isOwnInboxCopy(source) {
 				// The system's Inbox copy belongs to us: moving is instant, needs no extra
 				// space and leaves nothing behind in the Inbox.
@@ -84,7 +85,21 @@ enum IncomingPackageImporter {
 		} catch {
 			try? fileManager.removeItem(at: stagingDirectory)
 			if let error = error as? IncomingPackageError { throw error }
+			if let error = error as? ImportedFileHandlerError { throw error }
 			throw IncomingPackageError.unreadable(error.localizedDescription)
+		}
+	}
+
+	/// A copy needs about the file's size again (a move needs nothing); fail early with a clear message.
+	private static func _checkFreeSpace(for source: URL, inPlaceMove: Bool) throws {
+		guard !inPlaceMove else { return }
+		let size = Int64((try? source.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
+		guard size > 0 else { return }
+		let values = try? URL(fileURLWithPath: NSHomeDirectory())
+			.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+		guard let available = values?.volumeAvailableCapacityForImportantUsage else { return }
+		if available < size {
+			throw ImportedFileHandlerError.insufficientSpace(required: size, available: available)
 		}
 	}
 

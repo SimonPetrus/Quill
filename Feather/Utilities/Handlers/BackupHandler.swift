@@ -32,6 +32,7 @@ enum BackupError: LocalizedError {
 	case passwordRequired
 	case wrongPassword
 	case invalidFile
+	case corruptArchive
 	case unsupportedVersion
 	case failed(String)
 
@@ -41,6 +42,7 @@ enum BackupError: LocalizedError {
 		case .passwordRequired: return .localized("This backup is encrypted. Enter its password.")
 		case .wrongPassword: return .localized("Wrong password, or the backup file is damaged.")
 		case .invalidFile: return .localized("This file is not a valid Quill backup.")
+		case .corruptArchive: return .localized("The backup file is corrupt or not safe.")
 		case .unsupportedVersion: return .localized("This backup was made by a newer version of Quill.")
 		case .failed(let message): return message
 		}
@@ -370,7 +372,7 @@ enum BackupHandler {
 				try ZipEntryValidator.validate(zipURL)
 				try Zip.unzipFile(zipURL, destination: dest, overwrite: true, password: nil)
 			} catch {
-				throw BackupError.invalidFile
+				throw BackupError.corruptArchive
 			}
 			return (dest, encrypted)
 		}.value
