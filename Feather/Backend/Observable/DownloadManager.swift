@@ -7,8 +7,9 @@
 
 import Foundation
 import Combine
-import UIKit.UIImpactFeedbackGenerator
+import UIKit
 import BackgroundTasks
+import NimbleExtensions
 
 class Download: Identifiable, @unchecked Sendable {
 	@Published var progress: Double = 0.0
@@ -68,8 +69,43 @@ class DownloadManager: NSObject, ObservableObject {
 	}
 	#endif
 	
+	/// Import error waiting for a presenter (e.g. the app was in the background when it failed).
+	static var pendingImportError: String?
+	
+	/// Shows the pending import error only while the app is active and a presenter exists;
+	/// otherwise it is kept and retried on the next activation.
+	func presentPendingImportErrorIfPossible() {
+		DispatchQueue.main.async {
+			guard
+				let message = DownloadManager.pendingImportError,
+				UIApplication.shared.applicationState == .active,
+				let presenter = UIApplication.topViewController()
+			else { return }
+			DownloadManager.pendingImportError = nil
+			UIAlertController.showAlertWithOk(presenter, title: .localized("Import Failed"), message: message)
+		}
+	}
+	
+	/// Removes leftover download folders (older than 24h) from the app's own temp area.
+	private static func _cleanStaleDownloads() {
+		let fm = FileManager.default
+		let dir = fm.temporaryDirectory.appendingPathComponent("QuillDownloads", isDirectory: true)
+		guard let items = try? fm.contentsOfDirectory(
+			at: dir,
+			includingPropertiesForKeys: [.contentModificationDateKey]
+		) else { return }
+		let cutoff = Date().addingTimeInterval(-24 * 60 * 60)
+		for item in items {
+			let date = (try? item.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+			if let date, date < cutoff {
+				try? fm.removeItem(at: item)
+			}
+		}
+	}
+	
 	override init() {
 		super.init()
+		DispatchQueue.global(qos: .utility).async { DownloadManager._cleanStaleDownloads() }
 		let configuration = URLSessionConfiguration.default
 		_session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
 	}
@@ -177,9 +213,11 @@ extension DownloadManager: URLSessionDownloadDelegate {
 	
 	func handlePachageFile(url: URL, dl: Download) throws {
 		FR.handlePackageFile(url, download: dl) { err in
-			if err != nil {
+			if let err {
 				let generator = UINotificationFeedbackGenerator()
 				generator.notificationOccurred(.error)
+				DownloadManager.pendingImportError = err.localizedDescription
+				DownloadManager.shared.presentPendingImportErrorIfPossible()
 			}
 			
 			DispatchQueue.main.async {
@@ -209,7 +247,10 @@ extension DownloadManager: URLSessionDownloadDelegate {
 			
 			// Use the server-suggested filename if available, otherwise fallback
 			let suggestedFileName = downloadTask.response?.suggestedFilename ?? download.fileName
-			let destinationURL = customTempDir.appendingPathComponent(suggestedFileName)
+			// Unique sub folder per download: two downloads with the same file name must never share a path.
+			let downloadDir = customTempDir.appendingPathComponent(UUID().uuidString, isDirectory: true)
+			try FileManager.default.createDirectoryIfNeeded(at: downloadDir)
+			let destinationURL = downloadDir.appendingPathComponent(suggestedFileName)
 			
 			try FileManager.default.removeFileIfNeeded(at: destinationURL)
 			try FileManager.default.moveItem(at: location, to: destinationURL)

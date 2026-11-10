@@ -18614,6 +18614,74 @@
         }
       }
     },
+    "The IPA does not contain a valid Payload folder." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The IPA does not contain a valid Payload folder."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IPA geçerli bir Payload klasörü içermiyor."
+          }
+        }
+      }
+    },
+    "Not enough free space: %@ required, %@ available." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not enough free space: %1$@ required, %2$@ available."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeterli boş alan yok: %1$@ gerekli, %2$@ boş."
+          }
+        }
+      }
+    },
+    "Could not extract the IPA: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not extract the IPA: %@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IPA açılamadı: %@"
+          }
+        }
+      }
+    },
+    "Import Failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import Failed"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İçe Aktarma Başarısız"
+          }
+        }
+      }
+    },
     "Expiry Notifications" : {
       "extractionState" : "manual",
       "localizations" : {
