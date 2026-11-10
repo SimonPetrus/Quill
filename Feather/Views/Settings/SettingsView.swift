@@ -14,6 +14,7 @@ import IDeviceSwift
 // MARK: - View
 struct SettingsView: View {
 	@AppStorage("Quill.selectedCert") private var _storedSelectedCert: Int = 0
+	@AppStorage(NotificationManager.enabledKey) private var _expiryNotifications: Bool = false
 	
 	// MARK: Fetch
 	@FetchRequest(
@@ -57,6 +58,9 @@ struct SettingsView: View {
 					NavigationLink(destination: CertificatesView()) {
 						Label(.localized("Certificates"), systemImage: "checkmark.seal")
 					}
+					Toggle(isOn: _expiryNotificationsBinding) {
+						Label(.localized("Expiry Notifications"), systemImage: "bell.badge")
+					}
                  
 				} footer: {
 					Text(.localized("Add and manage certificates used for signing applications."))
@@ -92,6 +96,39 @@ struct SettingsView: View {
 
 // MARK: - View extension
 extension SettingsView {
+	/// Turning the switch on asks for notification permission; if it is denied the switch stays off
+	/// and the user is pointed to the system Settings.
+	private var _expiryNotificationsBinding: Binding<Bool> {
+		Binding(
+			get: { _expiryNotifications },
+			set: { newValue in
+				guard newValue else {
+					_expiryNotifications = false
+					NotificationManager.shared.reschedule()
+					return
+				}
+				NotificationManager.shared.requestAuthorization { granted in
+					if granted {
+						_expiryNotifications = true
+						NotificationManager.shared.reschedule()
+					} else {
+						_expiryNotifications = false
+						UIAlertController.showAlert(
+							title: .localized("Notifications Disabled"),
+							message: .localized("Notifications are turned off for Quill. Allow them in the system Settings to get certificate expiry reminders."),
+							actions: [
+								UIAlertAction(title: .localized("Open Settings"), style: .default) { _ in
+									NotificationManager.shared.openSystemSettings()
+								},
+								UIAlertAction(title: .localized("Cancel"), style: .cancel)
+							]
+						)
+					}
+				}
+			}
+		)
+	}
+	
 	@ViewBuilder
 	private func _feedback() -> some View {
 		Section {

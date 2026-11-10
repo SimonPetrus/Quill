@@ -18634,6 +18634,142 @@
           }
         }
       }
+    },
+    "Expiry Notifications" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expiry Notifications"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bitiş Bildirimleri"
+          }
+        }
+      }
+    },
+    "Certificate Expiring Soon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certificate Expiring Soon"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sertifikanın Süresi Dolmak Üzere"
+          }
+        }
+      }
+    },
+    "%@ expires in 7 days." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ expires in 7 days."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sertifikasının süresi 7 gün içinde doluyor."
+          }
+        }
+      }
+    },
+    "%@ expires tomorrow." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ expires tomorrow."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sertifikasının süresi yarın doluyor."
+          }
+        }
+      }
+    },
+    "Certificate Revoked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certificate Revoked"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sertifika İptal Edildi"
+          }
+        }
+      }
+    },
+    "%@ has been revoked and can no longer sign apps." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ has been revoked and can no longer sign apps."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ iptal edildi ve artık uygulama imzalayamaz."
+          }
+        }
+      }
+    },
+    "Notifications Disabled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications Disabled"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bildirimler Kapalı"
+          }
+        }
+      }
+    },
+    "Notifications are turned off for Quill. Allow them in the system Settings to get certificate expiry reminders." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications are turned off for Quill. Allow them in the system Settings to get certificate expiry reminders."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill için bildirimler kapalı. Sertifika bitiş hatırlatmalarını almak için sistem Ayarlar'ından bildirimlere izin verin."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
