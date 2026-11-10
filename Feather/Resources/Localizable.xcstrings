@@ -13497,6 +13497,23 @@
         }
       }
     },
+    "Reset Signing Options" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset Signing Options"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İmzalama Ayarlarını Sıfırla"
+          }
+        }
+      }
+    },
     "Reset Signed Apps" : {
       "extractionState" : "manual",
       "localizations" : {
