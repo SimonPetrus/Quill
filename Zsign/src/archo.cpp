@@ -534,7 +534,9 @@ bool ZArchO::BuildCodeSignature(ZSignAsset* pSignAsset,
 		ZFile::WriteFile("./.zsign_debug/CodeDirectory_SHA1.slot.new", strCodeDirectorySlot);
 		ZFile::WriteFile("./.zsign_debug/CodeDirectory_SHA256.slot.new", strAltnateCodeDirectorySlot);
 		ZFile::WriteFile("./.zsign_debug/CMSSignature.slot.new", strCMSSignatureSlot);
-		ZFile::WriteFile("./.zsign_debug/CMSSignature.der.new", strCMSSignatureSlot.data() + 8, strCMSSignatureSlot.size() - 8);
+		if (strCMSSignatureSlot.size() > 8) {
+			ZFile::WriteFile("./.zsign_debug/CMSSignature.der.new", strCMSSignatureSlot.data() + 8, strCMSSignatureSlot.size() - 8);
+		}
 		ZFile::WriteFile("./.zsign_debug/CodeSignature.blob.new", strOutput);
 	}
 

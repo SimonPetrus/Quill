@@ -9,7 +9,7 @@
 Previously a git submodule; now a normal directory so Quill can carry local patches.
 
 ## Omitted from upstream
-- `build/` (prebuilt Windows VS2022 OpenSSL .lib files, ~69 MB). Not referenced by `Package.swift`.
+- `build/` (entire directory, ~69 MB): Windows VS2022 OpenSSL .lib files and headers, sln/vcxproj, getopt/iconv sources, linux/macos Makefiles. None of it is used by `Package.swift`. Listed in the root `.gitignore` so it is not re-added from an old local submodule checkout.
 
 ## Local changes
 The vendoring commit is an unmodified copy. Patches applied afterwards:
