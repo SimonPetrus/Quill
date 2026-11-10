@@ -110,7 +110,7 @@ final class BulkSigner: ObservableObject {
 				
 				let error = await _sign(app)
 				if let error {
-					Logger.signing.error("Bulk signing failed for \(self.currentName): \(error.localizedDescription)")
+					Logger.signing.error("Bulk signing failed for \(self.currentName): \(error.localizedDescription, privacy: .public)")
 					failures.append(Failure(name: currentName, message: error.localizedDescription))
 				} else {
 					succeeded += 1

@@ -67,7 +67,7 @@ final class Storage: ObservableObject {
 		container.loadPersistentStores { description, error in
 			if let error, LegacyMigration.isPending {
 				// Migration from the old store name is incomplete: never wipe user data here.
-				Logger.misc.error("Store load failed while legacy migration is pending: \(error.localizedDescription)")
+				Logger.misc.error("Store load failed while legacy migration is pending: \(error.localizedDescription, privacy: .public)")
 				self.container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
 				self.container.loadPersistentStores { _, error in
 					if let error {
@@ -84,7 +84,7 @@ final class Storage: ObservableObject {
 				case .nothingToBack: break
 				case .failed:
 					// Old files are still in place: never open a fresh store over them.
-					Logger.misc.error("Store load failed (Cocoa code \(code)) and backup failed, using in-memory store: \(error.localizedDescription)")
+					Logger.misc.error("Store load failed (Cocoa code \(code, privacy: .public)) and backup failed, using in-memory store: \(error.localizedDescription, privacy: .public)")
 					self.container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
 					self.container.loadPersistentStores { _, error in
 						if let error {
@@ -93,13 +93,13 @@ final class Storage: ObservableObject {
 					}
 					return
 				}
-				Logger.misc.error("Store load failed (Cocoa code \(code)), backup: \(backup ?? "none"): \(error.localizedDescription)")
+				Logger.misc.error("Store load failed (Cocoa code \(code, privacy: .public)), backup: \(backup ?? "none"): \(error.localizedDescription, privacy: .public)")
 				if let backup {
 					Storage.startupNotice = String(format: .localized("The database could not be opened; the old data was backed up (%@)."), backup)
 				}
 				self.container.loadPersistentStores { _, error in
 					if let error {
-						Logger.misc.error("Fresh store failed to load, falling back to in-memory: \(error.localizedDescription)")
+						Logger.misc.error("Fresh store failed to load, falling back to in-memory: \(error.localizedDescription, privacy: .public)")
 						self.container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
 						self.container.loadPersistentStores { _, error in
 							if let error {
@@ -135,7 +135,7 @@ final class Storage: ObservableObject {
 		do {
 			try fm.moveItem(at: main, to: mainTarget)
 		} catch {
-			Logger.misc.error("Could not back up \(main.lastPathComponent): \(error.localizedDescription)")
+			Logger.misc.error("Could not back up \(main.lastPathComponent): \(error.localizedDescription, privacy: .public)")
 			return .failed
 		}
 		
@@ -148,7 +148,7 @@ final class Storage: ObservableObject {
 				try fm.moveItem(at: source, to: target)
 				moved.append((source, target))
 			} catch {
-				Logger.misc.error("Could not back up \(source.lastPathComponent), rolling back: \(error.localizedDescription)")
+				Logger.misc.error("Could not back up \(source.lastPathComponent), rolling back: \(error.localizedDescription, privacy: .public)")
 				for item in moved.reversed() {
 					try? fm.moveItem(at: item.to, to: item.from)
 				}

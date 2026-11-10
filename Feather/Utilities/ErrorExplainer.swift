@@ -22,17 +22,37 @@ enum ErrorExplainer {
 		let needles: [String]
 		/// `NSError` (domain, code) pairs.
 		let codes: [(String, Int)]
+		/// Regular expressions (case insensitive), used for numeric codes so "-7001" does not match "-70012".
+		let patterns: [String]
 		
-		init(_ summary: String, _ suggestion: String, needles: [String] = [], codes: [(String, Int)] = []) {
+		init(_ summary: String, _ suggestion: String, needles: [String] = [], patterns: [String] = [], codes: [(String, Int)] = []) {
 			self.summary = summary
 			self.suggestion = suggestion
 			self.needles = needles
+			self.patterns = patterns
 			self.codes = codes
 		}
 	}
 	
 	// Order matters: the first match wins, so specific rules come before generic ones.
 	private static let rules: [Rule] = [
+		Rule(
+			"The device rejected the app signature (ApplicationVerificationFailed, 0xe8008001).",
+			"The certificate may be revoked or expired, or the profile does not include this device. Sign again with a valid certificate and profile, then reinstall.",
+			needles: ["0xe8008001", "e8008001", "applicationverificationfailed", "application verification failed"]
+		),
+		Rule(
+			"The device connection was lost (RSD error -7001).",
+			"Check that the VPN/tunnel app is running and the pairing file is valid, then reconnect and try again.",
+			needles: ["remote service discovery", "rsd error"],
+			patterns: ["(?<![0-9])-7001(?![0-9])"]
+		),
+		Rule(
+			"There is not enough free storage on the device.",
+			"Free up some space (delete old signed or unsigned apps in Quill, or other data) and try again.",
+			needles: ["no space left", "not enough space", "out of space", "disk full", "insufficient storage"],
+			codes: [("NSCocoaErrorDomain", 640), ("NSPOSIXErrorDomain", 28)]
+		),
 		Rule(
 			"The certificate and provisioning profile do not belong together.",
 			"Select a certificate whose .p12 and .mobileprovision were issued as a pair, or import the pair again.",
@@ -46,17 +66,7 @@ enum ErrorExplainer {
 		Rule(
 			"The provisioning profile does not match this app or device.",
 			"Use a profile that includes this device and allows the app's bundle ID, or change the bundle ID in the signing options. Also check that the profile has not expired.",
-			needles: ["provisioning profile", "mobileprovision", "no matching profile", "profile has expired", "profile doesn't include", "profile does not include"]
-		),
-		Rule(
-			"The device rejected the app signature (ApplicationVerificationFailed, 0xe8008001).",
-			"The certificate may be revoked or expired, or the profile does not include this device. Sign again with a valid certificate and profile, then reinstall.",
-			needles: ["0xe8008001", "e8008001", "applicationverificationfailed", "application verification failed", "verification failed"]
-		),
-		Rule(
-			"The device connection was lost (RSD error -7001).",
-			"Check that the VPN/tunnel app is running and the pairing file is valid, then reconnect and try again.",
-			needles: ["-7001", "remote service discovery", "rsd error"]
+			needles: ["provisioning profile", "no matching profile", "profile has expired", "profile doesn't include", "profile does not include"]
 		),
 		Rule(
 			"A secure connection (SSL) could not be established.",
@@ -69,12 +79,6 @@ enum ErrorExplainer {
 			"Check your internet connection and that the address is correct. For installation, make sure Quill stays open and the install server settings are valid.",
 			needles: ["could not connect to the server", "cannot connect", "connection refused", "connection was lost", "timed out", "not connected to the internet", "internet connection appears to be offline"],
 			codes: [("NSURLErrorDomain", -1004), ("NSURLErrorDomain", -1001), ("NSURLErrorDomain", -1005), ("NSURLErrorDomain", -1009)]
-		),
-		Rule(
-			"There is not enough free storage on the device.",
-			"Free up some space (delete old signed or unsigned apps in Quill, or other data) and try again.",
-			needles: ["no space left", "not enough space", "out of space", "disk full", "insufficient storage"],
-			codes: [("NSCocoaErrorDomain", 640), ("NSPOSIXErrorDomain", 28)]
 		),
 		Rule(
 			"Signing failed.",
@@ -96,7 +100,8 @@ enum ErrorExplainer {
 		let haystack = raw.lowercased()
 		for rule in rules {
 			let byCode = rule.codes.contains { $0.0 == domain && $0.1 == code }
-			if byCode || rule.needles.contains(where: { haystack.contains($0) }) {
+			let byPattern = rule.patterns.contains { haystack.range(of: $0, options: [.regularExpression, .caseInsensitive]) != nil }
+			if byCode || byPattern || rule.needles.contains(where: { haystack.contains($0) }) {
 				return Explanation(summary: .localized(rule.summary), suggestion: .localized(rule.suggestion))
 			}
 		}

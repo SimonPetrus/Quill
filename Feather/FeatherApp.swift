@@ -200,6 +200,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
 	) -> Bool {
 		LegacyMigration.runIfNeeded()
+		NotificationManager.shared.start()
 		LegacyMigration.resetAlternateIcon()
 		_createPipeline()
 		_createDocumentsDirectories()
@@ -293,7 +294,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 			}
 			UserDefaults.standard.set(true, forKey: "Quill.didImportDefaultCertificates")
 		} catch {
-			Logger.misc.error("Failed to list signing-assets: \(error)")
+			Logger.misc.error("Failed to list signing-assets: \(error, privacy: .public)")
 		}
 	}
 

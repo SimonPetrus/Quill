@@ -12,7 +12,7 @@ import UserNotifications
 import UIKit
 import OSLog
 
-final class NotificationManager {
+final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 	static let shared = NotificationManager()
 	
 	/// UserDefaults key of the Settings switch (default off).
@@ -22,7 +22,20 @@ final class NotificationManager {
 	
 	private let center = UNUserNotificationCenter.current()
 	
-	private init() {}
+	private override init() { super.init() }
+	
+	/// Call once at launch: lets notifications show as banners while the app is in the foreground.
+	func start() {
+		center.delegate = self
+	}
+	
+	func userNotificationCenter(
+		_ center: UNUserNotificationCenter,
+		willPresent notification: UNNotification,
+		withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+	) {
+		completionHandler([.banner, .list, .sound])
+	}
 	
 	var isEnabled: Bool {
 		UserDefaults.standard.bool(forKey: Self.enabledKey)
@@ -32,7 +45,7 @@ final class NotificationManager {
 	func requestAuthorization(completion: @escaping (Bool) -> Void) {
 		center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
 			if let error {
-				Logger.misc.error("Notification authorization failed: \(error.localizedDescription)")
+				Logger.misc.error("Notification authorization failed: \(error.localizedDescription, privacy: .public)")
 			}
 			DispatchQueue.main.async { completion(granted) }
 		}
@@ -56,6 +69,10 @@ final class NotificationManager {
 	/// Rebuilds the schedule from the stored certificates. Call after adding/deleting a certificate
 	/// and at app launch. Past dates are skipped. Must be called on the main thread (Core Data).
 	func reschedule() {
+		guard Thread.isMainThread else {
+			DispatchQueue.main.async { self.reschedule() }
+			return
+		}
 		guard isEnabled else {
 			cancelAll()
 			return
@@ -103,35 +120,50 @@ final class NotificationManager {
 			}
 		}
 		
+		// Only the expiry requests are replaced; ".revoked" requests are left alone.
 		center.getPendingNotificationRequests { [center] pending in
-			let stale = pending.map(\.identifier).filter { $0.hasPrefix(Self.idPrefix) }
+			let stale = pending.map(\.identifier).filter {
+				$0.hasPrefix(Self.idPrefix) && ($0.hasSuffix(".7d") || $0.hasSuffix(".1d"))
+			}
 			center.removePendingNotificationRequests(withIdentifiers: stale)
 			for request in requests {
 				center.add(request) { error in
 					if let error {
-						Logger.misc.error("Scheduling notification failed: \(error.localizedDescription)")
+						Logger.misc.error("Scheduling notification failed: \(error.localizedDescription, privacy: .public)")
 					}
 				}
 			}
 		}
 		
-		// Revoked certificates (already known from the last check) are reported once, immediately.
-		if !revokedToNotify.isEmpty {
-			var notified = alreadyNotifiedRevoked
-			for item in revokedToNotify {
+		// Revoked certificates (already known from the last check) are reported once. A certificate is
+		// marked as notified only after the system accepted the request and notifications are allowed.
+		let toNotify = revokedToNotify
+		guard !toNotify.isEmpty else { return }
+		center.getNotificationSettings { [center] settings in
+			guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }
+			for item in toNotify {
 				let content = UNMutableNotificationContent()
 				content.title = .localized("Certificate Revoked")
 				content.body = .localized("%@ has been revoked and can no longer sign apps.", arguments: item.name)
 				content.sound = .default
 				let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
-				center.add(UNNotificationRequest(
+				let request = UNNotificationRequest(
 					identifier: "\(Self.idPrefix)\(item.uuid).revoked",
 					content: content,
 					trigger: trigger
-				))
-				notified.insert(item.uuid)
+				)
+				center.add(request) { error in
+					guard error == nil else {
+						Logger.misc.error("Scheduling revoked notification failed: \(error!.localizedDescription, privacy: .public)")
+						return
+					}
+					DispatchQueue.main.async {
+						var notified = Set(UserDefaults.standard.stringArray(forKey: Self.revokedNotifiedKey) ?? [])
+						notified.insert(item.uuid)
+						UserDefaults.standard.set(Array(notified), forKey: Self.revokedNotifiedKey)
+					}
+				}
 			}
-			UserDefaults.standard.set(Array(notified), forKey: Self.revokedNotifiedKey)
 		}
 	}
 }

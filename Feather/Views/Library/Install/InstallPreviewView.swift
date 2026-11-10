@@ -410,7 +410,7 @@ struct InstallPreviewView: View {
 					? _normalizeInstallProgress(rawProgress)
 					: 0.0
 
-				Logger.misc.info("Install progress for \(bundleID): \(progress)")
+				Logger.misc.info("Install progress for \(bundleID): \(progress, privacy: .public)")
 
 				await MainActor.run {
 					viewModel.installProgress = progress
