@@ -11,6 +11,11 @@ on:
       - '**'
   pull_request:
   workflow_dispatch:
+    inputs:
+      xcode:
+        description: 'Xcode version (e.g. 26.3.0, 26.6.0)'
+        required: false
+        default: '26.3.0'
 
 concurrency:
   group: build-${{ github.ref }}
@@ -32,9 +37,10 @@ jobs:
       - name: Select Xcode
         run: |
           ls -d /Applications/Xcode*.app || true
-          # Prefer the version upstream's release workflow uses, fall back to the newest Xcode 26.
-          if [ -d /Applications/Xcode_26.3.0.app ]; then
-            XCODE=/Applications/Xcode_26.3.0.app
+          # Default to the version upstream's release workflow uses, fall back to the newest Xcode 26.
+          WANT="${{ github.event.inputs.xcode || '26.3.0' }}"
+          if [ -d "/Applications/Xcode_${WANT}.app" ]; then
+            XCODE="/Applications/Xcode_${WANT}.app"
           else
             XCODE=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -n 1)
           fi
@@ -48,6 +54,23 @@ jobs:
           path: ${{ runner.temp }}/Feather/iphoneos/SourcePackages
           key: spm-${{ runner.os }}-${{ hashFiles('Feather.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: spm-${{ runner.os }}-
+
+      # xcodebuild sometimes aborts with an internal NSMutableArray exception while
+      # registering package references right after a cold resolve. Resolve
+      # separately (with retries) so the build step starts from a warm cache.
+      - name: Resolve Swift packages
+        run: |
+          for i in 1 2 3; do
+            echo "Resolve attempt $i"
+            if xcodebuild -resolvePackageDependencies \
+                 -project Feather.xcodeproj -scheme Feather \
+                 -derivedDataPath "$RUNNER_TEMP/Feather/iphoneos" \
+                 -skipPackagePluginValidation; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
 
       - name: Build
         env:
