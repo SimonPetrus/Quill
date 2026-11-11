@@ -19935,6 +19935,23 @@
           }
         }
       }
+    },
+    "This file type is not supported. Share an .ipa or .tipa file." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This file type is not supported. Share an .ipa or .tipa file."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu dosya türü desteklenmiyor. Bir .ipa veya .tipa dosyası paylaşın."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

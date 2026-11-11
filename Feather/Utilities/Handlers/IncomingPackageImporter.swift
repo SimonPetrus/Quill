@@ -6,6 +6,7 @@
 import Foundation
 import UIKit
 import NimbleExtensions
+import OSLog
 
 /// Imports `.ipa` / `.tipa` files handed to the app by other apps
 /// ("Open in" / "Copy to Quill" from the share sheet of Telegram, Safari, Files, ...).
@@ -24,6 +25,8 @@ enum IncomingPackageImporter {
 	static func handle(_ url: URL) {
 		let id = "QuillManualDownload_\(UUID().uuidString)"
 		let download = DownloadManager.shared.startArchive(from: url, id: id)
+		let kind = IncomingURLRouter.kind(of: url)
+		Logger.incoming.notice("Import started: kind=\(kind, privacy: .public) stage=staging")
 
 		DispatchQueue.global(qos: .userInitiated).async {
 			let result = Result { try _stage(url) }
@@ -31,14 +34,43 @@ enum IncomingPackageImporter {
 			DispatchQueue.main.async {
 				switch result {
 				case .success(let stagedURL):
-					try? DownloadManager.shared.handlePachageFile(url: stagedURL, dl: download)
+					Logger.incoming.notice("Import staged: stage=unpacking")
+					try? DownloadManager.shared.handlePachageFile(url: stagedURL, dl: download) { error in
+						if let error {
+							Logger.incoming.error("Import failed: stage=unpacking error=\(Self._describe(error), privacy: .public)")
+						} else {
+							Logger.incoming.notice("Import finished: added to Library")
+						}
+					}
 				case .failure(let error):
+					Logger.incoming.error("Import failed: stage=staging kind=\(kind, privacy: .public) error=\(Self._describe(error), privacy: .public)")
 					DownloadManager.shared.cancelDownload(download)
 					UINotificationFeedbackGenerator().notificationOccurred(.error)
 					DownloadManager.pendingImportError = ErrorExplainer.message(for: error)
 					DownloadManager.shared.presentPendingImportErrorIfPossible()
 				}
 			}
+		}
+	}
+
+	/// Error type, domain and code for the log; never includes file paths or names.
+	private static func _describe(_ error: Error) -> String {
+		switch error {
+		case let error as IncomingPackageError:
+			switch error {
+			case .notAPackage: return "notAPackage"
+			case .unreadable: return "unreadable"
+			}
+		case let error as ImportedFileHandlerError:
+			switch error {
+			case .payloadNotFound: return "payloadNotFound"
+			case .insufficientSpace: return "insufficientSpace"
+			case .extractionFailed: return "extractionFailed"
+			case .unsafeArchive: return "unsafeArchive"
+			}
+		default:
+			let nsError = error as NSError
+			return "\(nsError.domain)#\(nsError.code)"
 		}
 	}
 
@@ -49,6 +81,8 @@ enum IncomingPackageImporter {
 		// Open-in-place / File Provider URLs need security-scoped access; Inbox copies do not
 		// (the call then returns false, which is fine — the file is still readable).
 		let isScoped = source.startAccessingSecurityScopedResource()
+		let isInbox = Self._isOwnInboxCopy(source)
+		Logger.incoming.notice("Staging: scoped=\(isScoped, privacy: .public) inbox=\(isInbox, privacy: .public)")
 		defer {
 			if isScoped { source.stopAccessingSecurityScopedResource() }
 		}
@@ -84,6 +118,8 @@ enum IncomingPackageImporter {
 			return destination
 		} catch {
 			try? fileManager.removeItem(at: stagingDirectory)
+			let nsError = error as NSError
+			Logger.incoming.error("Staging error: scoped=\(isScoped, privacy: .public) inbox=\(isInbox, privacy: .public) domain=\(nsError.domain, privacy: .public) code=\(nsError.code, privacy: .public)")
 			if let error = error as? IncomingPackageError { throw error }
 			if let error = error as? ImportedFileHandlerError { throw error }
 			throw IncomingPackageError.unreadable(error.localizedDescription)

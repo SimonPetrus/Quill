@@ -10,6 +10,7 @@ import Combine
 import UIKit
 import BackgroundTasks
 import NimbleExtensions
+import OSLog
 
 class Download: Identifiable, @unchecked Sendable {
 	@Published var progress: Double = 0.0
@@ -117,15 +118,31 @@ class DownloadManager: NSObject, ObservableObject {
 	static var pendingImportError: String?
 	
 	/// Shows the pending import error only while the app is active and a presenter exists;
-	/// otherwise it is kept and retried on the next activation.
-	func presentPendingImportErrorIfPossible() {
+	/// otherwise it is kept and retried on the next activation. While active but without a usable
+	/// presenter (window not key yet on a cold launch, a sheet or alert still animating), it retries
+	/// shortly instead of waiting for the next activation.
+	func presentPendingImportErrorIfPossible(attempt: Int = 0) {
 		DispatchQueue.main.async {
 			guard
-				let message = DownloadManager.pendingImportError,
-				UIApplication.shared.applicationState == .active,
-				let presenter = UIApplication.topViewController()
+				DownloadManager.pendingImportError != nil,
+				UIApplication.shared.applicationState == .active
 			else { return }
+			guard
+				let message = DownloadManager.pendingImportError,
+				let presenter = UIApplication.topViewController(),
+				presenter.viewIfLoaded?.window != nil,
+				!presenter.isBeingPresented,
+				!presenter.isBeingDismissed
+			else {
+				if attempt < 20 {
+					DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+						self.presentPendingImportErrorIfPossible(attempt: attempt + 1)
+					}
+				}
+				return
+			}
 			DownloadManager.pendingImportError = nil
+			Logger.incoming.notice("Showing import error alert")
 			UIAlertController.showAlertWithOk(presenter, title: .localized("Import Failed"), message: message)
 		}
 	}
@@ -285,8 +302,9 @@ class DownloadManager: NSObject, ObservableObject {
 
 extension DownloadManager: URLSessionDownloadDelegate {
 	
-	func handlePachageFile(url: URL, dl: Download) throws {
+	func handlePachageFile(url: URL, dl: Download, completion: ((Error?) -> Void)? = nil) throws {
 		FR.handlePackageFile(url, download: dl) { err in
+			completion?(err)
 			if let err {
 				let generator = UINotificationFeedbackGenerator()
 				generator.notificationOccurred(.error)

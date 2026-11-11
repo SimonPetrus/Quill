@@ -26,7 +26,10 @@ struct QuillApp: App {
 	@StateObject var downloadManager = DownloadManager.shared
 	let storage = Storage.shared
 	@State private var _pendingBackup: PendingBackup?
-	
+	@Environment(\.scenePhase) private var _scenePhase
+	/// Set once the root view is on screen; incoming URLs wait for it (and for an active app).
+	@State private var _isRootReady = false
+
 	var body: some Scene {
 		WindowGroup {
 			VStack {
@@ -34,8 +37,16 @@ struct QuillApp: App {
 					.transition(.move(edge: .top).combined(with: .opacity))
 				VariedTabbarView()
 					.environment(\.managedObjectContext, storage.context)
-					.onOpenURL(perform: _handleURL)
+					.onOpenURL { url in
+						IncomingURLRouter.shared.enqueue(url, origin: .onOpenURL)
+					}
 					.transition(.move(edge: .top).combined(with: .opacity))
+			}
+			.onReceive(IncomingURLRouter.shared.$pendingCount) { count in
+				if count > 0 { _drainIncomingURLs() }
+			}
+			.onChange(of: _scenePhase) { phase in
+				if phase == .active { _drainIncomingURLs() }
 			}
 			.sheet(item: $_pendingBackup) { pending in
 				NBNavigationView(.localized("Backup & Restore"), displayMode: .inline) {
@@ -56,6 +67,7 @@ struct QuillApp: App {
 				_showStartupNoticeIfPossible()
 				NotificationManager.shared.reschedule()
 				DownloadManager.shared.presentPendingImportErrorIfPossible()
+				_drainIncomingURLs()
 				// Delayed so a startup notice shown just above wins; the update alert then waits for the next activation.
 				DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
 					SelfUpdateManager.shared.presentPendingIfPossible()
@@ -73,10 +85,41 @@ struct QuillApp: App {
 				SelfUpdateManager.shared.autoCheckIfNeeded()
 				
 				UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "Quill.userTintColor") ?? "#848ef9"))
+
+				_isRootReady = true
+				_drainIncomingURLs()
 			}
 		}
 	}
-	
+
+	/// Hands queued incoming URLs to `_handleURL` once the root view is on screen and the app is
+	/// active; otherwise they stay queued and the next trigger (root appeared, scene became
+	/// active, new URL queued) tries again.
+	private func _drainIncomingURLs(attempt: Int = 0) {
+		DispatchQueue.main.async {
+			guard IncomingURLRouter.shared.pendingCount > 0 else { return }
+			guard _isRootReady, UIApplication.shared.applicationState == .active else {
+				Logger.incoming.notice("Waiting for UI: rootReady=\(_isRootReady, privacy: .public) appState=\(UIApplication.shared.applicationState.rawValue, privacy: .public)")
+				return
+			}
+			// Root view is up but the window may not be key yet: retry shortly instead of
+			// waiting for the next activation.
+			guard UIApplication.topViewController() != nil else {
+				if attempt < 10 {
+					DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+						_drainIncomingURLs(attempt: attempt + 1)
+					}
+				} else {
+					Logger.incoming.error("No presenter for incoming URL; kept for next activation")
+				}
+				return
+			}
+			for url in IncomingURLRouter.shared.takeAll() {
+				_handleURL(url)
+			}
+		}
+	}
+
 	/// Shows the pending storage notice only when a presenter exists; otherwise keeps it for the next
 	/// time the app becomes active. Cleared only after it was actually presented.
 	private func _showStartupNoticeIfPossible() {
@@ -93,6 +136,7 @@ struct QuillApp: App {
 	
 	private func _handleURL(_ url: URL) {
 		if url.scheme == "quill" {
+			Logger.incoming.notice("Handling URL: quill link host=\(url.host ?? "-", privacy: .public)")
 			/// quill://import-certificate?p12=<base64>&mobileprovision=<base64>&password=<base64>
 			if url.host == "import-certificate" {
 				guard
@@ -190,13 +234,22 @@ struct QuillApp: App {
 				)
 			}
 		} else {
-			if url.pathExtension.lowercased() == "quillbackup" {
+			let ext = url.pathExtension.lowercased()
+			if ext == "quillbackup" {
+				Logger.incoming.notice("Handling URL: backup restore")
 				_pendingBackup = PendingBackup(url: url)
 				return
 			}
 			if IncomingPackageImporter.canHandle(url) {
+				Logger.incoming.notice("Handling URL: package import ext=\(ext, privacy: .public)")
 				IncomingPackageImporter.handle(url)
 				return
+			}
+			// Never ignore a shared file silently.
+			Logger.incoming.error("Unsupported URL: scheme=\(url.scheme ?? "-", privacy: .public) ext=\(ext, privacy: .public)")
+			if url.isFileURL {
+				DownloadManager.pendingImportError = .localized("This file type is not supported. Share an .ipa or .tipa file.")
+				DownloadManager.shared.presentPendingImportErrorIfPossible()
 			}
 		}
 	}
@@ -223,7 +276,21 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		_addDefaultCertificates()
 		return true
 	}
-	
+
+	/// Installs `QuillSceneDelegate` next to SwiftUI's own scene handling, so URLs that arrive with
+	/// the scene connection (cold launch via "Open in" / share sheet) are captured at the UIKit level
+	/// and queued instead of depending only on SwiftUI's `onOpenURL` delivery.
+	func application(
+		_ application: UIApplication,
+		configurationForConnecting connectingSceneSession: UISceneSession,
+		options: UIScene.ConnectionOptions
+	) -> UISceneConfiguration {
+		Logger.incoming.notice("Scene connecting: urlContexts=\(options.urlContexts.count, privacy: .public)")
+		let configuration = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+		configuration.delegateClass = QuillSceneDelegate.self
+		return configuration
+	}
+
 	private func _createPipeline() {
 		DataLoader.sharedUrlCache.diskCapacity = 0
 		
