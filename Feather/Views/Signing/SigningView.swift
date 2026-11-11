@@ -127,6 +127,8 @@ struct SigningView: View {
 			.disabled(_isSigning)
 			.animation(.smooth, value: _isSigning)
 			.onChange(of: _temporaryCertificate) { _ in
+				// Quill: a new certificate means a new profile, so the choice is asked again.
+				_applyQuillDefaults()
 				_applyAutoIdentifier()
 			}
 			.confirmationDialog(
@@ -191,6 +193,8 @@ extension SigningView {
 		guard app.isQuillItself else { return }
 		_temporaryOptions.ppqProtection = false
 		_temporaryOptions.appIdentifier = app.identifier
+		_idEditedByUser = false
+		_idFromProfile = false
 	}
 
 	fileprivate struct QuillIdChoice: Identifiable {
@@ -322,6 +326,11 @@ extension SigningView {
 						_idFromProfile = true
 					}
 				}
+			}
+			if app.isQuillItself, !_idEditedByUser {
+				Text(.localized("Not chosen yet — you'll be asked when signing."))
+					.font(.footnote)
+					.foregroundStyle(.secondary)
 			}
 			if
 				app.isQuillItself,
@@ -473,7 +482,8 @@ extension SigningView {
 
 	/// Quill itself needs an explicit bundle ID choice before signing.
 	private func _proceedAfterChecks() {
-		if app.isQuillItself, !_idEditedByUser {
+		let idIsEmpty = (_temporaryOptions.appIdentifier ?? "").trimmingCharacters(in: .whitespaces).isEmpty
+		if app.isQuillItself, !_idEditedByUser || idIsEmpty {
 			_isQuillIdDialogPresented = true
 		} else {
 			_beginSigning()

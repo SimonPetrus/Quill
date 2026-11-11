@@ -20190,6 +20190,23 @@
           }
         }
       }
+    },
+    "Not chosen yet — you'll be asked when signing." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not chosen yet — you'll be asked when signing."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Henüz seçilmedi, imzalarken sorulacak."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
