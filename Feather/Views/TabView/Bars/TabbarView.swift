@@ -9,9 +9,10 @@ import SwiftUI
 
 struct TabbarView: View {
 	@ObservedObject private var _router = TabRouter.shared
+	@State private var _selectedTab: TabEnum = .sources
 
 	var body: some View {
-		TabView(selection: $_router.selected) {
+		TabView(selection: $_selectedTab) {
 			ForEach(TabEnum.defaultTabs, id: \.hashValue) { tab in
 				TabEnum.view(for: tab)
 					.tabItem {
@@ -19,6 +20,9 @@ struct TabbarView: View {
 					}
 					.tag(tab)
 			}
+		}
+		.onChange(of: _router.openLibraryRequest) { request in
+			if request != nil { _selectedTab = .library }
 		}
 	}
 }

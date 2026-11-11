@@ -15,6 +15,8 @@ struct ExtendedTabbarView: View {
 	@AppStorage("Quill.tabCustomization") var customization = TabViewCustomization()
 	@StateObject var viewModel = SourcesViewModel.shared
 	@ObservedObject private var _router = TabRouter.shared
+	/// Holds every tab value (tab raw values, "all-repositories", "source.<id>").
+	@State private var _selectedTab: String = TabEnum.sources.rawValue
 	
 	@State private var _isAddingPresenting = false
 	
@@ -24,16 +26,8 @@ struct ExtendedTabbarView: View {
 		animation: .snappy
 	) private var _sources: FetchedResults<AltSource>
 		
-	/// Tab values are strings (tab raw values and source tabs); the shared router only knows `TabEnum`.
-	private var _selection: Binding<String> {
-		Binding(
-			get: { _router.selected.rawValue },
-			set: { if let tab = TabEnum(rawValue: $0) { _router.selected = tab } }
-		)
-	}
-	
 	var body: some View {
-		TabView(selection: _selection) {
+		TabView(selection: $_selectedTab) {
 			ForEach(TabEnum.defaultTabs, id: \.hashValue) { tab in
 				Tab(tab.title, systemImage: tab.icon, value: tab.rawValue) {
 					TabEnum.view(for: tab)
@@ -81,6 +75,9 @@ struct ExtendedTabbarView: View {
 			.hidden(horizontalSizeClass == .compact)
 		}
 		.tabViewStyle(.sidebarAdaptable)
+		.onChange(of: _router.openLibraryRequest) { request in
+			if request != nil { _selectedTab = TabEnum.library.rawValue }
+		}
 		.tabViewCustomization($customization)
 		.sheet(isPresented: $_isAddingPresenting) {
 			SourcesAddView()

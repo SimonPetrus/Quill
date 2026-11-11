@@ -20662,7 +20662,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ ve %@ diğer"
+            "value" : "%@ ve %@ tane daha"
           }
         }
       }

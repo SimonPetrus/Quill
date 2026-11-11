@@ -36,7 +36,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 		withCompletionHandler completionHandler: @escaping () -> Void
 	) {
 		if response.notification.request.identifier == AppUpdateChecker.notificationID {
-			Task { @MainActor in TabRouter.shared.selected = .library }
+			Task { @MainActor in TabRouter.shared.requestLibrary() }
 		}
 		completionHandler()
 	}

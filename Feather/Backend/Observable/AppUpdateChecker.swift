@@ -51,20 +51,22 @@ final class AppUpdateChecker {
 
 	/// Reads the stored sources and library apps (main-thread Core Data) and refreshes the shared
 	/// `UpdateManager`. False when nothing could be checked (no sources, offline, already running).
-	private func _scan() async -> Bool {
-		guard !_isRunning else { return false }
+	private enum ScanResult { case checked, nothingToDo, failed }
+	
+	private func _scan() async -> ScanResult {
+		guard !_isRunning else { return .failed }
 		_isRunning = true
 		defer { _isRunning = false }
 
 		let context = Storage.shared.context
 		let sources = (try? context.fetch(AltSource.fetchRequest() as NSFetchRequest<AltSource>)) ?? []
-		guard !sources.isEmpty else { return false }
+		guard !sources.isEmpty else { return .nothingToDo }
 		let signed = (try? context.fetch(Signed.fetchRequest() as NSFetchRequest<Signed>)) ?? []
 		let imported = (try? context.fetch(Imported.fetchRequest() as NSFetchRequest<Imported>)) ?? []
 		let localApps = signed.map { $0 as AppInfoPresentable } + imported.map { $0 as AppInfoPresentable }
-		guard !localApps.isEmpty else { return false }
+		guard !localApps.isEmpty else { return .nothingToDo }
 
-		return await UpdateManager.shared.checkForUpdates(sources: sources, localApps: localApps)
+		return await UpdateManager.shared.checkForUpdates(sources: sources, localApps: localApps) ? .checked : .failed
 	}
 
 	// MARK: Notified keys
@@ -120,7 +122,7 @@ final class AppUpdateChecker {
 		   Date().timeIntervalSince(last) < Self._interval { return }
 
 		Task {
-			guard await _scan() else { return }
+			guard await _scan() == .checked else { return }
 			defaults.set(Date(), forKey: Self._lastCheckKey)
 			let fresh = _unannounced()
 			guard !fresh.isEmpty else { return }
@@ -155,7 +157,7 @@ final class AppUpdateChecker {
 			message: Self._summary(toShow),
 			actions: [
 				UIAlertAction(title: .localized("Show"), style: .default) { _ in
-					TabRouter.shared.selected = .library
+					TabRouter.shared.requestLibrary()
 				},
 				UIAlertAction(title: .localized("Later"), style: .cancel)
 			]
@@ -181,12 +183,21 @@ final class AppUpdateChecker {
 			cancelBackgroundRefresh()
 			return
 		}
-		let request = BGAppRefreshTaskRequest(identifier: refreshTaskID)
-		request.earliestBeginDate = Date(timeIntervalSinceNow: _interval)
-		do {
-			try BGTaskScheduler.shared.submit(request)
-		} catch {
-			Logger.misc.error("App update refresh could not be scheduled: \(error.localizedDescription, privacy: .public)")
+		submitRefreshRequest()
+	}
+	
+	/// Submits the next refresh; `onlyIfNone` keeps an already pending request (and its date) as is,
+	/// so going to the background repeatedly does not keep pushing the date out.
+	nonisolated private static func submitRefreshRequest(onlyIfNone: Bool = true) {
+		BGTaskScheduler.shared.getPendingTaskRequests { pending in
+			if onlyIfNone, pending.contains(where: { $0.identifier == refreshTaskID }) { return }
+			let request = BGAppRefreshTaskRequest(identifier: refreshTaskID)
+			request.earliestBeginDate = Date(timeIntervalSinceNow: _interval)
+			do {
+				try BGTaskScheduler.shared.submit(request)
+			} catch {
+				Logger.misc.error("App update refresh could not be scheduled: \(error.localizedDescription, privacy: .public)")
+			}
 		}
 	}
 
@@ -212,8 +223,8 @@ final class AppUpdateChecker {
 	}
 
 	nonisolated private static func handleBackgroundRefresh(_ task: BGAppRefreshTask) {
-		// Always line up the next run first.
-		scheduleBackgroundRefresh()
+		// Always line up the next run first (the running task's own request is already consumed).
+		if isBackgroundNotifyEnabled { submitRefreshRequest(onlyIfNone: false) }
 
 		let completion = _Completion(task)
 		// Core Data's view context is main-thread only, so the whole job runs on the main actor.
@@ -222,11 +233,11 @@ final class AppUpdateChecker {
 				completion.finish(success: true)
 				return
 			}
-			let ok = await shared._scan()
-			if ok, !Task.isCancelled {
+			let result = await shared._scan()
+			if result == .checked, !Task.isCancelled {
 				await shared._notifyNewUpdates()
 			}
-			completion.finish(success: ok)
+			completion.finish(success: result != .failed)
 		}
 		task.expirationHandler = {
 			work.cancel()

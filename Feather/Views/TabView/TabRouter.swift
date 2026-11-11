@@ -11,7 +11,12 @@ import SwiftUI
 final class TabRouter: ObservableObject {
 	static let shared = TabRouter()
 	
-	@Published var selected: TabEnum = .sources
+	/// Changes on every request, so repeated "open Library" requests are always observed.
+	@Published private(set) var openLibraryRequest: UUID?
+	
+	func requestLibrary() {
+		openLibraryRequest = UUID()
+	}
 	
 	private init() {}
 }
