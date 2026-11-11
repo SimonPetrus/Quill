@@ -32,6 +32,11 @@ struct InstallationView: View {
 			}
 			
 			if _installationMethod == 0 {
+				Section {
+					NavigationLink(destination: IDeviceGuideView()) {
+						Label(.localized("How to set up idevice"), systemImage: "questionmark.circle")
+					}
+				}
 				ServerView()
 			} else if _installationMethod == 1 {
 				TunnelView()

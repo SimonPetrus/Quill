@@ -314,8 +314,14 @@ struct InstallPreviewView: View {
 				// The server dies together with Quill when iOS closes it, so the server method can't work.
 				UIAlertController.showAlert(
 					title: .localized("Install"),
-					message: .localized("Quill can't install over itself with the server method. Switch Installation Type to idevice (needs pairing file + VPN), then try again."),
+					message: .localized("Quill can't update itself with the server method. Use idevice (pairing file + LocalDevVPN) or another signer such as Feather."),
 					actions: [
+						UIAlertAction(title: .localized("How to set up"), style: .default) { _ in
+							dismiss()
+							DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+								Self._presentIDeviceGuide()
+							}
+						},
 						UIAlertAction(title: .localized("Open Settings"), style: .default) { _ in
 							dismiss()
 							DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -406,6 +412,11 @@ struct InstallPreviewView: View {
 	
 	/// Shows Settings → Installation in a sheet (the tab bar has no programmatic selection).
 	@MainActor
+	private static func _presentIDeviceGuide() {
+		let root = NBNavigationView(.localized("How to set up idevice")) { IDeviceGuideView() }
+		UIApplication.topViewController()?.present(UIHostingController(rootView: root), animated: true)
+	}
+	
 	private static func _presentInstallationSettings() {
 		let root = NBNavigationView(.localized("Installation")) { InstallationView() }
 		UIApplication.topViewController()?.present(UIHostingController(rootView: root), animated: true)

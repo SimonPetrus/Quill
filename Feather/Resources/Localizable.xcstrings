@@ -18405,23 +18405,6 @@
         }
       }
     },
-    "Quill can't install over itself with the server method. Switch Installation Type to idevice (needs pairing file + VPN), then try again." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quill can't install over itself with the server method. Switch Installation Type to idevice (needs pairing file + VPN), then try again."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quill, sunucu yöntemiyle kendi üzerine kurulamaz. Kurulum Türü'nü idevice'a çevirin (eşleştirme dosyası + VPN gerekir), sonra tekrar deneyin."
-          }
-        }
-      }
-    },
     "Quill will close during the update; reopen it from the home screen." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -20204,6 +20187,295 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Henüz seçilmedi, imzalarken sorulacak."
+          }
+        }
+      }
+    },
+    "Quill can't update itself with the server method. Use idevice (pairing file + LocalDevVPN) or another signer such as Feather." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill can't update itself with the server method. Use idevice (pairing file + LocalDevVPN) or another signer such as Feather."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill kendini sunucu yöntemiyle güncelleyemez. idevice (eşleştirme dosyası + LocalDevVPN) veya Feather gibi başka bir imzalayıcı kullanın."
+          }
+        }
+      }
+    },
+    "How to set up" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How to set up"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nasıl kurulur"
+          }
+        }
+      }
+    },
+    "How to set up idevice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How to set up idevice"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "idevice nasıl kurulur"
+          }
+        }
+      }
+    },
+    "Get a pairing file on a computer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get a pairing file on a computer"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bilgisayarda eşleştirme dosyası alın"
+          }
+        }
+      }
+    },
+    "Install iTunes or Apple Devices (Windows) for the iPhone driver, then download idevice_pair. Connect the iPhone with a cable, tap \"Trust\" and enter the passcode. Select the device in idevice_pair, generate the pairing file and save it. Send it to your phone (AirDrop, Files, Telegram)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install iTunes or Apple Devices (Windows) for the iPhone driver, then download idevice_pair. Connect the iPhone with a cable, tap \"Trust\" and enter the passcode. Select the device in idevice_pair, generate the pairing file and save it. Send it to your phone (AirDrop, Files, Telegram)."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone sürücüsü için iTunes veya Apple Devices'ı (Windows) kurun, ardından idevice_pair'i indirin. iPhone'u kabloyla bağlayın, \"Güven\"e dokunup parolayı girin. idevice_pair'de cihazı seçin, eşleştirme dosyasını oluşturup kaydedin. Dosyayı telefonunuza gönderin (AirDrop, Dosyalar, Telegram)."
+          }
+        }
+      }
+    },
+    "Open idevice_pair Downloads" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open idevice_pair Downloads"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "idevice_pair İndirmelerini Aç"
+          }
+        }
+      }
+    },
+    "Import the pairing file" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import the pairing file"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eşleştirme dosyasını içe aktarın"
+          }
+        }
+      }
+    },
+    "Tap \"Import Pairing File\" in the idevice settings and pick the file." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap \"Import Pairing File\" in the idevice settings and pick the file."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "idevice ayarlarında \"Import Pairing File\" düğmesine dokunup dosyayı seçin."
+          }
+        }
+      }
+    },
+    "Install and connect LocalDevVPN" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install and connect LocalDevVPN"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LocalDevVPN'i kurup bağlayın"
+          }
+        }
+      }
+    },
+    "Get LocalDevVPN from the App Store and connect it. The VPN stays on your device; it only lets Quill reach the install service of your phone." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get LocalDevVPN from the App Store and connect it. The VPN stays on your device; it only lets Quill reach the install service of your phone."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LocalDevVPN'i App Store'dan indirip bağlayın. VPN cihazınızdan çıkmaz; yalnızca Quill'in telefonun kurulum hizmetine ulaşmasını sağlar."
+          }
+        }
+      }
+    },
+    "Use Wi-Fi or Airplane mode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use Wi-Fi or Airplane mode"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wi-Fi veya Uçak modu kullanın"
+          }
+        }
+      }
+    },
+    "Be connected to Wi-Fi, or turn on Airplane mode." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Be connected to Wi-Fi, or turn on Airplane mode."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wi-Fi'ye bağlı olun veya Uçak modunu açın."
+          }
+        }
+      }
+    },
+    "Install with idevice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install with idevice"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "idevice ile kurun"
+          }
+        }
+      }
+    },
+    "Set Installation Type to idevice and install. You can switch back to Server afterwards. The pairing file stays valid until you reset the phone." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set Installation Type to idevice and install. You can switch back to Server afterwards. The pairing file stays valid until you reset the phone."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kurulum Türü'nü idevice yapıp kurun. Sonra tekrar Sunucu'ya dönebilirsiniz. Eşleştirme dosyası telefonu sıfırlayana kadar geçerlidir."
+          }
+        }
+      }
+    },
+    "With a computer (one time)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With a computer (one time)"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bilgisayarla (tek seferlik)"
+          }
+        }
+      }
+    },
+    "Without a computer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Without a computer"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bilgisayarsız"
+          }
+        }
+      }
+    },
+    "Install the update with another signer that is still on your phone (for example Feather). Open the Quill IPA there, set the bundle ID to %@ and install it with the server method. Quill keeps its data." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install the update with another signer that is still on your phone (for example Feather). Open the Quill IPA there, set the bundle ID to %@ and install it with the server method. Quill keeps its data."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Güncellemeyi telefonunuzda duran başka bir imzalayıcıyla (örneğin Feather) kurun. Quill IPA'sını orada açın, bundle ID'yi %@ yapın ve sunucu yöntemiyle kurun. Quill verilerini korur."
           }
         }
       }

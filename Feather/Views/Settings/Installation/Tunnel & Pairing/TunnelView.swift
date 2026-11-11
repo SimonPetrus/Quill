@@ -20,6 +20,12 @@ struct TunnelView: View {
 	var body: some View {
 		Group {
 			Section {
+				NavigationLink(destination: IDeviceGuideView()) {
+					Label(.localized("How to set up idevice"), systemImage: "questionmark.circle")
+				}
+			}
+			
+			Section {
 				if #available(iOS 17.4, *) {
 				} else {
 					_tunnelInfo()
