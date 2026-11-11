@@ -10,6 +10,7 @@ import SwiftUI
 struct TabbarView: View {
 	@ObservedObject private var _router = TabRouter.shared
 	@State private var _selectedTab: TabEnum = .sources
+	@State private var _lastRequest: UUID?
 
 	var body: some View {
 		TabView(selection: $_selectedTab) {
@@ -21,8 +22,11 @@ struct TabbarView: View {
 					.tag(tab)
 			}
 		}
-		.onChange(of: _router.openLibraryRequest) { request in
-			if request != nil { _selectedTab = .library }
+		// onReceive also delivers the current value on subscription (notification tapped on a cold launch).
+		.onReceive(_router.$openLibraryRequest) { request in
+			guard let request, request != _lastRequest else { return }
+			_lastRequest = request
+			_selectedTab = .library
 		}
 	}
 }

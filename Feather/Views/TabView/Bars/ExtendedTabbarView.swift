@@ -19,6 +19,7 @@ struct ExtendedTabbarView: View {
 	@State private var _selectedTab: String = TabEnum.sources.rawValue
 	
 	@State private var _isAddingPresenting = false
+	@State private var _lastRequest: UUID?
 	
 	@FetchRequest(
 		entity: AltSource.entity(),
@@ -75,14 +76,40 @@ struct ExtendedTabbarView: View {
 			.hidden(horizontalSizeClass == .compact)
 		}
 		.tabViewStyle(.sidebarAdaptable)
-		.onChange(of: _router.openLibraryRequest) { request in
-			if request != nil { _selectedTab = TabEnum.library.rawValue }
+		// onReceive also delivers the current value on subscription (notification tapped on a cold launch).
+		.onReceive(_router.$openLibraryRequest) { request in
+			guard let request, request != _lastRequest else { return }
+			_lastRequest = request
+			_selectedTab = TabEnum.library.rawValue
 		}
+		.onChange(of: _sources.map { $0.identifier ?? "" }) { _ in _validateSelection() }
+		.onChange(of: horizontalSizeClass) { _ in _validateSelection() }
 		.tabViewCustomization($customization)
 		.sheet(isPresented: $_isAddingPresenting) {
 			SourcesAddView()
 				.presentationDetents([.medium])
 		}
+	}
+	
+	/// Falls back to Sources when the selected tab no longer exists (source deleted) or is hidden
+	/// (compact width hides the sidebar-only tabs).
+	private func _validateSelection() {
+		let compact = horizontalSizeClass == .compact
+		let value = _selectedTab
+		let isValid: Bool
+		if TabEnum.defaultTabs.contains(where: { $0.rawValue == value }) {
+			isValid = true
+		} else if TabEnum.customizableTabs.contains(where: { $0.rawValue == value }) {
+			isValid = !compact
+		} else if value == "all-repositories" {
+			isValid = !compact
+		} else if value.hasPrefix("source.") {
+			let id = String(value.dropFirst("source.".count))
+			isValid = !compact && _sources.contains(where: { ($0.identifier ?? "") == id })
+		} else {
+			isValid = false
+		}
+		if !isValid { _selectedTab = TabEnum.sources.rawValue }
 	}
 	
 	@ViewBuilder

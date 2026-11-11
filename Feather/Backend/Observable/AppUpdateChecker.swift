@@ -190,6 +190,8 @@ final class AppUpdateChecker {
 	/// so going to the background repeatedly does not keep pushing the date out.
 	nonisolated private static func submitRefreshRequest(onlyIfNone: Bool = true) {
 		BGTaskScheduler.shared.getPendingTaskRequests { pending in
+			// The switch may have been turned off while this callback was waiting.
+			guard isBackgroundNotifyEnabled else { return }
 			if onlyIfNone, pending.contains(where: { $0.identifier == refreshTaskID }) { return }
 			let request = BGAppRefreshTaskRequest(identifier: refreshTaskID)
 			request.earliestBeginDate = Date(timeIntervalSinceNow: _interval)
