@@ -77,6 +77,14 @@ struct QuillApp: App {
 				DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
 					SelfUpdateManager.shared.presentPendingIfPossible()
 				}
+				// After the Quill self-update alert had its chance; at most one of them shows at a time.
+				DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+					AppUpdateChecker.shared.autoCheckIfNeeded()
+					AppUpdateChecker.shared.presentPendingIfPossible()
+				}
+			}
+			.onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+				AppUpdateChecker.scheduleBackgroundRefresh()
 			}
 			// dear god help me
 			.onAppear {
@@ -88,6 +96,7 @@ struct QuillApp: App {
 				Storage.shared.removeLegacyUpstreamSourceIfNeeded()
 				Storage.shared.addOwnSourceIfNeeded()
 				SelfUpdateManager.shared.autoCheckIfNeeded()
+				AppUpdateChecker.scheduleBackgroundRefresh()
 				
 				UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "Quill.userTintColor") ?? "#848ef9"))
 
@@ -313,6 +322,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 	) -> Bool {
 		LegacyMigration.runIfNeeded()
 		NotificationManager.shared.start()
+		// BGTaskScheduler requires registration before launching finishes.
+		AppUpdateChecker.registerBackgroundTask()
 		LegacyMigration.resetAlternateIcon()
 		_createPipeline()
 		_createDocumentsDirectories()

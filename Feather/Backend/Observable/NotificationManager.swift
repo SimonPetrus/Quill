@@ -29,6 +29,18 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 		center.delegate = self
 	}
 	
+	/// Tapping the app update notification opens the Library tab.
+	func userNotificationCenter(
+		_ center: UNUserNotificationCenter,
+		didReceive response: UNNotificationResponse,
+		withCompletionHandler completionHandler: @escaping () -> Void
+	) {
+		if response.notification.request.identifier == AppUpdateChecker.notificationID {
+			Task { @MainActor in TabRouter.shared.selected = .library }
+		}
+		completionHandler()
+	}
+	
 	func userNotificationCenter(
 		_ center: UNUserNotificationCenter,
 		willPresent notification: UNNotification,

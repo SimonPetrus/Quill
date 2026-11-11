@@ -208,6 +208,8 @@ extension ResetView {
 	
 	static func resetUserDefaults() {
 		UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
+		// The background switch is off again after the reset: drop the pending refresh and notification.
+		AppUpdateChecker.cancelBackgroundRefresh()
 	}
 	
 	static func resetAll() {

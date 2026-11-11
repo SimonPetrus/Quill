@@ -15,6 +15,8 @@ import IDeviceSwift
 struct SettingsView: View {
 	@AppStorage("Quill.selectedCert") private var _storedSelectedCert: Int = 0
 	@AppStorage(NotificationManager.enabledKey) private var _expiryNotifications: Bool = false
+	@AppStorage(AppUpdateChecker.autoCheckKey) private var _autoCheckUpdates: Bool = true
+	@AppStorage(AppUpdateChecker.backgroundNotifyKey) private var _updateNotifications: Bool = false
 	
 	// MARK: Fetch
 	@FetchRequest(
@@ -66,6 +68,17 @@ struct SettingsView: View {
 					Text(.localized("Add and manage certificates used for signing applications."))
 				}
                 
+				NBSection(.localized("App Updates")) {
+					Toggle(isOn: $_autoCheckUpdates) {
+						Label(.localized("Check for App Updates"), systemImage: "arrow.triangle.2.circlepath")
+					}
+					Toggle(isOn: _updateNotificationsBinding) {
+						Label(.localized("Update Notifications"), systemImage: "bell.badge")
+					}
+				} footer: {
+					Text(.localized("Background checks run when iOS allows it, so notifications can be late or skipped."))
+				}
+				
 				NBSection(.localized("Features")) {
 					NavigationLink(destination: ConfigurationView()) {
 						Label(.localized("Signing Options"), systemImage: "signature")
@@ -124,6 +137,38 @@ extension SettingsView {
 						UIAlertController.showAlert(
 							title: .localized("Notifications Disabled"),
 							message: .localized("Notifications are turned off for Quill. Allow them in the system Settings to get certificate expiry reminders."),
+							actions: [
+								UIAlertAction(title: .localized("Open Settings"), style: .default) { _ in
+									NotificationManager.shared.openSystemSettings()
+								},
+								UIAlertAction(title: .localized("Cancel"), style: .cancel)
+							]
+						)
+					}
+				}
+			}
+		)
+	}
+	
+	/// Same pattern as the expiry switch: turning it on asks for permission and stays off if denied.
+	private var _updateNotificationsBinding: Binding<Bool> {
+		Binding(
+			get: { _updateNotifications },
+			set: { newValue in
+				guard newValue else {
+					_updateNotifications = false
+					AppUpdateChecker.cancelBackgroundRefresh()
+					return
+				}
+				NotificationManager.shared.requestAuthorization { granted in
+					if granted {
+						_updateNotifications = true
+						AppUpdateChecker.scheduleBackgroundRefresh()
+					} else {
+						_updateNotifications = false
+						UIAlertController.showAlert(
+							title: .localized("Notifications Disabled"),
+							message: .localized("Notifications are turned off for Quill. Allow them in the system Settings to get app update notifications."),
 							actions: [
 								UIAlertAction(title: .localized("Open Settings"), style: .default) { _ in
 									NotificationManager.shared.openSystemSettings()

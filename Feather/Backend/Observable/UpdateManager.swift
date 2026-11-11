@@ -89,11 +89,15 @@ final class UpdateManager: ObservableObject {
 		)
 	}
 	
+	/// Returns true when at least one repository could be read (the result was applied); false when
+	/// a check was already running or every repository failed (e.g. offline), in which case the
+	/// previous results are kept.
+	@discardableResult
 	func checkForUpdates(
 		sources: [AltSource],
 		localApps: [AppInfoPresentable]
-	) async {
-		guard !isChecking else { return }
+	) async -> Bool {
+		guard !isChecking else { return false }
 		
 		isChecking = true
 		defer {
@@ -102,7 +106,9 @@ final class UpdateManager: ObservableObject {
 		}
 		
 		let repositories = await _fetchRepositories(from: sources)
+		if repositories.isEmpty && !sources.isEmpty { return false }
 		updates = _findUpdates(repositories: repositories, localApps: localApps)
+		return true
 	}
 	
 	private func _fetchRepositories(from sources: [AltSource]) async -> [(AltSource, ASRepository)] {
