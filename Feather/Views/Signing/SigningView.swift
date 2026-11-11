@@ -194,7 +194,7 @@ extension SigningView {
 			if let identifier = app.identifier {
 				_temporaryOptions.appIdentifier = "\(identifier).\(_optionsManager.options.ppqString)"
 			}
-		} else if let profileId = _profileBundleId() {
+		} else if _optionsManager.options.autoProfileBundleId, let profileId = _profileBundleId() {
 			_temporaryOptions.appIdentifier = profileId
 			_idFromProfile = true
 		}
@@ -260,6 +260,17 @@ extension SigningView {
 					Text(.localized("From provisioning profile"))
 						.font(.footnote)
 						.foregroundStyle(.secondary)
+				} else if let profileId = _profileBundleId() {
+					Text(verbatim: String.localized("This profile is only valid for the %@ identifier.", arguments: profileId))
+						.font(.footnote)
+						.foregroundStyle(.secondary)
+					if _temporaryOptions.appIdentifier != profileId {
+						Button(.localized("Use profile ID")) {
+							_temporaryOptions.appIdentifier = profileId
+							_idEditedByUser = true
+							_idFromProfile = true
+						}
+					}
 				}
 			}
 			_infoCell(.localized("Version"), desc: _temporaryOptions.appVersion ?? app.version) {

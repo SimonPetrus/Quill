@@ -215,6 +215,17 @@ struct SigningOptionsView: View {
 			}
 		}
 		
+		Section {
+			_toggle(
+				.localized("Use profile bundle ID automatically"),
+				systemImage: "person.text.rectangle",
+				isOn: $options.autoProfileBundleId,
+				temporaryValue: temporaryOptions?.autoProfileBundleId
+			)
+		} footer: {
+			Text(.localized("With non-wildcard profiles, all apps get the same identifier; apps with the same identifier install over each other."))
+		}
+		
 		NBSection(.localized("Experiments")) {			
 			_toggle(
 				.localized("Replace Substrate with ElleKit"),

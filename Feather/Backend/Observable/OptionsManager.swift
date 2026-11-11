@@ -165,6 +165,8 @@ struct Options: Codable, Equatable {
 	var mergeEntitlements: Bool
 	/// If the keychain access group should be unique to this app (`TEAMID.<bundle id>`), wildcard profiles only
 	var isolateKeychain: Bool
+	/// If the bundle ID should automatically be taken from a non-wildcard provisioning profile
+	var autoProfileBundleId: Bool
 
 	// MARK: Experiments
 	
@@ -217,6 +219,7 @@ struct Options: Codable, Equatable {
 		injectIntoWatchApp: false,
 		mergeEntitlements: false,
 		isolateKeychain: false,
+		autoProfileBundleId: false,
 		
 		// MARK: Experiments
 		

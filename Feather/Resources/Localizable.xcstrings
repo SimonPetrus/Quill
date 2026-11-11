@@ -7317,6 +7317,74 @@
         }
       }
     },
+    "Use profile bundle ID automatically" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use profile bundle ID automatically"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profildeki bundle ID'yi otomatik kullan"
+          }
+        }
+      }
+    },
+    "With non-wildcard profiles, all apps get the same identifier; apps with the same identifier install over each other." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With non-wildcard profiles, all apps get the same identifier; apps with the same identifier install over each other."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Joker olmayan profillerde tüm uygulamalar aynı kimliği alır; aynı kimlikli uygulamalar birbirinin üzerine kurulur."
+          }
+        }
+      }
+    },
+    "This profile is only valid for the %@ identifier." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This profile is only valid for the %@ identifier."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu profil yalnızca %@ kimliği için geçerli."
+          }
+        }
+      }
+    },
+    "Use profile ID" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use profile ID"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profilden al"
+          }
+        }
+      }
+    },
     "From provisioning profile" : {
       "extractionState" : "manual",
       "localizations" : {
