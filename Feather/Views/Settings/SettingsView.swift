@@ -147,6 +147,27 @@ extension SettingsView {
 					FRAppIconView(size: 23)
 				}
 			}
+			// Quill signed with a fixed App ID that differs from its bundle ID: iOS then does not
+			// hand shared files to it. Wildcard profiles and missing profiles show nothing.
+			if let profileID = OwnSigningIdentity.mismatchedProfileBundleID {
+				Button {
+					UIAlertController.showAlertWithOk(
+						title: .localized("Bundle ID Mismatch"),
+						message: .localized(
+							"Quill runs as %1$@, but its profile is only valid for %2$@. iOS then does not hand shared files to Quill.\n\n1. Back up your data in Backup & Restore (turn on Include Certificates).\n2. Sign Quill again with %2$@ (tap “Use profile ID” when signing Quill) and install it.\n3. Open the new Quill and restore the backup.",
+							arguments: Bundle.main.bundleIdentifier ?? "-", profileID
+						)
+					)
+				} label: {
+					Label {
+						Text(verbatim: .localized("Share import won't work: Quill must be signed with the profile's ID (%@).", arguments: profileID))
+							.font(.footnote)
+					} icon: {
+						Image(systemName: "exclamationmark.triangle.fill")
+							.foregroundStyle(.orange)
+					}
+				}
+			}
 		}
 	}
     

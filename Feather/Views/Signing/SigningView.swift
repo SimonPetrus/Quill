@@ -129,7 +129,8 @@ struct SigningView: View {
 			}
 		}
 		.onAppear {
-			// Quill itself: keep the bundle ID (no PPQ suffix, no rename) so the install replaces this app.
+			// Quill itself: default to the installed copy's bundle ID (no PPQ suffix, no mapping), so the
+			// install replaces this app. The user may still change it (e.g. "Use profile ID").
 			if app.isQuillItself {
 				_temporaryOptions.ppqProtection = false
 				_temporaryOptions.appIdentifier = Bundle.main.bundleIdentifier
@@ -235,41 +236,40 @@ extension SigningView {
 				)
 			}
 			if app.isQuillItself {
-				LabeledContent(.localized("Identifier")) {
-					Text(Bundle.main.bundleIdentifier ?? app.identifier ?? .localized("Unknown"))
-				}
-				Text(.localized("This is Quill itself. Bundle ID is kept so your data stays."))
+				Text(verbatim: String.localized(
+					"This is Quill itself. The installed bundle ID (%@) is used by default, so it updates this app in place. Another ID installs a separate copy without your data.",
+					arguments: Bundle.main.bundleIdentifier ?? "-"
+				))
 					.font(.footnote)
 					.foregroundStyle(.secondary)
-			} else {
-				_infoCell(.localized("Identifier"), desc: _temporaryOptions.appIdentifier ?? app.identifier) {
-					SigningPropertiesView(
-						title: .localized("Identifier"),
-						initialValue: _temporaryOptions.appIdentifier ?? (app.identifier ?? ""),
-						bindingValue: Binding(
-							get: { _temporaryOptions.appIdentifier },
-							set: {
-								_temporaryOptions.appIdentifier = $0
-								_idEditedByUser = true
-								_idFromProfile = false
-							}
-						)
-					)
-				}
-				if _idFromProfile {
-					Text(.localized("From provisioning profile"))
-						.font(.footnote)
-						.foregroundStyle(.secondary)
-				} else if let profileId = _profileBundleId() {
-					Text(verbatim: String.localized("This profile is only valid for the %@ identifier.", arguments: profileId))
-						.font(.footnote)
-						.foregroundStyle(.secondary)
-					if _temporaryOptions.appIdentifier != profileId {
-						Button(.localized("Use profile ID")) {
-							_temporaryOptions.appIdentifier = profileId
+			}
+			_infoCell(.localized("Identifier"), desc: _temporaryOptions.appIdentifier ?? app.identifier) {
+				SigningPropertiesView(
+					title: .localized("Identifier"),
+					initialValue: _temporaryOptions.appIdentifier ?? (app.identifier ?? ""),
+					bindingValue: Binding(
+						get: { _temporaryOptions.appIdentifier },
+						set: {
+							_temporaryOptions.appIdentifier = $0
 							_idEditedByUser = true
-							_idFromProfile = true
+							_idFromProfile = false
 						}
+					)
+				)
+			}
+			if _idFromProfile {
+				Text(.localized("From provisioning profile"))
+					.font(.footnote)
+					.foregroundStyle(.secondary)
+			} else if let profileId = _profileBundleId() {
+				Text(verbatim: String.localized("This profile is only valid for the %@ identifier.", arguments: profileId))
+					.font(.footnote)
+					.foregroundStyle(.secondary)
+				if _temporaryOptions.appIdentifier != profileId {
+					Button(.localized("Use profile ID")) {
+						_temporaryOptions.appIdentifier = profileId
+						_idEditedByUser = true
+						_idFromProfile = true
 					}
 				}
 			}
@@ -410,10 +410,13 @@ extension SigningView {
 		generator.impactOccurred()
 		_isSigning = true
 		
-		// Only for this signing: Quill itself must keep its bundle ID.
+		// Only for this signing: Quill itself never gets a PPQ suffix; without a chosen ID it keeps
+		// the installed copy's bundle ID (the release IPA itself carries "app.quill.sign").
 		if app.isQuillItself {
 			_temporaryOptions.ppqProtection = false
-			_temporaryOptions.appIdentifier = Bundle.main.bundleIdentifier
+			if (_temporaryOptions.appIdentifier ?? "").trimmingCharacters(in: .whitespaces).isEmpty {
+				_temporaryOptions.appIdentifier = Bundle.main.bundleIdentifier
+			}
 		}
 		
 		FR.signPackageFile(

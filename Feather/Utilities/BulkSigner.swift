@@ -148,7 +148,8 @@ final class BulkSigner: ObservableObject {
 			options.appIdentifier = newBundleId
 		}
 		if app.isQuillItself {
-			// Keep the bundle ID so the install replaces this app.
+			// The installed copy's bundle ID (may differ from the release ID "app.quill.sign"),
+			// so the install replaces this app instead of adding a second copy.
 			options.ppqProtection = false
 			options.appIdentifier = Bundle.main.bundleIdentifier
 		}

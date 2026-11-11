@@ -19986,6 +19986,74 @@
           }
         }
       }
+    },
+    "Share import won't work: Quill must be signed with the profile's ID (%@)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share import won't work: Quill must be signed with the profile's ID (%@)."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paylaşımla içe aktarma çalışmaz: Quill, profilin kimliğiyle (%@) imzalanmalı."
+          }
+        }
+      }
+    },
+    "Bundle ID Mismatch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bundle ID Mismatch"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kimlik Uyuşmazlığı"
+          }
+        }
+      }
+    },
+    "Quill runs as %1$@, but its profile is only valid for %2$@. iOS then does not hand shared files to Quill.\n\n1. Back up your data in Backup & Restore (turn on Include Certificates).\n2. Sign Quill again with %2$@ (tap “Use profile ID” when signing Quill) and install it.\n3. Open the new Quill and restore the backup." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill runs as %1$@, but its profile is only valid for %2$@. iOS then does not hand shared files to Quill.\n\n1. Back up your data in Backup & Restore (turn on Include Certificates).\n2. Sign Quill again with %2$@ (tap “Use profile ID” when signing Quill) and install it.\n3. Open the new Quill and restore the backup."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill %1$@ kimliğiyle çalışıyor, ancak profili yalnız %2$@ için geçerli. Bu durumda iOS paylaşılan dosyaları Quill'e teslim etmez.\n\n1. Verilerinizi Yedekleme ve Geri Yükleme'den yedekleyin (Sertifikaları Dahil Et'i açın).\n2. Quill'i %2$@ ile yeniden imzalayın (Quill'i imzalarken “Profilden al”a dokunun) ve kurun.\n3. Yeni Quill'i açın ve yedeği geri yükleyin."
+          }
+        }
+      }
+    },
+    "This is Quill itself. The installed bundle ID (%@) is used by default, so it updates this app in place. Another ID installs a separate copy without your data." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is Quill itself. The installed bundle ID (%@) is used by default, so it updates this app in place. Another ID installs a separate copy without your data."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu, Quill'in kendisi. Varsayılan olarak kurulu bundle ID (%@) kullanılır; böylece bu uygulamanın üzerine güncellenir. Başka bir ID, verileriniz olmadan ayrı bir kopya kurar."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

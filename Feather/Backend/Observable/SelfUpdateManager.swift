@@ -19,14 +19,29 @@ func bundleIDMatchesRunningApp(_ identifier: String, own: String) -> Bool {
 	return !suffix.isEmpty && !suffix.contains(".")
 }
 
+/// True for Quill's own bundle ID: the release ID (`app.quill.sign`) or the running app's ID
+/// (Quill may be installed under the profile's App ID, e.g. "simon.bjk").
+func isQuillBundleID(_ identifier: String) -> Bool {
+	if identifier == quillCanonicalBundleID { return true }
+	guard let own = Bundle.main.bundleIdentifier else { return false }
+	return bundleIDMatchesRunningApp(identifier, own: own)
+}
+
 extension AppInfoPresentable {
-	/// True when this library item is Quill itself (same bundle ID as the running app).
-	/// Determined at runtime so no Core Data schema change is needed.
+	/// True when this library item is Quill itself: the release IPA (`app.quill.sign`) or a copy with
+	/// the running app's bundle ID. Determined at runtime so no Core Data schema change is needed.
 	var isQuillItself: Bool {
-		guard let identifier, !identifier.isEmpty, let own = Bundle.main.bundleIdentifier else { return false }
+		guard let identifier, !identifier.isEmpty else { return false }
 		// Tools like SideStore/AltStore can rewrite the installed bundle ID (e.g. "app.quill.sign.TEAMID"),
 		// so a library item whose ID is a prefix of the running one is Quill too. Require a dotted
 		// identifier and exactly one extra suffix component so short IDs ("app") never match broadly.
+		return isQuillBundleID(identifier)
+	}
+	
+	/// True only when installing this item replaces the running app (same bundle ID as the running
+	/// app). A Quill IPA with another ID installs as a separate copy.
+	var replacesRunningApp: Bool {
+		guard let identifier, !identifier.isEmpty, let own = Bundle.main.bundleIdentifier else { return false }
 		return bundleIDMatchesRunningApp(identifier, own: own)
 	}
 }
@@ -164,8 +179,8 @@ final class SelfUpdateManager: ObservableObject {
 		
 		guard
 			let apps = json["apps"] as? [[String: Any]],
-			let own = Bundle.main.bundleIdentifier,
-			let app = apps.first(where: { bundleIDMatchesRunningApp(($0["bundleIdentifier"] as? String) ?? "", own: own) })
+			// The source lists the release ID; the installed copy may run under the profile's App ID.
+			let app = apps.first(where: { isQuillBundleID(($0["bundleIdentifier"] as? String) ?? "") })
 		else { return nil }
 		
 		let latest = (app["versions"] as? [[String: Any]])?.first

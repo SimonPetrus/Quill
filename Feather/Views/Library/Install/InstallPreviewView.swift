@@ -220,7 +220,7 @@ struct InstallPreviewView: View {
 	
 	/// Fully Local + server install: warn first if the local CA is not trusted yet.
 	private func _checkTrustThenInstall() {
-		guard !isSharing, !app.isQuillItself, _installationMethod == 0, _serverMethod == 0 else {
+		guard !isSharing, !app.replacesRunningApp, _installationMethod == 0, _serverMethod == 0 else {
 			_install()
 			return
 		}
@@ -289,7 +289,7 @@ struct InstallPreviewView: View {
 	}
 	
 	private func _install() {
-		if !isSharing, app.isQuillItself {
+		if !isSharing, app.replacesRunningApp {
 			guard _installationMethod == 1 else {
 				// The server dies together with Quill when iOS closes it, so the server method can't work.
 				UIAlertController.showAlert(

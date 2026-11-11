@@ -318,6 +318,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		_createDocumentsDirectories()
 		ResetView.clearWorkCache()
 		IncomingLog.startRun()
+		// Logs whether the profile's App ID matches the bundle ID (share import needs it).
+		_ = OwnSigningIdentity.current
 		IncomingInboxScanner.recordRunStart()
 		// Certificates: files to Application Support + passwords to the Keychain (once; retried until complete).
 		SecureCertificateMigration.runIfNeeded()
