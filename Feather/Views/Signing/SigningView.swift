@@ -278,7 +278,7 @@ extension SigningView {
 				}
 			}
 			if _wouldReplaceQuill(_temporaryOptions.appIdentifier) {
-				Label(.localized("This is Quill's bundle ID: installing this app replaces Quill and deletes its data."), systemImage: "exclamationmark.triangle.fill")
+				Label(.localized("This is Quill's bundle ID: installing this app replaces Quill and gives it access to Quill's data, including certificates."), systemImage: "exclamationmark.triangle.fill")
 					.font(.footnote)
 					.foregroundStyle(.red)
 			}

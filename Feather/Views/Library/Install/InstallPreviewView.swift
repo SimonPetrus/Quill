@@ -297,7 +297,7 @@ struct InstallPreviewView: View {
 				UIAlertController.showAlert(
 					title: .localized("Replace Quill?"),
 					message: .localized(
-						"This app uses Quill's bundle ID (%@). Installing it deletes Quill and all its data and puts this app in its place.",
+						"This app uses Quill's bundle ID (%@). Installing it removes Quill and gives this app access to Quill's data, including certificates.",
 						arguments: app.identifier ?? "-"
 					),
 					actions: [

@@ -20038,23 +20038,6 @@
         }
       }
     },
-    "This is Quill's bundle ID: installing this app replaces Quill and deletes its data." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This is Quill's bundle ID: installing this app replaces Quill and deletes its data."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu, Quill'in bundle ID'si: bu uygulamayı kurmak Quill'in yerine geçer ve verilerini siler."
-          }
-        }
-      }
-    },
     "Replace Quill?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -20072,23 +20055,6 @@
         }
       }
     },
-    "This app uses Quill's bundle ID (%@). Installing it deletes Quill and all its data and puts this app in its place." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This app uses Quill's bundle ID (%@). Installing it deletes Quill and all its data and puts this app in its place."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu uygulama Quill'in bundle ID'sini (%@) kullanıyor. Kurulursa Quill tüm verileriyle silinir ve yerine bu uygulama gelir."
-          }
-        }
-      }
-    },
     "Replace Quill" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -20102,6 +20068,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quill'in Yerine Kur"
+          }
+        }
+      }
+    },
+    "This app uses Quill's bundle ID (%@). Installing it removes Quill and gives this app access to Quill's data, including certificates." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This app uses Quill's bundle ID (%@). Installing it removes Quill and gives this app access to Quill's data, including certificates."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu uygulama Quill'in bundle ID'sini (%@) kullanıyor. Kurulursa Quill kaldırılır ve bu uygulama Quill'in verilerine (sertifikalar dahil) erişir."
+          }
+        }
+      }
+    },
+    "This is Quill's bundle ID: installing this app replaces Quill and gives it access to Quill's data, including certificates." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is Quill's bundle ID: installing this app replaces Quill and gives it access to Quill's data, including certificates."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu, Quill'in bundle ID'si: bu uygulamayı kurmak Quill'in yerine geçer ve Quill'in verilerine (sertifikalar dahil) erişim verir."
           }
         }
       }
