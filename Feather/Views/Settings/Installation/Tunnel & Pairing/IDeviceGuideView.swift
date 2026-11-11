@@ -18,20 +18,21 @@ struct IDeviceGuideView: View {
 				Button(.localized("Open idevice_pair Downloads"), systemImage: "arrow.down.circle") {
 					UIApplication.open("https://github.com/jkcoxson/idevice_pair/releases")
 				}
-				_step(2, .localized("Import the pairing file"), .localized("Tap \"Import Pairing File\" in the idevice settings and pick the file."))
-				_step(3, .localized("Install and connect LocalDevVPN"), .localized("Get LocalDevVPN from the App Store and connect it. The VPN stays on your device; it only lets Quill reach the install service of your phone."))
+				_step(2, .localized("Choose idevice"), .localized("Open Settings › Installation and set Installation Type to idevice."))
+				_step(3, .localized("Import the pairing file"), .localized("Tap \"Import Pairing File\" and pick the file."))
+				_step(4, .localized("Install and connect LocalDevVPN"), .localized("Get LocalDevVPN from the App Store and connect it. The VPN stays on your device; it only lets Quill reach the install service of your phone."))
 				Button(.localized("Download LocalDevVPN"), systemImage: "arrow.down.app") {
 					UIApplication.open("https://apps.apple.com/us/app/localdevvpn/id6755608044")
 				}
-				_step(4, .localized("Use Wi-Fi or Airplane mode"), .localized("Be connected to Wi-Fi, or turn on Airplane mode."))
-				_step(5, .localized("Install with idevice"), .localized("Set Installation Type to idevice and install. You can switch back to Server afterwards. The pairing file stays valid until you reset the phone."))
+				_step(5, .localized("Use Wi-Fi or Airplane mode"), .localized("Be connected to Wi-Fi, or turn on Airplane mode."))
+				_step(6, .localized("Install"), .localized("Install the update. Afterwards you can set Installation Type back to Server. The pairing file stays valid until you reset the phone or use Reset Location & Privacy."))
 			} header: {
 				Text(.localized("With a computer (one time)"))
 			}
 			
 			Section {
 				Text(verbatim: String.localized(
-					"Install the update with another signer that is still on your phone (for example Feather). Open the Quill IPA there, set the bundle ID to %@ and install it with the server method. Quill keeps its data.",
+					"Install the update with another signer that is still on your phone (for example Feather). Open the Quill IPA there, sign it with the same certificate and profile you signed Quill with, set the bundle ID to %@ and install it with the server method. Otherwise iOS refuses the update or Quill loses its data.",
 					arguments: Bundle.main.bundleIdentifier ?? "-"
 				))
 				.font(.subheadline)
@@ -44,7 +45,7 @@ struct IDeviceGuideView: View {
 	@ViewBuilder
 	private func _step(_ number: Int, _ title: String, _ detail: String) -> some View {
 		HStack(alignment: .top, spacing: 12) {
-			Text("\(number)")
+			Text(verbatim: "\(number)")
 				.font(.headline)
 				.foregroundStyle(.white)
 				.frame(width: 26, height: 26)

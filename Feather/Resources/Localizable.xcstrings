@@ -20310,23 +20310,6 @@
         }
       }
     },
-    "Tap \"Import Pairing File\" in the idevice settings and pick the file." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tap \"Import Pairing File\" in the idevice settings and pick the file."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "idevice ayarlarında \"Import Pairing File\" düğmesine dokunup dosyayı seçin."
-          }
-        }
-      }
-    },
     "Install and connect LocalDevVPN" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -20395,40 +20378,6 @@
         }
       }
     },
-    "Install with idevice" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Install with idevice"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "idevice ile kurun"
-          }
-        }
-      }
-    },
-    "Set Installation Type to idevice and install. You can switch back to Server afterwards. The pairing file stays valid until you reset the phone." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set Installation Type to idevice and install. You can switch back to Server afterwards. The pairing file stays valid until you reset the phone."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kurulum Türü'nü idevice yapıp kurun. Sonra tekrar Sunucu'ya dönebilirsiniz. Eşleştirme dosyası telefonu sıfırlayana kadar geçerlidir."
-          }
-        }
-      }
-    },
     "With a computer (one time)" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -20463,19 +20412,121 @@
         }
       }
     },
-    "Install the update with another signer that is still on your phone (for example Feather). Open the Quill IPA there, set the bundle ID to %@ and install it with the server method. Quill keeps its data." : {
+    "Choose idevice" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Install the update with another signer that is still on your phone (for example Feather). Open the Quill IPA there, set the bundle ID to %@ and install it with the server method. Quill keeps its data."
+            "value" : "Choose idevice"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Güncellemeyi telefonunuzda duran başka bir imzalayıcıyla (örneğin Feather) kurun. Quill IPA'sını orada açın, bundle ID'yi %@ yapın ve sunucu yöntemiyle kurun. Quill verilerini korur."
+            "value" : "idevice'i seçin"
+          }
+        }
+      }
+    },
+    "Open Settings › Installation and set Installation Type to idevice." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings › Installation and set Installation Type to idevice."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayarlar › Kurulum bölümünü açıp Kurulum Türü'nü idevice yapın."
+          }
+        }
+      }
+    },
+    "Tap \"Import Pairing File\" and pick the file." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap \"Import Pairing File\" and pick the file."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "\"Eşleştirme Dosyasını İçe Aktar\" düğmesine dokunup dosyayı seçin."
+          }
+        }
+      }
+    },
+    "Install the update. Afterwards you can set Installation Type back to Server. The pairing file stays valid until you reset the phone or use Reset Location & Privacy." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install the update. Afterwards you can set Installation Type back to Server. The pairing file stays valid until you reset the phone or use Reset Location & Privacy."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Güncellemeyi kurun. Sonra Kurulum Türü'nü tekrar Sunucu yapabilirsiniz. Eşleştirme dosyası, telefonu sıfırlayana ya da Konum ve Gizliliği Sıfırla yapana kadar geçerlidir."
+          }
+        }
+      }
+    },
+    "Install the update with another signer that is still on your phone (for example Feather). Open the Quill IPA there, sign it with the same certificate and profile you signed Quill with, set the bundle ID to %@ and install it with the server method. Otherwise iOS refuses the update or Quill loses its data." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install the update with another signer that is still on your phone (for example Feather). Open the Quill IPA there, sign it with the same certificate and profile you signed Quill with, set the bundle ID to %@ and install it with the server method. Otherwise iOS refuses the update or Quill loses its data."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Güncellemeyi telefonunuzda duran başka bir imzalayıcıyla (örneğin Feather) kurun. Quill IPA'sını orada açın, Quill'i imzaladığınız aynı sertifika ve profille imzalayın, bundle ID'yi %@ yapın ve sunucu yöntemiyle kurun. Aksi halde iOS güncellemeyi reddeder veya Quill verilerini kaybeder."
+          }
+        }
+      }
+    },
+    "Download LocalDevVPN" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download LocalDevVPN"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LocalDevVPN'i İndir"
+          }
+        }
+      }
+    },
+    "Connect to LocalDevVPN" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect to LocalDevVPN"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LocalDevVPN'e Bağlan"
           }
         }
       }

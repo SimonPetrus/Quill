@@ -410,13 +410,14 @@ struct InstallPreviewView: View {
 		}
 	}
 	
-	/// Shows Settings → Installation in a sheet (the tab bar has no programmatic selection).
+	/// Shows the idevice setup guide in a sheet.
 	@MainActor
 	private static func _presentIDeviceGuide() {
 		let root = NBNavigationView(.localized("How to set up idevice")) { IDeviceGuideView() }
 		UIApplication.topViewController()?.present(UIHostingController(rootView: root), animated: true)
 	}
 	
+	/// Shows Settings → Installation in a sheet (the tab bar has no programmatic selection).
 	private static func _presentInstallationSettings() {
 		let root = NBNavigationView(.localized("Installation")) { InstallationView() }
 		UIApplication.topViewController()?.present(UIHostingController(rootView: root), animated: true)
