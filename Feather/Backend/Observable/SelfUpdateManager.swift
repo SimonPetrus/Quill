@@ -55,7 +55,7 @@ private let _quillExecutableCache = NSCache<NSString, NSNumber>()
 extension AppInfoPresentable {
 	/// True when this library item is Quill itself. The release ID (`app.quill.sign`, also with a
 	/// SideStore/AltStore suffix) always counts. An item carrying the running app's ID (Quill installed
-	/// under the profile's App ID, e.g. "simon.bjk") counts only if its executable is Quill's, so another
+	/// under the profile's App ID, e.g. "com.example.app") counts only if its executable is Quill's, so another
 	/// app that was given this ID is never mistaken for Quill. Determined at runtime (no schema change).
 	var isQuillItself: Bool {
 		guard let identifier, !identifier.isEmpty else { return false }

@@ -30,7 +30,7 @@ struct IDeviceGuideView: View {
 			}
 			
 			Section {
-				Text(.localized(
+				Text(verbatim: String.localized(
 					"Install the update with another signer that is still on your phone (for example Feather). Open the Quill IPA there, set the bundle ID to %@ and install it with the server method. Quill keeps its data.",
 					arguments: Bundle.main.bundleIdentifier ?? "-"
 				))

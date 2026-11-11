@@ -11,7 +11,7 @@ import Foundation
 /// the installed copy runs under another bundle ID (e.g. re-signed with the profile's App ID).
 let quillCanonicalBundleID = "app.quill.sign"
 
-/// When Quill is signed with a profile for a different, fixed App ID (e.g. `TEAMID.simon.bjk`)
+/// When Quill is signed with a profile for a different, fixed App ID (e.g. `TEAMID.com.example.app`)
 /// while keeping `app.quill.sign`, iOS does not hand shared files to the app (the scene connects
 /// without URL contexts). Read once from the app's own `embedded.mobileprovision`.
 enum OwnSigningIdentity {
