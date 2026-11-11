@@ -24,16 +24,24 @@ struct ExtendedTabbarView: View {
 		animation: .snappy
 	) private var _sources: FetchedResults<AltSource>
 		
+	/// Tab values are strings (tab raw values and source tabs); the shared router only knows `TabEnum`.
+	private var _selection: Binding<String> {
+		Binding(
+			get: { _router.selected.rawValue },
+			set: { if let tab = TabEnum(rawValue: $0) { _router.selected = tab } }
+		)
+	}
+	
 	var body: some View {
-		TabView(selection: $_router.selected) {
+		TabView(selection: _selection) {
 			ForEach(TabEnum.defaultTabs, id: \.hashValue) { tab in
-				Tab(tab.title, systemImage: tab.icon, value: tab) {
+				Tab(tab.title, systemImage: tab.icon, value: tab.rawValue) {
 					TabEnum.view(for: tab)
 				}
 			}
 			
 			ForEach(TabEnum.customizableTabs, id: \.hashValue) { tab in
-				Tab(tab.title, systemImage: tab.icon, value: tab) {
+				Tab(tab.title, systemImage: tab.icon, value: tab.rawValue) {
 					TabEnum.view(for: tab)
 				}
 				.customizationID("tab.\(tab.rawValue)")
@@ -43,14 +51,14 @@ struct ExtendedTabbarView: View {
 			}
 			
 			TabSection("Sources") {
-				Tab(.localized("All Repositories"), systemImage: "globe.desk") {
+				Tab(.localized("All Repositories"), systemImage: "globe.desk", value: "all-repositories") {
 					NavigationStack {
 						SourceAppsView(object: Array(_sources), viewModel: viewModel)
 					}
 				}
 				
 				ForEach(_sources, id: \.identifier) { source in
-					Tab {
+					Tab(value: "source.\(source.identifier ?? "")") {
 						NavigationStack {
 							SourceAppsView(object: [source], viewModel: viewModel)
 						}
