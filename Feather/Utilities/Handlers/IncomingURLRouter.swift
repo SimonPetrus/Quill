@@ -191,7 +191,7 @@ final class IncomingURLRouter: ObservableObject {
 /// (current systems). Every file found there is queued through `IncomingURLRouter`, so the
 /// normal readiness, de-duplication and error handling apply. Quill's own folders are never touched.
 ///
-/// Only files that iOS created since the previous app run started are imported (left-overs from
+/// Only files that arrived (see `_freshnessDate`) since the previous app run started are imported (left-overs from
 /// older versions must never be imported or restored unasked). Older copies are deleted: they are
 /// iOS's own copies, the originals stay in the sharing app.
 enum IncomingInboxScanner {
@@ -250,26 +250,51 @@ enum IncomingInboxScanner {
 			var fresh: [URL] = []
 			var removedOld = 0
 			var undated = 0
+			// Per file "ext:dateSource:new|old" (public-safe), so the log shows which date decided.
+			var decisions: [String] = []
 			for url in found where IncomingURLRouter.isOwnInboxCopy(url) {
-				guard let created = (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate else {
+				let ext = url.pathExtension.lowercased()
+				guard let freshness = Self._freshnessDate(of: url) else {
 					undated += 1
+					decisions.append("\(ext):none:skipped")
 					continue
 				}
-				if created >= cutoff {
+				let (date, source) = freshness
+				if date >= cutoff {
 					fresh.append(url)
-				} else if (try? fileManager.removeItem(at: url)) != nil {
-					removedOld += 1
+					decisions.append("\(ext):\(source):new")
+				} else {
+					if (try? fileManager.removeItem(at: url)) != nil { removedOld += 1 }
+					decisions.append("\(ext):\(source):old")
 				}
 			}
 
 			let extensions = found.map { $0.pathExtension.lowercased() }.map { $0.isEmpty ? "(none)" : $0 }
 			if !found.isEmpty || reason == "launch" {
-				IncomingLog.notice("Inbox scan: reason=\(reason) folders=\(folders.count) files=\(found.count) ext=[\(extensions.joined(separator: ","))] new=\(fresh.count) removedOld=\(removedOld) undatedSkipped=\(undated)")
+				IncomingLog.notice("Inbox scan: reason=\(reason) folders=\(folders.count) files=\(found.count) ext=[\(extensions.joined(separator: ","))] new=\(fresh.count) removedOld=\(removedOld) undatedSkipped=\(undated) dateSource=[\(decisions.joined(separator: ","))]")
 			}
 			for url in fresh {
 				IncomingURLRouter.shared.enqueue(url, origin: .inboxScan)
 			}
 		}
+	}
+
+	/// When the file arrived: the newest of "added to directory" (the moment iOS put the copy into
+	/// the Inbox; primary signal), creation and modification date. A "Copy to" clone can keep the
+	/// original's old creation date, so creation alone would wrongly treat a fresh share as old.
+	/// On equal dates the earlier entry wins (added > created > modified). Nil if none is readable.
+	private static func _freshnessDate(of url: URL) -> (Date, String)? {
+		let values = try? url.resourceValues(forKeys: [.addedToDirectoryDateKey, .creationDateKey, .contentModificationDateKey])
+		let candidates: [(Date?, String)] = [
+			(values?.addedToDirectoryDate, "added"),
+			(values?.creationDate, "created"),
+			(values?.contentModificationDate, "modified")
+		]
+		var best: (Date, String)?
+		for case let (date?, source) in candidates where best == nil || date > best!.0 {
+			best = (date, source)
+		}
+		return best
 	}
 }
 
