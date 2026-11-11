@@ -26,7 +26,7 @@ enum IncomingPackageImporter {
 		let id = "QuillManualDownload_\(UUID().uuidString)"
 		let download = DownloadManager.shared.startArchive(from: url, id: id)
 		let kind = IncomingURLRouter.kind(of: url)
-		Logger.incoming.notice("Import started: kind=\(kind, privacy: .public) stage=staging")
+		IncomingLog.notice("Import started: kind=\(kind) stage=staging")
 
 		DispatchQueue.global(qos: .userInitiated).async {
 			let result = Result { try _stage(url) }
@@ -34,16 +34,16 @@ enum IncomingPackageImporter {
 			DispatchQueue.main.async {
 				switch result {
 				case .success(let stagedURL):
-					Logger.incoming.notice("Import staged: stage=unpacking")
+					IncomingLog.notice("Import staged: stage=unpacking")
 					try? DownloadManager.shared.handlePachageFile(url: stagedURL, dl: download) { error in
 						if let error {
-							Logger.incoming.error("Import failed: stage=unpacking error=\(Self._describe(error), privacy: .public)")
+							IncomingLog.error("Import failed: stage=unpacking error=\(Self._describe(error))")
 						} else {
-							Logger.incoming.notice("Import finished: added to Library")
+							IncomingLog.notice("Import finished: added to Library")
 						}
 					}
 				case .failure(let error):
-					Logger.incoming.error("Import failed: stage=staging kind=\(kind, privacy: .public) error=\(Self._describe(error), privacy: .public)")
+					IncomingLog.error("Import failed: stage=staging kind=\(kind) error=\(Self._describe(error))")
 					DownloadManager.shared.cancelDownload(download)
 					UINotificationFeedbackGenerator().notificationOccurred(.error)
 					DownloadManager.pendingImportError = ErrorExplainer.message(for: error)
@@ -82,7 +82,7 @@ enum IncomingPackageImporter {
 		// (the call then returns false, which is fine — the file is still readable).
 		let isScoped = source.startAccessingSecurityScopedResource()
 		let isInbox = Self._isOwnInboxCopy(source)
-		Logger.incoming.notice("Staging: scoped=\(isScoped, privacy: .public) inbox=\(isInbox, privacy: .public)")
+		IncomingLog.notice("Staging: scoped=\(isScoped) inbox=\(isInbox)")
 		defer {
 			if isScoped { source.stopAccessingSecurityScopedResource() }
 		}
@@ -118,8 +118,11 @@ enum IncomingPackageImporter {
 			return destination
 		} catch {
 			try? fileManager.removeItem(at: stagingDirectory)
+			// A failed Inbox copy must not be found again by the Inbox scan on every launch;
+			// the original stays in the sharing app, so the user can simply share it again.
+			if isInbox { try? fileManager.removeItem(at: source) }
 			let nsError = error as NSError
-			Logger.incoming.error("Staging error: scoped=\(isScoped, privacy: .public) inbox=\(isInbox, privacy: .public) domain=\(nsError.domain, privacy: .public) code=\(nsError.code, privacy: .public)")
+			IncomingLog.error("Staging error: scoped=\(isScoped) inbox=\(isInbox) domain=\(nsError.domain) code=\(nsError.code)")
 			if let error = error as? IncomingPackageError { throw error }
 			if let error = error as? ImportedFileHandlerError { throw error }
 			throw IncomingPackageError.unreadable(error.localizedDescription)

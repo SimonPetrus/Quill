@@ -32,7 +32,13 @@ enum LogExporter {
 			for case let entry as OSLogEntryLog in entries {
 				lines.append("\(formatter.string(from: entry.date)) [\(entry.category)] \(_level(entry.level)): \(entry.composedMessage)")
 			}
-			
+
+			// OSLogStore only covers the current run on iOS; incoming-file diagnostics are also kept
+			// in a small persistent file, so earlier runs (e.g. a cold launch from the share sheet) show up.
+			if let history = IncomingLog.history(), !history.isEmpty {
+				lines += ["", "--- IncomingURL history (all runs, oldest first) ---", history]
+			}
+
 			let url = FileManager.default.temporaryDirectory.appendingPathComponent("Quill-Logs.txt")
 			try lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
 			return url

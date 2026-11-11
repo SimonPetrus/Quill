@@ -40,6 +40,9 @@ struct QuillApp: App {
 					.onOpenURL { url in
 						IncomingURLRouter.shared.enqueue(url, origin: .onOpenURL)
 					}
+					.onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+						IncomingURLRouter.shared.handle(activity, via: "swiftui")
+					}
 					.transition(.move(edge: .top).combined(with: .opacity))
 			}
 			.onReceive(IncomingURLRouter.shared.$pendingCount) { count in
@@ -67,6 +70,8 @@ struct QuillApp: App {
 				_showStartupNoticeIfPossible()
 				NotificationManager.shared.reschedule()
 				DownloadManager.shared.presentPendingImportErrorIfPossible()
+				// Share-sheet copies can arrive in the Inbox without any URL delivery.
+				IncomingInboxScanner.scan(reason: "active")
 				_drainIncomingURLs()
 				// Delayed so a startup notice shown just above wins; the update alert then waits for the next activation.
 				DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
@@ -87,6 +92,7 @@ struct QuillApp: App {
 				UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "Quill.userTintColor") ?? "#848ef9"))
 
 				_isRootReady = true
+				IncomingInboxScanner.scan(reason: "launch")
 				_drainIncomingURLs()
 			}
 		}
@@ -99,7 +105,7 @@ struct QuillApp: App {
 		DispatchQueue.main.async {
 			guard IncomingURLRouter.shared.pendingCount > 0 else { return }
 			guard _isRootReady, UIApplication.shared.applicationState == .active else {
-				Logger.incoming.notice("Waiting for UI: rootReady=\(_isRootReady, privacy: .public) appState=\(UIApplication.shared.applicationState.rawValue, privacy: .public)")
+				IncomingLog.notice("Waiting for UI: rootReady=\(_isRootReady) appState=\(UIApplication.shared.applicationState.rawValue)")
 				return
 			}
 			// Root view is up but the window may not be key yet: retry shortly instead of
@@ -110,7 +116,7 @@ struct QuillApp: App {
 						_drainIncomingURLs(attempt: attempt + 1)
 					}
 				} else {
-					Logger.incoming.error("No presenter for incoming URL; kept for next activation")
+					IncomingLog.error("No presenter for incoming URL; kept for next activation")
 				}
 				return
 			}
@@ -136,7 +142,7 @@ struct QuillApp: App {
 	
 	private func _handleURL(_ url: URL) {
 		if url.scheme == "quill" {
-			Logger.incoming.notice("Handling URL: quill link host=\(url.host ?? "-", privacy: .public)")
+			IncomingLog.notice("Handling URL: quill link host=\(url.host ?? "-")")
 			/// quill://import-certificate?p12=<base64>&mobileprovision=<base64>&password=<base64>
 			if url.host == "import-certificate" {
 				guard
@@ -236,21 +242,46 @@ struct QuillApp: App {
 		} else {
 			let ext = url.pathExtension.lowercased()
 			if ext == "quillbackup" {
-				Logger.incoming.notice("Handling URL: backup restore")
-				_pendingBackup = PendingBackup(url: url)
+				IncomingLog.notice("Handling URL: backup restore")
+				// Move a system Inbox copy out first, so a cancelled restore does not reappear on every launch.
+				_pendingBackup = PendingBackup(url: Self._moveOutOfInbox(url) ?? url)
 				return
 			}
 			if IncomingPackageImporter.canHandle(url) {
-				Logger.incoming.notice("Handling URL: package import ext=\(ext, privacy: .public)")
+				IncomingLog.notice("Handling URL: package import ext=\(ext)")
 				IncomingPackageImporter.handle(url)
 				return
 			}
 			// Never ignore a shared file silently.
-			Logger.incoming.error("Unsupported URL: scheme=\(url.scheme ?? "-", privacy: .public) ext=\(ext, privacy: .public)")
+			IncomingLog.error("Unsupported URL: scheme=\(url.scheme ?? "-") ext=\(ext)")
 			if url.isFileURL {
 				DownloadManager.pendingImportError = .localized("This file type is not supported. Share an .ipa or .tipa file.")
 				DownloadManager.shared.presentPendingImportErrorIfPossible()
+				// A system Inbox copy is ours to delete; otherwise the Inbox scan would find it again on every launch.
+				if IncomingURLRouter.kind(of: url) == "inbox" {
+					try? FileManager.default.removeItem(at: url)
+				}
 			}
+		}
+	}
+	
+	/// Moves a system Inbox copy into `tmp/QuillIncoming/<UUID>/` (cleared on the next launch).
+	/// Returns nil for other URLs or when the move fails.
+	private static func _moveOutOfInbox(_ url: URL) -> URL? {
+		guard IncomingURLRouter.kind(of: url) == "inbox" else { return nil }
+		let fileManager = FileManager.default
+		let folder = fileManager.temporaryDirectory
+			.appendingPathComponent("QuillIncoming", isDirectory: true)
+			.appendingPathComponent(UUID().uuidString, isDirectory: true)
+		do {
+			try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
+			let destination = folder.appendingPathComponent(url.lastPathComponent)
+			try fileManager.moveItem(at: url, to: destination)
+			return destination
+		} catch {
+			let nsError = error as NSError
+			IncomingLog.error("Moving backup out of Inbox failed: domain=\(nsError.domain) code=\(nsError.code)")
+			return nil
 		}
 	}
 }
@@ -271,6 +302,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		_createPipeline()
 		_createDocumentsDirectories()
 		ResetView.clearWorkCache()
+		IncomingLog.startRun()
 		// Certificates: files to Application Support + passwords to the Keychain (once; retried until complete).
 		SecureCertificateMigration.runIfNeeded()
 		_addDefaultCertificates()
@@ -285,12 +317,29 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		configurationForConnecting connectingSceneSession: UISceneSession,
 		options: UIScene.ConnectionOptions
 	) -> UISceneConfiguration {
-		Logger.incoming.notice("Scene connecting: urlContexts=\(options.urlContexts.count, privacy: .public)")
+		IncomingLog.notice("Scene connecting: \(IncomingURLRouter.summary(of: options))")
 		let configuration = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
 		configuration.delegateClass = QuillSceneDelegate.self
 		return configuration
 	}
 
+	/// Not called for scene-based apps (URLs go to the scene); logged and queued in case iOS does.
+	func application(
+		_ app: UIApplication,
+		open url: URL,
+		options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+	) -> Bool {
+		let source = options[.sourceApplication] as? String
+		IncomingLog.notice("AppDelegate open URL: source=\(source ?? "-")")
+		IncomingURLRouter.shared.enqueue(
+			url,
+			origin: .appDelegateOpen,
+			openInPlace: options[.openInPlace] as? Bool,
+			sourceApplication: source
+		)
+		return true
+	}
+	
 	private func _createPipeline() {
 		DataLoader.sharedUrlCache.diskCapacity = 0
 		

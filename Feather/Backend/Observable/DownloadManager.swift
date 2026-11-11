@@ -142,7 +142,7 @@ class DownloadManager: NSObject, ObservableObject {
 				return
 			}
 			DownloadManager.pendingImportError = nil
-			Logger.incoming.notice("Showing import error alert")
+			IncomingLog.notice("Showing import error alert")
 			UIAlertController.showAlertWithOk(presenter, title: .localized("Import Failed"), message: message)
 		}
 	}
