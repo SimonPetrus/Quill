@@ -36,7 +36,7 @@ final class IncomingURLRouter: ObservableObject {
 	private var _queue: [URL] = []
 	/// URL key -> time it was first received; a second delivery within the window is ignored.
 	private var _recent: [String: Date] = [:]
-	private static let _duplicateWindow: TimeInterval = 10
+	private static let _duplicateWindow: TimeInterval = 3
 
 	private init() {}
 
@@ -86,8 +86,12 @@ final class IncomingURLRouter: ObservableObject {
 		return url.resolvingSymlinksInPath().path.hasPrefix(home + "/") ? "container" : "open-in-place"
 	}
 
+	/// Purely lexical (no file system access): the file may already have been moved away when a
+	/// second delivery arrives, so "/private/var/..." and "/var/..." must give the same key.
 	private static func _key(for url: URL) -> String {
-		url.isFileURL ? url.standardizedFileURL.resolvingSymlinksInPath().path : url.absoluteString
+		guard url.isFileURL else { return url.absoluteString }
+		let path = url.standardizedFileURL.path
+		return path.hasPrefix("/private/") ? String(path.dropFirst("/private".count)) : path
 	}
 }
 
