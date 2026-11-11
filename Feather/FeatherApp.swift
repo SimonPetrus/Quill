@@ -243,8 +243,14 @@ struct QuillApp: App {
 			let ext = url.pathExtension.lowercased()
 			if ext == "quillbackup" {
 				IncomingLog.notice("Handling URL: backup restore")
-				// Move a system Inbox copy out first, so a cancelled restore does not reappear on every launch.
-				_pendingBackup = PendingBackup(url: Self._moveOutOfInbox(url) ?? url)
+				if IncomingURLRouter.isOwnInboxCopy(url) {
+					// Move the system Inbox copy out first, so a cancelled restore does not reappear on
+					// every launch. If that fails the copy is deleted and an error is shown instead.
+					guard let moved = Self._moveOutOfInbox(url) else { return }
+					_pendingBackup = PendingBackup(url: moved)
+				} else {
+					_pendingBackup = PendingBackup(url: url)
+				}
 				return
 			}
 			if IncomingPackageImporter.canHandle(url) {
@@ -258,7 +264,7 @@ struct QuillApp: App {
 				DownloadManager.pendingImportError = .localized("This file type is not supported. Share an .ipa or .tipa file.")
 				DownloadManager.shared.presentPendingImportErrorIfPossible()
 				// A system Inbox copy is ours to delete; otherwise the Inbox scan would find it again on every launch.
-				if IncomingURLRouter.kind(of: url) == "inbox" {
+				if IncomingURLRouter.isOwnInboxCopy(url) {
 					try? FileManager.default.removeItem(at: url)
 				}
 			}
@@ -266,9 +272,11 @@ struct QuillApp: App {
 	}
 	
 	/// Moves a system Inbox copy into `tmp/QuillIncoming/<UUID>/` (cleared on the next launch).
-	/// Returns nil for other URLs or when the move fails.
+	/// Returns nil for URLs outside our own Inbox folders (never touched) and when the move fails;
+	/// a failed move deletes the Inbox copy (the original stays in the sharing app) and shows an
+	/// error, so the same copy is not found again on every launch.
 	private static func _moveOutOfInbox(_ url: URL) -> URL? {
-		guard IncomingURLRouter.kind(of: url) == "inbox" else { return nil }
+		guard IncomingURLRouter.isOwnInboxCopy(url) else { return nil }
 		let fileManager = FileManager.default
 		let folder = fileManager.temporaryDirectory
 			.appendingPathComponent("QuillIncoming", isDirectory: true)
@@ -281,6 +289,13 @@ struct QuillApp: App {
 		} catch {
 			let nsError = error as NSError
 			IncomingLog.error("Moving backup out of Inbox failed: domain=\(nsError.domain) code=\(nsError.code)")
+			try? fileManager.removeItem(at: folder)
+			try? fileManager.removeItem(at: url)
+			DownloadManager.pendingImportError = String(
+				format: .localized("The shared file could not be read: %@"),
+				error.localizedDescription
+			)
+			DownloadManager.shared.presentPendingImportErrorIfPossible()
 			return nil
 		}
 	}
@@ -303,6 +318,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		_createDocumentsDirectories()
 		ResetView.clearWorkCache()
 		IncomingLog.startRun()
+		IncomingInboxScanner.recordRunStart()
 		// Certificates: files to Application Support + passwords to the Keychain (once; retried until complete).
 		SecureCertificateMigration.runIfNeeded()
 		_addDefaultCertificates()

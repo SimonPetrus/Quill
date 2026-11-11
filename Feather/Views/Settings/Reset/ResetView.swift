@@ -218,5 +218,6 @@ extension ResetView {
 		deleteImportedApps()
 		resetCertificates(resetAll: true)
 		resetUserDefaults()
+		IncomingLog.clear()
 	}
 }

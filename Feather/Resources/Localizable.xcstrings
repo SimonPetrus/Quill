@@ -19952,6 +19952,40 @@
           }
         }
       }
+    },
+    "Restore this backup?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore this backup?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu yedek geri yüklensin mi?"
+          }
+        }
+      }
+    },
+    "This backup was opened from another app. Restoring it replaces your current settings and adds its sources." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This backup was opened from another app. Restoring it replaces your current settings and adds its sources."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu yedek başka bir uygulamadan açıldı. Geri yüklemek mevcut ayarlarınızı değiştirir ve içindeki kaynakları ekler."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

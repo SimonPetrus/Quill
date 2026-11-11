@@ -81,7 +81,7 @@ enum IncomingPackageImporter {
 		// Open-in-place / File Provider URLs need security-scoped access; Inbox copies do not
 		// (the call then returns false, which is fine — the file is still readable).
 		let isScoped = source.startAccessingSecurityScopedResource()
-		let isInbox = Self._isOwnInboxCopy(source)
+		let isInbox = IncomingURLRouter.isOwnInboxCopy(source)
 		IncomingLog.notice("Staging: scoped=\(isScoped) inbox=\(isInbox)")
 		defer {
 			if isScoped { source.stopAccessingSecurityScopedResource() }
@@ -98,8 +98,8 @@ enum IncomingPackageImporter {
 		let destination = stagingDirectory.appendingPathComponent(fileName)
 
 		do {
-			try _checkFreeSpace(for: source, inPlaceMove: _isOwnInboxCopy(source))
-			if _isOwnInboxCopy(source) {
+			try _checkFreeSpace(for: source, inPlaceMove: isInbox)
+			if isInbox {
 				// The system's Inbox copy belongs to us: moving is instant, needs no extra
 				// space and leaves nothing behind in the Inbox.
 				do {
@@ -162,14 +162,6 @@ enum IncomingPackageImporter {
 		if let error = copyError ?? coordinatorError {
 			throw error
 		}
-	}
-
-	/// `Documents/Inbox/...` or `tmp/<bundle id>-Inbox/...` inside our own container.
-	private static func _isOwnInboxCopy(_ url: URL) -> Bool {
-		let folder = url.deletingLastPathComponent().lastPathComponent
-		guard folder == "Inbox" || folder.hasSuffix("-Inbox") else { return false }
-		let home = URL(fileURLWithPath: NSHomeDirectory()).resolvingSymlinksInPath().path
-		return url.resolvingSymlinksInPath().path.hasPrefix(home + "/")
 	}
 
 	/// IPA files are ZIP archives: they start with a local file header ("PK\u{3}\u{4}").

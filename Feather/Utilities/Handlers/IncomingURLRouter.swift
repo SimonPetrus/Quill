@@ -123,11 +123,31 @@ final class IncomingURLRouter: ObservableObject {
 	/// (original file outside our container), "container" (other file inside our container).
 	static func kind(of url: URL, openInPlace: Bool? = nil) -> String {
 		guard url.isFileURL else { return "link" }
-		let folder = url.deletingLastPathComponent().lastPathComponent
-		if folder == "Inbox" || folder.hasSuffix("-Inbox") { return "inbox" }
+		if isOwnInboxCopy(url) { return "inbox" }
 		if openInPlace == true { return "open-in-place" }
-		let home = URL(fileURLWithPath: NSHomeDirectory()).resolvingSymlinksInPath().path
-		return url.resolvingSymlinksInPath().path.hasPrefix(home + "/") ? "container" : "open-in-place"
+		return isInOwnContainer(url) ? "container" : "open-in-place"
+	}
+
+	/// True only for `Documents/Inbox/<file>` or `tmp/<bundle id>-Inbox/<file>` inside our own
+	/// container. Only such system copies may be moved or deleted by the incoming-file code.
+	static func isOwnInboxCopy(_ url: URL) -> Bool {
+		guard url.isFileURL else { return false }
+		let folder = url.deletingLastPathComponent().lastPathComponent
+		guard folder == "Inbox" || folder.hasSuffix("-Inbox") else { return false }
+		return isInOwnContainer(url)
+	}
+
+	/// Lexical check (no file system access, so it also works for files that were moved away).
+	static func isInOwnContainer(_ url: URL) -> Bool {
+		guard url.isFileURL else { return false }
+		let home = _normalizedPath(URL(fileURLWithPath: NSHomeDirectory()))
+		return _normalizedPath(url).hasPrefix(home + "/")
+	}
+
+	/// Standardized path with a leading "/private" removed ("/private/var/..." == "/var/...").
+	private static func _normalizedPath(_ url: URL) -> String {
+		let path = url.standardizedFileURL.path
+		return path.hasPrefix("/private/") ? String(path.dropFirst("/private".count)) : path
 	}
 
 	/// Type identifiers only (public-safe): the type the extension maps to on this device (another
@@ -150,9 +170,7 @@ final class IncomingURLRouter: ObservableObject {
 	/// Purely lexical (no file system access): the file may already have been moved away when a
 	/// second delivery arrives, so "/private/var/..." and "/var/..." must give the same key.
 	private static func _key(for url: URL) -> String {
-		guard url.isFileURL else { return url.absoluteString }
-		let path = url.standardizedFileURL.path
-		return path.hasPrefix("/private/") ? String(path.dropFirst("/private".count)) : path
+		url.isFileURL ? _normalizedPath(url) : url.absoluteString
 	}
 
 	/// Size and dates of an existing file; nil when it does not exist (any more).
@@ -172,11 +190,42 @@ final class IncomingURLRouter: ObservableObject {
 /// iOS copies such files into `Documents/Inbox` (older systems) or `tmp/<bundle id>-Inbox`
 /// (current systems). Every file found there is queued through `IncomingURLRouter`, so the
 /// normal readiness, de-duplication and error handling apply. Quill's own folders are never touched.
+///
+/// Only files that iOS created since the previous app run started are imported (left-overs from
+/// older versions must never be imported or restored unasked). Older copies are deleted: they are
+/// iOS's own copies, the originals stay in the sharing app.
 enum IncomingInboxScanner {
 	private static let _queue = DispatchQueue(label: "Quill.IncomingInboxScanner", qos: .userInitiated)
+	private static let _runStartKey = "Quill.incoming.lastRunStart"
+	/// Used when no previous run start is stored (first launch of this build, or after Reset All).
+	private static let _firstRunWindow: TimeInterval = 5 * 60
+	/// Files created before this date are not imported. Set once per run by `recordRunStart()`.
+	private static var _cutoff: Date?
+
+	/// Call once per app run, before the first scan: remembers the previous run's start as the
+	/// cutoff and stores this run's start for the next one.
+	static func recordRunStart() {
+		let now = Date()
+		let previous = UserDefaults.standard.object(forKey: _runStartKey) as? Date
+		let cutoff: Date
+		if let previous, previous <= now {
+			cutoff = previous
+		} else {
+			// No stored start, or the clock went backwards: only the last few minutes count.
+			cutoff = now.addingTimeInterval(-_firstRunWindow)
+		}
+		_queue.sync { Self._cutoff = cutoff }
+		UserDefaults.standard.set(now, forKey: _runStartKey)
+		IncomingLog.notice("Inbox cutoff: previousRunStored=\(previous != nil)")
+	}
 
 	static func scan(reason: String) {
 		_queue.async {
+			// Without a cutoff, stay on the safe side and import nothing.
+			guard let cutoff = Self._cutoff else {
+				IncomingLog.error("Inbox scan skipped: no cutoff recorded")
+				return
+			}
 			let fileManager = FileManager.default
 			var folders = [URL.documentsDirectory.appendingPathComponent("Inbox", isDirectory: true)]
 			let tmp = fileManager.temporaryDirectory
@@ -198,11 +247,26 @@ enum IncomingInboxScanner {
 				}
 			}
 
+			var fresh: [URL] = []
+			var removedOld = 0
+			var undated = 0
+			for url in found where IncomingURLRouter.isOwnInboxCopy(url) {
+				guard let created = (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate else {
+					undated += 1
+					continue
+				}
+				if created >= cutoff {
+					fresh.append(url)
+				} else if (try? fileManager.removeItem(at: url)) != nil {
+					removedOld += 1
+				}
+			}
+
 			let extensions = found.map { $0.pathExtension.lowercased() }.map { $0.isEmpty ? "(none)" : $0 }
 			if !found.isEmpty || reason == "launch" {
-				IncomingLog.notice("Inbox scan: reason=\(reason) folders=\(folders.count) files=\(found.count) ext=[\(extensions.joined(separator: ","))]")
+				IncomingLog.notice("Inbox scan: reason=\(reason) folders=\(folders.count) files=\(found.count) ext=[\(extensions.joined(separator: ","))] new=\(fresh.count) removedOld=\(removedOld) undatedSkipped=\(undated)")
 			}
-			for url in found {
+			for url in fresh {
 				IncomingURLRouter.shared.enqueue(url, origin: .inboxScan)
 			}
 		}

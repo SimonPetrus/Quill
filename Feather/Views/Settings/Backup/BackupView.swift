@@ -23,6 +23,8 @@ struct BackupView: View {
 	@State private var _pickedURL: URL?
 	@State private var _isAskingPassword = false
 	@State private var _restorePassword = ""
+	/// Unencrypted backups from outside the app are restored only after an explicit confirmation.
+	@State private var _isConfirmingRestore = false
 
 	private var _passwordValid: Bool {
 		!_includeCertificates
@@ -86,9 +88,21 @@ struct BackupView: View {
 		} message: {
 			Text(.localized("This backup is encrypted. Enter its password."))
 		}
+		.alert(.localized("Restore this backup?"), isPresented: $_isConfirmingRestore) {
+			Button(.localized("Cancel"), role: .cancel) {
+				if let url = _pickedURL { try? FileManager.default.removeItem(at: url) }
+				_pickedURL = nil
+			}
+			Button(.localized("Restore")) {
+				if let url = _pickedURL { _restore(url, password: nil) }
+			}
+		} message: {
+			Text(.localized("This backup was opened from another app. Restoring it replaces your current settings and adds its sources."))
+		}
 		.onAppear {
 			if let url = initialURL, _pickedURL == nil, !_isWorking {
-				_didPick(url)
+				// Not picked by the user in this screen: never restore without asking.
+				_didPick(url, confirmFirst: true)
 			}
 		}
 		.overlay {
@@ -151,7 +165,9 @@ extension BackupView {
 		}
 	}
 
-	private func _didPick(_ url: URL) {
+	/// `confirmFirst`: the file came from outside the app (share sheet / Inbox); an unencrypted
+	/// backup then asks before restoring (an encrypted one asks for its password anyway).
+	private func _didPick(_ url: URL, confirmFirst: Bool = false) {
 		// The picked file is only reachable inside the security scope; copy it out first.
 		let scoped = url.startAccessingSecurityScopedResource()
 		defer { if scoped { url.stopAccessingSecurityScopedResource() } }
@@ -164,6 +180,9 @@ extension BackupView {
 				_pickedURL = copy
 				_restorePassword = ""
 				_isAskingPassword = true
+			} else if confirmFirst {
+				_pickedURL = copy
+				_isConfirmingRestore = true
 			} else {
 				_restore(copy, password: nil)
 			}

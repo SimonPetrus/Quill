@@ -49,6 +49,13 @@ enum IncomingLog {
 		}
 	}
 
+	/// Deletes the persistent file (Reset All).
+	static func clear() {
+		_queue.async {
+			try? FileManager.default.removeItem(at: fileURL)
+		}
+	}
+
 	private static func _append(_ level: String, _ message: String) {
 		let line = "\(_formatter.string(from: Date())) [IncomingURL] \(level): \(message)\n"
 		_queue.async {
