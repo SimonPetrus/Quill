@@ -418,6 +418,7 @@ struct InstallPreviewView: View {
 	}
 	
 	/// Shows Settings → Installation in a sheet (the tab bar has no programmatic selection).
+	@MainActor
 	private static func _presentInstallationSettings() {
 		let root = NBNavigationView(.localized("Installation")) { InstallationView() }
 		UIApplication.topViewController()?.present(UIHostingController(rootView: root), animated: true)
