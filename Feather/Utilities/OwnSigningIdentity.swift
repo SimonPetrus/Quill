@@ -50,20 +50,33 @@ enum OwnSigningIdentity {
 		guard
 			let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
 			let profile = CertificateReader(url).decoded,
-			let full = profile.Entitlements?["application-identifier"]?.value as? String,
+			let full = profile.applicationIdentifier,
 			let bundleID = Bundle.main.bundleIdentifier
 		else { return .unknown }
 
 		guard !full.contains("*") else { return .wildcard }
+		guard let profileBundleID = profile.fixedAppIDBundleID else { return .unknown }
+		return sameBundleID(profileBundleID, bundleID) ? .match : .mismatch(profileBundleID: profileBundleID)
+	}
+}
 
-		let prefix = profile.ApplicationIdentifierPrefix?.first ?? profile.TeamIdentifier.first
-		var profileBundleID = full
+// MARK: - Profile App ID (shared with SigningView)
+extension Certificate {
+	/// The `application-identifier` entitlement, e.g. "TEAMID.com.example.app" or "TEAMID.*".
+	var applicationIdentifier: String? {
+		Entitlements?["application-identifier"]?.value as? String
+	}
+
+	/// The App ID without its team prefix; nil for wildcard or unreadable App IDs.
+	var fixedAppIDBundleID: String? {
+		guard let full = applicationIdentifier, !full.contains("*") else { return nil }
+		let prefix = ApplicationIdentifierPrefix?.first ?? TeamIdentifier.first
+		var id = full
 		if let prefix, full.hasPrefix(prefix + ".") {
-			profileBundleID = String(full.dropFirst(prefix.count + 1))
+			id = String(full.dropFirst(prefix.count + 1))
 		} else if let dot = full.firstIndex(of: ".") {
-			profileBundleID = String(full[full.index(after: dot)...])
+			id = String(full[full.index(after: dot)...])
 		}
-		guard !profileBundleID.isEmpty else { return .unknown }
-		return profileBundleID == bundleID ? .match : .mismatch(profileBundleID: profileBundleID)
+		return id.isEmpty ? nil : id
 	}
 }

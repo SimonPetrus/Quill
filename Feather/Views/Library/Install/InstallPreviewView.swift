@@ -33,6 +33,8 @@ struct InstallPreviewView: View {
 	@State private var _deleteScheduled = false
 	/// Set once the user acknowledged that Quill closes while it updates itself.
 	@State private var _selfUpdateConfirmed = false
+	/// Set once the user acknowledged that this (non-Quill) app replaces Quill.
+	@State private var _replaceQuillConfirmed = false
 	
 	init(app: AppInfoPresentable, isSharing: Bool = false, deleteSignedAfterInstall: Bool? = nil) {
 		self.app = app
@@ -290,6 +292,24 @@ struct InstallPreviewView: View {
 	
 	private func _install() {
 		if !isSharing, app.replacesRunningApp {
+			// Another app carrying Quill's bundle ID: iOS replaces Quill with it (Quill and its data are gone).
+			if !app.isQuillItself, !_replaceQuillConfirmed {
+				UIAlertController.showAlert(
+					title: .localized("Replace Quill?"),
+					message: .localized(
+						"This app uses Quill's bundle ID (%@). Installing it deletes Quill and all its data and puts this app in its place.",
+						arguments: app.identifier ?? "-"
+					),
+					actions: [
+						UIAlertAction(title: .localized("Replace Quill"), style: .destructive) { _ in
+							_replaceQuillConfirmed = true
+							_install()
+						},
+						UIAlertAction(title: .localized("Cancel"), style: .cancel) { _ in dismiss() }
+					]
+				)
+				return
+			}
 			guard _installationMethod == 1 else {
 				// The server dies together with Quill when iOS closes it, so the server method can't work.
 				UIAlertController.showAlert(
@@ -307,7 +327,7 @@ struct InstallPreviewView: View {
 				)
 				return
 			}
-			if !_selfUpdateConfirmed {
+			if app.isQuillItself, !_selfUpdateConfirmed {
 				UIAlertController.showAlert(
 					title: .localized("Install"),
 					message: .localized("Quill will close during the update; reopen it from the home screen."),
@@ -349,7 +369,7 @@ struct InstallPreviewView: View {
 						}
 					} else if await _installationMethod == 1 {
 						let handler = await InstallationProxy(viewModel: viewModel)
-						try await handler.install(at: packageUrl, suspend: app.identifier == Bundle.main.bundleIdentifier!)
+						try await handler.install(at: packageUrl, suspend: app.replacesRunningApp)
 					}
 				} else {
 					let package = try await handler.moveToArchive(packageUrl, shouldOpen: !_useShareSheet)
