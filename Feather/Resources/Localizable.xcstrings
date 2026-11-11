@@ -20021,23 +20021,6 @@
         }
       }
     },
-    "This is Quill itself. The installed bundle ID (%@) is used by default, so it updates this app in place. Another ID installs a separate copy without your data." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This is Quill itself. The installed bundle ID (%@) is used by default, so it updates this app in place. Another ID installs a separate copy without your data."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu, Quill'in kendisi. Varsayılan olarak kurulu bundle ID (%@) kullanılır; böylece bu uygulamanın üzerine güncellenir. Başka bir ID, verileriniz olmadan ayrı bir kopya kurar."
-          }
-        }
-      }
-    },
     "Replace Quill?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -20102,6 +20085,108 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bu, Quill'in bundle ID'si: bu uygulamayı kurmak Quill'in yerine geçer ve Quill'in verilerine (sertifikalar dahil) erişim verir."
+          }
+        }
+      }
+    },
+    "Which bundle ID should Quill use?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Which bundle ID should Quill use?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quill hangi kimlikle imzalansın?"
+          }
+        }
+      }
+    },
+    "To receive IPAs from the share sheet, Quill must be signed with the profile's ID (%@)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To receive IPAs from the share sheet, Quill must be signed with the profile's ID (%@)."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paylaş menüsünden IPA alabilmek için Quill profilin kimliğiyle (%@) imzalanmalı."
+          }
+        }
+      }
+    },
+    "Profile ID: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profile ID: %@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profil kimliği: %@"
+          }
+        }
+      }
+    },
+    "Current ID: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current ID: %@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Şu anki kimlik: %@"
+          }
+        }
+      }
+    },
+    "A different ID than this Quill (%@) installs a separate copy without your data." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A different ID than this Quill (%@) installs a separate copy without your data."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu Quill'den (%@) farklı bir kimlik, verilerin olmadan ayrı bir kopya kurar."
+          }
+        }
+      }
+    },
+    "Sign Quill on its own to choose its bundle ID." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign Quill on its own to choose its bundle ID."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kimliğini seçmek için Quill'i tek başına imzala."
           }
         }
       }

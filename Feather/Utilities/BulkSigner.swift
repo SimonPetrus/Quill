@@ -108,6 +108,11 @@ final class BulkSigner: ObservableObject {
 					continue
 				}
 				
+				if app.isQuillItself {
+					failures.append(Failure(name: currentName, message: .localized("Sign Quill on its own to choose its bundle ID.")))
+					continue
+				}
+
 				let error = await _sign(app)
 				if let error {
 					Logger.signing.error("Bulk signing failed for \(self.currentName): \(error.localizedDescription, privacy: .public)")
@@ -146,12 +151,6 @@ final class BulkSigner: ObservableObject {
 			let newBundleId = options.identifiers[currentBundleId]
 		{
 			options.appIdentifier = newBundleId
-		}
-		if app.isQuillItself {
-			// The installed copy's bundle ID (may differ from the release ID "app.quill.sign"),
-			// so the install replaces this app instead of adding a second copy.
-			options.ppqProtection = false
-			options.appIdentifier = Bundle.main.bundleIdentifier
 		}
 		if
 			let currentName = app.name,
