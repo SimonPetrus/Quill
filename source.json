@@ -1,0 +1,42 @@
+{
+  "name": "Quill",
+  "identifier": "app.quill.source",
+  "subtitle": "Official Quill releases",
+  "description": "Official source for Quill, an on-device iOS signer and installer.",
+  "iconURL": "https://raw.githubusercontent.com/SimonPetrus/Quill/quill/.github/quill-icon.png",
+  "website": "https://github.com/SimonPetrus/Quill",
+  "apps": [
+    {
+      "name": "Quill",
+      "bundleIdentifier": "app.quill.sign",
+      "developerName": "SP",
+      "subtitle": "On-device iOS signer and installer",
+      "localizedDescription": "Quill signs and installs iOS apps on your device.",
+      "iconURL": "https://raw.githubusercontent.com/SimonPetrus/Quill/quill/.github/quill-icon.png",
+      "tintColor": "1E3A5F",
+      "versions": [
+        {
+          "version": "1.1.4",
+          "date": "2026-11-11T19:37:19Z",
+          "localizedDescription": "- Quill checks your sources for app updates when it opens (at most every 6 hours) and tells you when new versions are available. Show opens the Library. Can be turned off in Settings.\n- Optional background notification for app updates (off by default). iOS decides when background checks run, so notifications can be late.\n- New step-by-step idevice setup guide (pairing file, LocalDevVPN, installation type), linked from Tunnel & Pairing, Installation settings and the self-install alert, including a way to update without a computer.\n- iPad: source tabs in the sidebar select correctly.",
+          "downloadURL": "https://github.com/SimonPetrus/Quill/releases/download/v1.1.4/Quill.ipa",
+          "size": 15310910,
+          "minOSVersion": "16.0"
+        },
+        {
+          "version": "1.1.3",
+          "date": "2026-11-11T16:45:07Z",
+          "localizedDescription": "- Share-sheet import needs Quill's bundle ID to match its provisioning profile's App ID. Settings now warns when they differ and explains how to switch.\n- When Quill signs itself, it asks which bundle ID to use (profile ID or current ID) instead of filling one in, and explains why the profile ID is needed.\n- Other apps can no longer silently take Quill's bundle ID; doing it manually shows a warning and an extra confirmation before install.\n- Bulk signing skips Quill; sign Quill on its own to choose its bundle ID.",
+          "downloadURL": "https://github.com/SimonPetrus/Quill/releases/download/v1.1.3/Quill.ipa",
+          "size": 15281280,
+          "minOSVersion": "16.0"
+        }
+      ],
+      "version": "1.1.4",
+      "versionDate": "2026-11-11T19:37:19Z",
+      "downloadURL": "https://github.com/SimonPetrus/Quill/releases/download/v1.1.4/Quill.ipa",
+      "size": 15310910
+    }
+  ],
+  "news": []
+}
