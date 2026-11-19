@@ -1,0 +1,4 @@
+branch: feat/own-manifest-service
+commit: 9a374b5072190c38c5cf0dfe7c4ddc96c9a18a1f
+run:    https://github.com/SimonPetrus/Quill/actions/runs/44479587011
+sha256: 6446446c6be78f66f51f594e9ea28841a073dccda622aeb8fccae8b6b1df8477
