@@ -10,6 +10,14 @@
 import Foundation
 import UIKit.UIGraphicsImageRenderer
 
+/// Our own manifest service (Cloudflare Worker, see `manifest-worker/`).
+enum ManifestService {
+	// TODO(deploy): replace SUBDOMAIN with the real workers.dev subdomain after `wrangler deploy`.
+	static let genPlistURL = "https://quill-manifest.SUBDOMAIN.workers.dev/genPlist"
+	
+	static var host: String { URL(string: genPlistURL)?.host ?? "?" }
+}
+
 extension ServerInstaller {
 	var plistEndpoint: URL {
 		var comps = URLComponents()
@@ -39,7 +47,7 @@ extension ServerInstaller {
 	}
 	
 	var externalServerLink: String {
-		let baseUrl = "https://api.palera.in/genPlist?bundleid=\(app.identifier!)&name=\(app.name!)&version=\(app.version!)&fetchurl=\(self.payloadEndpoint.absoluteString)"
+		let baseUrl = "\(ManifestService.genPlistURL)?bundleid=\(app.identifier!)&name=\(app.name!)&version=\(app.version!)&fetchurl=\(self.payloadEndpoint.absoluteString)"
 		let encodedBaseUrl = baseUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
 		let finalEncodedUrl = encodedBaseUrl.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
 		

@@ -79,6 +79,9 @@ class ServerInstaller: Identifiable, ObservableObject {
 		if _isFullyLocal {
 			log.add(Self.localCADescription())
 		}
+		if !_isFullyLocal {
+			log.add("Manifest service: \(ManifestService.host)")
+		}
 		
 		// The installer daemons can only connect while the app (and its server) is alive.
 		let center = NotificationCenter.default
