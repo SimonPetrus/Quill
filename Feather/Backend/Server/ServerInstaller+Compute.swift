@@ -12,8 +12,7 @@ import UIKit.UIGraphicsImageRenderer
 
 /// Our own manifest service (Cloudflare Worker, see `manifest-worker/`).
 enum ManifestService {
-	// TODO(deploy): replace SUBDOMAIN with the real workers.dev subdomain after `wrangler deploy`.
-	static let genPlistURL = "https://quill-manifest.SUBDOMAIN.workers.dev/genPlist"
+	static let genPlistURL = "https://quill-manifest.quill-sign.workers.dev/genPlist"
 	
 	static var host: String { URL(string: genPlistURL)?.host ?? "?" }
 }
@@ -37,6 +36,19 @@ extension ServerInstaller {
 		return comps.url!
 	}
 	
+	/// Payload URL put into the external manifest. Always the IPv4 loopback literal: the install
+	/// daemon runs on this device and the Semi Local server listens on 0.0.0.0, so loopback is
+	/// reachable regardless of `sni()` (which returns the LAN address while "IP fix" is off).
+	/// The manifest service only accepts loopback fetch URLs.
+	var externalPayloadEndpoint: URL {
+		var comps = URLComponents()
+		comps.scheme = self.getServerMethod() == 1 ? "http" : "https"
+		comps.host = "127.0.0.1"
+		comps.path = "/\(id).ipa"
+		comps.port = port
+		return comps.url!
+	}
+	
 	var pageEndpoint: URL {
 		var comps = URLComponents()
 		comps.scheme = self.getServerMethod() == 1 ? "http" : "https"
@@ -55,7 +67,7 @@ extension ServerInstaller {
 			value.addingPercentEncoding(withAllowedCharacters: strict) ?? ""
 		}
 		
-		let baseUrl = "\(ManifestService.genPlistURL)?bundleid=\(enc(app.identifier!))&name=\(enc(app.name!))&version=\(enc(app.version!))&fetchurl=\(enc(self.payloadEndpoint.absoluteString))"
+		let baseUrl = "\(ManifestService.genPlistURL)?bundleid=\(enc(app.identifier!))&name=\(enc(app.name!))&version=\(enc(app.version!))&fetchurl=\(enc(self.externalPayloadEndpoint.absoluteString))"
 		// Outer encoding for the itms-services `url=` value; iOS decodes it once, leaving the inner encoding intact.
 		return baseUrl.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
 	}

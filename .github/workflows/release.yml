@@ -83,6 +83,15 @@ jobs:
           path: tools
           sparse-checkout: .github/scripts
 
+      # Never ship a build whose manifest service address is still the pre-deploy placeholder.
+      - name: Check manifest service address
+        if: ${{ !inputs.source_only }}
+        run: |
+          if grep -rn --include='*.swift' -e 'SUBDOMAIN' -e 'TODO(deploy)' Feather; then
+            echo "::error::ManifestService.genPlistURL still contains the SUBDOMAIN placeholder"; exit 1
+          fi
+          grep -n 'static let genPlistURL = "https://' Feather/Backend/Server/ServerInstaller+Compute.swift
+
       - name: Set version
         if: ${{ !inputs.source_only }}
         run: |

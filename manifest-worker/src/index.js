@@ -1,14 +1,42 @@
 const MAX_URL_LENGTH = 2048;
+const MAX_NAME_LENGTH = 255;
+const MAX_VERSION_LENGTH = 64;
 
-const BUNDLE_ID_RE = /^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*$/;
-const VERSION_RE = /^[A-Za-z0-9._+-]{1,64}$/;
+const BUNDLE_ID_RE = /^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/;
 const IPA_PATH_RE = /^\/[A-Za-z0-9._-]{1,128}\.ipa$/;
+
+// Characters that are not allowed (or not safe) in an XML 1.0 plist string:
+// C0/C1 controls, DEL, line/paragraph separators, lone surrogates and the non-characters U+FFFE/U+FFFF.
 function hasControl(str) {
   for (const ch of str) {
     const c = ch.codePointAt(0);
-    if (c <= 0x1f || (c >= 0x7f && c <= 0x9f) || c === 0x2028 || c === 0x2029) return true;
+    if (
+      c <= 0x1f ||
+      (c >= 0x7f && c <= 0x9f) ||
+      c === 0x2028 ||
+      c === 0x2029 ||
+      (c >= 0xd800 && c <= 0xdfff) ||
+      c === 0xfffe ||
+      c === 0xffff
+    ) {
+      return true;
+    }
   }
   return false;
+}
+
+// Bidi marks, embeddings, overrides and isolates (can make a title read differently than it is).
+function hasBidiControl(str) {
+  for (const ch of str) {
+    const c = ch.codePointAt(0);
+    if (c === 0x200e || c === 0x200f || (c >= 0x202a && c <= 0x202e) || (c >= 0x2066 && c <= 0x2069)) return true;
+  }
+  return false;
+}
+
+function validText(value, maxLength) {
+  const length = [...value].length;
+  return length >= 1 && length <= maxLength && !hasControl(value) && !hasBidiControl(value);
 }
 
 function text(body, status, extra = {}) {
@@ -59,11 +87,6 @@ function validFetchUrl(raw) {
   if (url.username || url.password || url.search || url.hash) return false;
   if (url.hostname !== "127.0.0.1" && url.hostname !== "localhost") return false;
   return IPA_PATH_RE.test(url.pathname);
-}
-
-function validName(name) {
-  const length = [...name].length;
-  return length >= 1 && length <= 128 && !hasControl(name);
 }
 
 function buildPlist({ fetchurl, bundleid, version, name }) {
@@ -121,8 +144,8 @@ export function handle(request) {
     return text("bad request", 400);
   }
   if (bundleid.length > 255 || !BUNDLE_ID_RE.test(bundleid)) return text("bad request", 400);
-  if (!VERSION_RE.test(version)) return text("bad request", 400);
-  if (!validName(name)) return text("bad request", 400);
+  if (!validText(version, MAX_VERSION_LENGTH)) return text("bad request", 400);
+  if (!validText(name, MAX_NAME_LENGTH)) return text("bad request", 400);
   if (!validFetchUrl(fetchurl)) return text("bad request", 400);
 
   return new Response(buildPlist({ fetchurl, bundleid, version, name }), {
