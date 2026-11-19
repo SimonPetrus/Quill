@@ -1,0 +1,4 @@
+branch: quill
+commit: 9a374b5072190c38c5cf0dfe7c4ddc96c9a18a1f
+run:    https://github.com/SimonPetrus/Quill/actions/runs/44485912108
+sha256: 22b8a2b1cf3daf427ed7aed6974d120c938f182bde8b026d485d70fd3dc9ae62
