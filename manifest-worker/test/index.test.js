@@ -153,3 +153,27 @@ test("end to end with Quill's real link shape", async () => {
   assert.match(b, /<string>http:\/\/127\.0\.0\.1:61234\/0F3A9C\.ipa<\/string>/);
   assert.match(b, /<string>Quill Test<\/string>/);
 });
+
+// Mirrors the new ServerInstaller.externalServerLink: strict per-value encoding, then alphanumerics-only outer encoding.
+const strictEnc = (s) =>
+  [...new TextEncoder().encode(s)]
+    .map((b) => (/[A-Za-z0-9\-._~]/.test(String.fromCharCode(b)) && b < 128 ? String.fromCharCode(b) : "%" + b.toString(16).toUpperCase().padStart(2, "0")))
+    .join("");
+const quillLink = (app, payload) => {
+  const inner = `https://quill-manifest.example.workers.dev/genPlist?bundleid=${strictEnc(app.identifier)}&name=${strictEnc(app.name)}&version=${strictEnc(app.version)}&fetchurl=${strictEnc(payload)}`;
+  return `itms-services://?action=download-manifest&url=${alnumOnly(inner)}`;
+};
+
+test("end to end with strict per-value encoding and tricky names", async () => {
+  const names = ["A&B", "x=y", "1+1", "C#", "what?", "two  spaces", "Çalışkan Üğür İş", "Game 🎮 Pro", "%41 100%", "a&fetchurl=http://evil.com/x.ipa"];
+  for (const name of names) {
+    const link = quillLink({ identifier: "com.example.App", name, version: "1.0+5" }, "http://127.0.0.1:61234/0F3A9C.ipa");
+    const once = new URL(link.replace("itms-services://", "https://x/")).searchParams.get("url");
+    const r = await worker.fetch(new Request(once));
+    assert.equal(r.status, 200, name);
+    const b = await r.text();
+    assert.ok(b.includes(`<string>${name.replace(/&/g, "&amp;")}</string>`), name);
+    assert.match(b, /<string>1\.0\+5<\/string>/);
+    assert.match(b, /<string>http:\/\/127\.0\.0\.1:61234\/0F3A9C\.ipa<\/string>/);
+  }
+});

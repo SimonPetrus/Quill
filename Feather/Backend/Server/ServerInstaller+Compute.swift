@@ -47,11 +47,17 @@ extension ServerInstaller {
 	}
 	
 	var externalServerLink: String {
-		let baseUrl = "\(ManifestService.genPlistURL)?bundleid=\(app.identifier!)&name=\(app.name!)&version=\(app.version!)&fetchurl=\(self.payloadEndpoint.absoluteString)"
-		let encodedBaseUrl = baseUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
-		let finalEncodedUrl = encodedBaseUrl.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
+		// Each value is encoded on its own with a strict set (only unreserved characters stay),
+		// so `&`, `=`, `+`, `#`, `?`, spaces and non-ASCII characters in the app name cannot split or corrupt the query.
+		var strict = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~")
+		strict.remove(charactersIn: "+&=#?")
+		func enc(_ value: String) -> String {
+			value.addingPercentEncoding(withAllowedCharacters: strict) ?? ""
+		}
 		
-		return finalEncodedUrl
+		let baseUrl = "\(ManifestService.genPlistURL)?bundleid=\(enc(app.identifier!))&name=\(enc(app.name!))&version=\(enc(app.version!))&fetchurl=\(enc(self.payloadEndpoint.absoluteString))"
+		// Outer encoding for the itms-services `url=` value; iOS decodes it once, leaving the inner encoding intact.
+		return baseUrl.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
 	}
 
 	var iTunesLink: String {
